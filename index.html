@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProModXgOEM – Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brand-blue:#0065A5;
+    --brand-blue-dark:#004E80;
+    --brand-blue-soft:#E6F0F7;
+    --brand-gray:#939598;
+    --tenant-red:#CB2B2B;
+    --bg:#FFFFFF;
+    --panel:#F6F8FA;
+    --panel-2:#EDF1F5;
+    --border:#E1E7ED;
+    --border-strong:#C9D2DA;
+    --text:#1E2A33;
+    --muted:#6C7A85;
+    --font-sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --l1:#0065A5;
+    --l2:#7A3FA8;
+    --l3:#0E8A6E;
+    --l4:#D9822B;
+    --l5:#C0392B;
+    --header-h:52px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--font-sans);
+    color:var(--text);
+    background:var(--bg);
+    font-size:14px;
+    line-height:1.45;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;cursor:pointer}
+  .mono{font-family:var(--font-mono)}
+
+  /* ---------- Header ---------- */
+  header{
+    height:var(--header-h);
+    display:flex;align-items:center;
+    border-bottom:1px solid var(--border);
+    padding:0 18px;gap:14px;
+    background:var(--bg);
+    position:relative;z-index:20;
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand svg{display:block}
+  .brand-name{font-weight:600;letter-spacing:.3px;font-size:15px}
+  .brand-name b{color:var(--brand-blue)}
+  .brand .ver{font-family:var(--font-mono);font-size:11px;color:var(--muted);
+    border:1px solid var(--border);border-radius:3px;padding:1px 5px;margin-left:2px}
+  .tenant{
+    position:absolute;left:50%;transform:translateX(-50%);
+    color:var(--tenant-red);font-weight:700;letter-spacing:2px;font-size:13px;
+    display:flex;align-items:center;gap:7px;
+  }
+  .tenant .dot{width:7px;height:7px;border-radius:50%;background:var(--tenant-red);
+    box-shadow:0 0 0 3px rgba(203,43,43,.15)}
+  .head-right{margin-left:auto;display:flex;align-items:center;gap:4px}
+  .icon-btn{
+    width:34px;height:34px;border:none;background:none;border-radius:6px;
+    color:var(--muted);display:grid;place-items:center;transition:.15s;
+  }
+  .icon-btn:hover{background:var(--panel-2);color:var(--brand-blue)}
+  .user-chip{
+    display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border-radius:20px;
+    background:var(--panel);border:1px solid var(--border);margin-left:6px;
+  }
+  .avatar{width:26px;height:26px;border-radius:50%;background:var(--brand-blue);
+    color:#fff;display:grid;place-items:center;font-size:11px;font-weight:600}
+  .user-chip span{font-size:12.5px;font-weight:500}
+
+  /* ---------- App shell ---------- */
+  .app{display:flex;height:calc(100vh - var(--header-h))}
+  aside.tree{
+    width:262px;flex-shrink:0;border-right:1px solid var(--border);
+    background:var(--bg);display:flex;flex-direction:column;
+  }
+  .tree-head{padding:13px 16px 9px;display:flex;align-items:center;justify-content:space-between}
+  .tree-head h2{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .tree-scroll{flex:1;overflow-y:auto;padding:2px 8px 8px}
+  .tree-foot{padding:10px 12px;border-top:1px solid var(--border)}
+  .btn-add{
+    width:100%;border:1px dashed var(--border-strong);background:var(--panel);
+    color:var(--brand-blue);border-radius:7px;padding:9px;font-size:11.5px;font-weight:600;
+    letter-spacing:.6px;display:flex;align-items:center;justify-content:center;gap:7px;transition:.15s;
+  }
+  .btn-add:hover{background:var(--brand-blue-soft);border-color:var(--brand-blue)}
+
+  /* tree nodes */
+  .node{user-select:none}
+  .row{
+    display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:6px;
+    cursor:pointer;position:relative;font-size:13px;transition:background .12s;
+  }
+  .row:hover{background:var(--panel)}
+  .row.active{background:var(--brand-blue-soft);color:var(--brand-blue-dark)}
+  .row.active .n-name{font-weight:600}
+  .toggle{width:16px;height:16px;flex-shrink:0;display:grid;place-items:center;color:var(--muted)}
+  .toggle svg{transition:transform .18s}
+  .node.open>.row>.toggle svg{transform:rotate(90deg)}
+  .toggle.leaf{visibility:hidden}
+  .n-icon{width:17px;height:17px;flex-shrink:0;color:var(--brand-gray);display:grid;place-items:center}
+  .row.active .n-icon{color:var(--brand-blue)}
+  .n-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .n-type{font-family:var(--font-mono);font-size:9.5px;color:var(--muted);margin-left:auto;
+    opacity:0;transition:.12s;letter-spacing:.5px}
+  .row:hover .n-type{opacity:.7}
+  .children{margin-left:11px;border-left:1px solid var(--border);padding-left:5px;
+    overflow:hidden;max-height:0;transition:max-height .2s ease}
+  .node.open>.children{max-height:2000px}
+
+  /* ---------- Content ---------- */
+  main.content{flex:1;overflow-y:auto;background:var(--panel);position:relative}
+  .breadcrumb{
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+    padding:12px 26px;background:var(--bg);border-bottom:1px solid var(--border);
+    font-size:12px;color:var(--muted);position:sticky;top:0;z-index:5;
+  }
+  .breadcrumb b{color:var(--text)}
+  .breadcrumb .crumb{color:var(--muted)}
+  .breadcrumb .crumb.last{color:var(--brand-blue);font-weight:600}
+  .breadcrumb .sep{color:var(--border-strong)}
+
+  .pad{padding:22px 26px 60px}
+  .card{background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:18px;overflow:hidden}
+  .card-head{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .card-head h3{font-size:13px;font-weight:600;letter-spacing:.2px}
+  .card-head .badge{font-family:var(--font-mono);font-size:10px;color:var(--muted);
+    background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 6px}
+  .card-body{padding:18px}
+
+  /* detail hero */
+  .detail-top{display:grid;grid-template-columns:280px 1fr;gap:22px;margin-bottom:18px}
+  .preview{
+    border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;
+    aspect-ratio:4/3;position:relative;cursor:pointer;transition:.15s;
+  }
+  .preview:hover{border-color:var(--brand-blue);box-shadow:0 4px 18px rgba(0,101,165,.10)}
+  .preview .tag{position:absolute;left:10px;bottom:10px;background:rgba(30,42,51,.82);color:#fff;
+    font-size:10px;font-family:var(--font-mono);padding:3px 8px;border-radius:4px;backdrop-filter:blur(2px)}
+  .preview .open-hint{position:absolute;top:10px;right:10px;background:var(--brand-blue);color:#fff;
+    font-size:10px;font-weight:600;padding:3px 8px;border-radius:4px;opacity:0;transition:.15s}
+  .preview:hover .open-hint{opacity:1}
+  .detail-title{display:flex;flex-direction:column;gap:3px;margin-bottom:6px}
+  .detail-title h1{font-size:22px;font-weight:600;letter-spacing:-.2px}
+  .detail-title .sub{color:var(--muted);font-size:13px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 4px}
+  .chip{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--panel-2);
+    color:var(--text);display:flex;align-items:center;gap:5px}
+  .chip.blue{background:var(--brand-blue-soft);color:var(--brand-blue-dark)}
+
+  /* form grid */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 34px}
+  .fld{padding:9px 0;border-bottom:1px solid var(--border)}
+  .fld label{display:block;font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;font-weight:600}
+  .fld .val{font-size:13.5px;min-height:20px}
+  .fld input,.fld textarea{
+    width:100%;border:none;border-bottom:1.5px solid transparent;background:none;font:inherit;
+    font-size:13.5px;color:var(--text);padding:0;outline:none;
+  }
+  .fld.editing{border-bottom-color:var(--brand-blue)}
+  .fld.editing input,.fld.editing textarea{cursor:text}
+  .fld input:disabled,.fld textarea:disabled{color:var(--text);opacity:1}
+  .fld.wide{grid-column:1/-1}
+  .fld .auto{font-family:var(--font-mono);font-size:11px;color:var(--brand-gray)}
+
+  /* journal */
+  .journal-list{display:flex;flex-direction:column;gap:0}
+  .j-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);position:relative}
+  .j-item:last-child{border-bottom:none}
+  .j-dot{width:8px;height:8px;border-radius:50%;background:var(--brand-blue);margin-top:6px;flex-shrink:0}
+  .j-body{flex:1}
+  .j-text{font-size:13px}
+  .j-meta{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin-top:2px}
+  .j-add{display:flex;gap:8px;margin-top:14px}
+  .j-add input{flex:1;border:1px solid var(--border);border-radius:7px;padding:8px 11px;font:inherit;font-size:13px;outline:none}
+  .j-add input:focus{border-color:var(--brand-blue)}
+  .j-add button{width:38px;border-radius:7px;border:none;background:var(--brand-blue);color:#fff;display:grid;place-items:center;transition:.15s}
+  .j-add button:hover{background:var(--brand-blue-dark)}
+
+  /* SPS table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:left;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);
+    font-weight:600;padding:0 12px 9px;border-bottom:1px solid var(--border)}
+  thead th.num{text-align:right}
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tbody td.num{text-align:right;font-family:var(--font-mono);font-size:12.5px}
+  tbody tr:last-child td{border-bottom:none}
+  .sps-name{font-weight:600;display:flex;align-items:center;gap:9px}
+  .sps-swatch{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+  .row-act{display:flex;gap:2px;justify-content:flex-end}
+  .mini-btn{width:28px;height:28px;border:none;background:none;border-radius:5px;color:var(--muted);display:grid;place-items:center;transition:.12s}
+  .mini-btn:hover{background:var(--panel-2);color:var(--brand-blue)}
+  .mini-btn.del:hover{background:#fdecea;color:var(--tenant-red)}
+  .add-row-btn{margin-top:12px;border:1px dashed var(--border-strong);background:none;color:var(--brand-blue);
+    border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .add-row-btn:hover{background:var(--brand-blue-soft)}
+
+  /* action bar */
+  .action-bar{display:flex;gap:10px;margin-bottom:20px}
+  .btn{
+    border:1px solid var(--border-strong);background:var(--bg);color:var(--text);
+    border-radius:8px;padding:10px 20px;font-size:12.5px;font-weight:600;letter-spacing:.6px;
+    display:inline-flex;align-items:center;gap:8px;transition:.15s;
+  }
+  .btn:hover{border-color:var(--brand-blue);color:var(--brand-blue)}
+  .btn.primary{background:var(--brand-blue);border-color:var(--brand-blue);color:#fff}
+  .btn.primary:hover{background:var(--brand-blue-dark);color:#fff}
+  .btn.solid-dark{background:var(--text);border-color:var(--text);color:#fff}
+  .btn.solid-dark:hover{background:#2f3d48;color:#fff}
+
+  /* Werk overview */
+  .werk-wrap{padding:22px 26px 60px}
+  .werk-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+  .werk-head h1{font-size:24px;font-weight:600}
+  .werk-head p{color:var(--muted);font-size:13px;margin-top:2px}
+  .zone-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .stat .k{font-family:var(--font-mono);font-size:26px;font-weight:600;letter-spacing:-1px}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
+  .stat.b .k{color:var(--brand-blue)}
+
+  /* ---------- Editor ---------- */
+  .editor-wrap{display:flex;height:100%;background:var(--panel)}
+  .canvas-col{flex:1;display:flex;flex-direction:column;min-width:0}
+  .editor-topbar{
+    display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--bg);
+    border-bottom:1px solid var(--border);
+  }
+  .editor-topbar .ttl{font-weight:600;font-size:14px;display:flex;align-items:center;gap:9px}
+  .editor-topbar .ttl .lyr-badge{font-family:var(--font-mono);font-size:10px;color:#fff;padding:2px 7px;border-radius:4px}
+  .zoom-ctl{margin-left:auto;display:flex;align-items:center;gap:2px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:2px}
+  .zoom-ctl button{width:28px;height:26px;border:none;background:none;border-radius:5px;color:var(--muted);font-size:16px;display:grid;place-items:center}
+  .zoom-ctl button:hover{background:var(--bg);color:var(--brand-blue)}
+  .zoom-ctl .z{font-family:var(--font-mono);font-size:11px;color:var(--muted);width:44px;text-align:center}
+
+  .canvas-stage{flex:1;position:relative;overflow:hidden;background:
+    radial-gradient(circle at 30% 20%, #fbfcfd, #eef2f6)}
+  .canvas-inner{position:absolute;inset:0;display:grid;place-items:center}
+  #floorplan{max-width:92%;max-height:92%;transition:transform .12s}
+  .floor-symbols{pointer-events:none}
+
+  .palette{
+    position:absolute;top:16px;left:16px;background:rgba(255,255,255,.96);border:1px solid var(--border);
+    border-radius:10px;padding:11px;box-shadow:0 6px 22px rgba(30,42,51,.09);backdrop-filter:blur(4px);width:186px;
+  }
+  .palette h4{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:9px}
+  .pal-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .pal-item{
+    display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border:1px solid var(--border);
+    border-radius:7px;background:var(--bg);cursor:grab;transition:.12s;text-align:center;
+  }
+  .pal-item:hover{border-color:var(--brand-blue);background:var(--brand-blue-soft);transform:translateY(-1px)}
+  .pal-item .sym{width:24px;height:24px;display:grid;place-items:center}
+  .pal-item span{font-size:9.5px;line-height:1.1;color:var(--muted)}
+
+  .sat-ctl{
+    position:absolute;bottom:16px;left:16px;background:rgba(255,255,255,.96);border:1px solid var(--border);
+    border-radius:10px;padding:10px 14px;box-shadow:0 6px 22px rgba(30,42,51,.09);width:200px;
+  }
+  .sat-ctl label{font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);font-weight:600;display:flex;justify-content:space-between}
+  .sat-ctl label span{font-family:var(--font-mono);color:var(--brand-blue)}
+  input[type=range]{width:100%;margin-top:8px;accent-color:var(--brand-blue)}
+
+  .exp-ctl{
+    position:absolute;bottom:16px;right:16px;display:flex;gap:8px;
+  }
+  .exp-ctl .btn{padding:8px 14px;font-size:11px;box-shadow:0 3px 12px rgba(30,42,51,.08)}
+  .pager{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 3px 12px rgba(30,42,51,.08)}
+  .pager button{width:34px;height:36px;border:none;background:none;color:var(--muted);display:grid;place-items:center}
+  .pager button:hover{background:var(--panel);color:var(--brand-blue)}
+  .pager button+button{border-left:1px solid var(--border)}
+
+  /* editor right panel */
+  aside.layers{
+    width:288px;flex-shrink:0;border-left:1px solid var(--border);background:var(--bg);
+    display:flex;flex-direction:column;
+  }
+  .lp-head{padding:13px 16px 8px}
+  .lp-head h2{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .lp-head p{font-size:11px;color:var(--muted);margin-top:2px}
+  .layer-stack{padding:6px 12px 4px;display:flex;flex-direction:column;gap:6px}
+  .layer{
+    display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;
+    cursor:pointer;transition:.14s;position:relative;background:var(--bg);
+  }
+  .layer:hover{border-color:var(--border-strong)}
+  .layer.active{border-color:var(--lc);background:var(--lc-soft);box-shadow:inset 3px 0 0 var(--lc)}
+  .layer .lbar{width:5px;align-self:stretch;border-radius:3px;background:var(--lc)}
+  .layer .lmeta{flex:1;min-width:0}
+  .layer .lid{font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--lc)}
+  .layer .lname{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .layer .lcount{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+  .eye{width:30px;height:30px;border:none;background:none;border-radius:6px;color:var(--muted);display:grid;place-items:center;transition:.12s}
+  .eye:hover{background:var(--panel-2)}
+  .eye.off{color:var(--border-strong)}
+  .layer.hidden{opacity:.5}
+
+  .lp-action{padding:10px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .lp-action .btn{width:100%;justify-content:center;background:var(--lc,#0065A5);border-color:var(--lc,#0065A5);color:#fff;font-size:11.5px}
+  .lp-action .btn:hover{filter:brightness(.92)}
+
+  .objlist{flex:1;overflow-y:auto;padding:8px 12px 12px}
+  .objlist h4{font-size:10px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 4px 6px}
+  .obj-cat{margin-bottom:2px}
+  .obj-cat-head{display:flex;align-items:center;gap:6px;padding:6px 6px;font-size:11px;color:var(--muted);font-weight:600}
+  .obj-cat-head .cnt{margin-left:auto;font-family:var(--font-mono);background:var(--panel-2);border-radius:10px;padding:0 7px;font-size:10px}
+  .obj{
+    display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;font-size:12.5px;transition:.1s;
+  }
+  .obj:hover{background:var(--panel)}
+  .obj .odot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+  .obj .oname{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .obj-tools{display:flex;gap:1px;opacity:0;transition:.12s}
+  .obj:hover .obj-tools{opacity:1}
+  .obj-tools button{width:24px;height:24px;border:none;background:none;border-radius:5px;color:var(--muted);display:grid;place-items:center}
+  .obj-tools button:hover{background:var(--panel-2);color:var(--brand-blue)}
+  .obj-tools button.del:hover{background:#fdecea;color:var(--tenant-red)}
+
+  /* welcome */
+  .welcome{height:100%;display:grid;place-items:center;padding:40px}
+  .welcome-inner{text-align:center;max-width:380px}
+  .welcome-inner .glyph{margin:0 auto 20px}
+  .welcome-inner h2{font-size:19px;font-weight:600;margin-bottom:6px}
+  .welcome-inner p{color:var(--muted);font-size:13.5px}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--text);color:#fff;padding:10px 18px;border-radius:9px;font-size:13px;
+    box-shadow:0 8px 30px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:.25s;z-index:100;
+    display:flex;align-items:center;gap:9px;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .tdot{width:8px;height:8px;border-radius:50%;background:#4ade80}
+
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:6px;border:2px solid var(--bg)}
+  ::-webkit-scrollbar-thumb:hover{background:var(--brand-gray)}
+
+  @media (max-width:920px){
+    aside.tree{width:210px}
+    aside.layers{width:230px}
+    .detail-top{grid-template-columns:1fr}
+    .form-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <!-- Ebenen-Stack Logo -->
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <path d="M13 2 L23 7 L13 12 L3 7 Z" fill="#0065A5"/>
+      <path d="M13 9 L23 14 L13 19 L3 14 Z" fill="#3d8bc0"/>
+      <path d="M13 16 L23 21 L13 26 L3 21 Z" fill="#939598"/>
+    </svg>
+    <div class="brand-name">ProMod<b>X</b>gOEM</div>
+    <span class="ver">v0.24.1</span>
+  </div>
+  <div class="tenant"><span class="dot"></span>TEST</div>
+  <div class="head-right">
+    <button class="icon-btn" title="Team / Nutzergruppe">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 5.5a3 3 0 0 1 0 5.7M18 20c0-2.4-1-4.3-2.6-5.3"/></svg>
+    </button>
+    <button class="icon-btn" title="Kontaktkarte / Profil">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.4-1.5 1.6-2.3 3-2.3s2.6.8 3 2.3M14 9.5h4M14 13h3"/></svg>
+    </button>
+    <div class="user-chip">
+      <div class="avatar">AB</div>
+      <span>A. Berger</span>
+    </div>
+    <button class="icon-btn" title="Logout">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 12H3M6 8l-4 4 4 4"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="app">
+  <aside class="tree">
+    <div class="tree-head"><h2>Anlagenstruktur</h2></div>
+    <div class="tree-scroll" id="treeScroll"></div>
+    <div class="tree-foot">
+      <button class="btn-add" onclick="toast('Projekt hinzufügen')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+        PROJEKT HINZUFÜGEN
+      </button>
+    </div>
+  </aside>
+  <main class="content" id="content"></main>
+</div>
+
+<div class="toast" id="toast"><span class="tdot"></span><span id="toastMsg"></span></div>
+
+<script>
+/* ---------------- Daten ---------------- */
+const ICONS = {
+  Werk:'<path d="M3 21V10l5 3V8l6 4V6l6 4v11z"/><path d="M3 21h18"/>',
+  Center:'<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16M4 12h16"/>',
+  Abteilung:'<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M8 5V3h8v2M4 12h16"/>',
+  KST:'<path d="M3 7l9-4 9 4-9 4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/>',
+  Linie:'<circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h10"/><rect x="10" y="9" width="4" height="6" rx="1"/>',
+  Anlage:'<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M8 9V6a4 4 0 0 1 8 0v3M9 14h6"/>'
+};
+
+const TREE = [
+  {id:'w1',type:'Werk',name:'Werk 1 · Sindelfingen',children:[
+    {id:'c1',type:'Center',name:'Center Nord',children:[
+      {id:'a1',type:'Abteilung',name:'Karosseriebau',children:[
+        {id:'k1',type:'KST',name:'KST 4711',children:[
+          {id:'l1',type:'Linie',name:'Linie 1 · Seitenwand',children:[
+            {id:'as300',type:'Anlage',name:'AS300 – Geo Seitenwand'},
+            {id:'as310',type:'Anlage',name:'AS310 – Finish Seitenwand'},
+            {id:'as320',type:'Anlage',name:'AS320 – Roboterschweißen'}
+          ]},
+          {id:'l2',type:'Linie',name:'Linie 2 · Bodengruppe',children:[
+            {id:'as400',type:'Anlage',name:'AS400 – Vorderwagen'},
+            {id:'as410',type:'Anlage',name:'AS410 – Hinterwagen'}
+          ]}
+        ]},
+        {id:'k2',type:'KST',name:'KST 4712',children:[
+          {id:'l3',type:'Linie',name:'Linie 3 · Türen',children:[
+            {id:'as500',type:'Anlage',name:'AS500 – Türenmontage'}
+          ]}
+        ]}
+      ]},
+      {id:'a2',type:'Abteilung',name:'Montage',children:[
+        {id:'k3',type:'KST',name:'KST 4820',children:[
+          {id:'l4',type:'Linie',name:'Linie 8 · Endmontage',children:[
+            {id:'as800',type:'Anlage',name:'AS800 – Hochzeit'}
+          ]}
+        ]}
+      ]}
+    ]},
+    {id:'c2',type:'Center',name:'Center Süd',children:[
+      {id:'a3',type:'Abteilung',name:'Presswerk',children:[
+        {id:'k4',type:'KST',name:'KST 3300',children:[
+          {id:'l5',type:'Linie',name:'Linie P1 · Pressen',children:[
+            {id:'as900',type:'Anlage',name:'AS900 – Pressenstraße'}
+          ]}
+        ]}
+      ]}
+    ]}
+  ]},
+  {id:'w2',type:'Werk',name:'Werk 2 · Rastatt',children:[
+    {id:'c3',type:'Center',name:'Center Ost',children:[]}
+  ]}
+];
+
+const STATIONS = {
+  as300:{
+    name:'AS300 – Geo Seitenwand',bereich:'Karosseriebau',erstelltVon:'A. Berger',
+    erstelltAm:'12.03.2025',letzteAenderung:'02.07.2026 · 14:22',oem:'KUKA / evomax',version:'2.4.1',
+    beschr:'Geometrie-Schweißstation für die Seitenwand links/rechts. 4 Roboter, 2 Spanntische, integrierte Ident-Kontrolle über 2D-Code-Kamera an der Beladestelle.',
+    sps:[
+      {name:'SPS_Haupt',zyklus:12,rem:4096,code:512,farbe:'#0065A5'},
+      {name:'SPS_Sicherheit',zyklus:8,rem:2048,code:256,farbe:'#C0392B'},
+      {name:'SPS_Antrieb',zyklus:6,rem:1024,code:128,farbe:'#0E8A6E'}
+    ],
+    journal:[
+      {t:'Antriebs-SPS Zykluszeit auf 6 ms optimiert',a:'A. Berger',z:'02.07.2026 · 14:22'},
+      {t:'Sicherheitslayout L5 – Lichtgitter Beladestelle ergänzt',a:'M. Klein',z:'18.06.2026 · 09:05'},
+      {t:'Not-Halt-Kreis 2 neu vergeben (Zaun Nord)',a:'A. Berger',z:'11.05.2026 · 16:40'},
+      {t:'Anlage angelegt',a:'A. Berger',z:'12.03.2025 · 08:12'}
+    ]
+  }
+};
+function station(id){ return STATIONS[id] || genericStation(id); }
+function genericStation(id){
+  const n = findNode(id);
+  return {name:n?n.name:id,bereich:'Karosseriebau',erstelltVon:'A. Berger',erstelltAm:'12.03.2025',
+    letzteAenderung:'30.06.2026 · 11:00',oem:'evomax',version:'1.0.0',
+    beschr:'Noch keine ausführliche Beschreibung hinterlegt.',
+    sps:[{name:'SPS_Haupt',zyklus:10,rem:2048,code:256,farbe:'#0065A5'}],
+    journal:[{t:'Anlage angelegt',a:'A. Berger',z:'12.03.2025 · 08:00'}]};
+}
+
+const LAYERS = [
+  {id:'L1.0',name:'Steuerungstechnik',color:'#0065A5',soft:'#E6F0F7',action:'SB EINZEICHNEN',
+    cats:[{n:'Schutz-Bereich',c:2},{n:'Schaltschrank',c:4},{n:'Bedienkonzept',c:2}]},
+  {id:'L2.0',name:'Saferobot / Technologie',color:'#7A3FA8',soft:'#F0E9F7',action:'ROBOTER SETZEN',
+    cats:[{n:'Technologiesteuerung',c:4}]},
+  {id:'L3.0',name:'Antriebstechnik / Ident',color:'#0E8A6E',soft:'#E4F3EE',action:'IDENT PLATZIEREN',
+    cats:[{n:'Antriebe',c:6},{n:'2D-Code-Kamera',c:2},{n:'RFID-Lesestelle',c:3},{n:'Ritzpräger',c:1}]},
+  {id:'L4.0',name:'Not-Halt',color:'#D9822B',soft:'#FBF0E3',action:'NOTHALT GENERIEREN',
+    cats:[{n:'Not-Halt ortsfest',c:5},{n:'Roboter-SmartPad',c:4}]},
+  {id:'L5.0',name:'Sicherheitslayout',color:'#C0392B',soft:'#FBEAE8',action:'SCHUTZZAUN ZIEHEN',
+    cats:[{n:'Türen',c:3},{n:'Lichtgitter',c:2},{n:'Sicherheitsschalter',c:4},{n:'Beladestellen',c:2}]}
+];
+
+const PALETTES = {
+  'L1.0':[['Schaltschrank','cab'],['Schutzbereich','zone'],['Bedienpult','panel'],['Klemmkasten','box']],
+  'L2.0':[['Roboter','robot'],['Techno-Steuerung','ctrl'],['Greifer','grip'],['Zelle','cell']],
+  'L3.0':[['Antrieb','motor'],['2D-Kamera','cam'],['RFID','rfid'],['Ritzpräger','mark']],
+  'L4.0':[['Not-Halt','estop'],['SmartPad','pad'],['Reißleine','pull'],['Quittier','ack']],
+  'L5.0':[['Sicherheitstür','door'],['Lichtgitter','light'],['Sicherheitsschalter','switch'],['Beladestelle','load']]
+};
+const SYM = {
+  cab:'<rect x="5" y="4" width="14" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/>',
+  zone:'<rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2.5"/>',
+  panel:'<rect x="4" y="7" width="16" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><path d="M13 10h4M13 14h4" stroke="currentColor" stroke-width="1.6"/>',
+  box:'<rect x="6" y="6" width="12" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  robot:'<circle cx="12" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v4l5 4M12 11l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  ctrl:'<rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="1.6"/>',
+  grip:'<path d="M12 4v6M8 10v6M16 10v6M8 10h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  cell:'<path d="M5 5h14v14H5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="4 3"/>',
+  motor:'<circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v8M9 10l6 4M15 10l-6 4" stroke="currentColor" stroke-width="1.4"/>',
+  cam:'<rect x="4" y="8" width="12" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 11l4-2v6l-4-2" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  rfid:'<path d="M7 8a7 7 0 0 1 0 8M10 6a11 11 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="12" r="2" fill="currentColor"/>',
+  mark:'<path d="M6 18L14 6l4 3-8 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 18l2-.5" stroke="currentColor" stroke-width="1.8"/>',
+  estop:'<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/>',
+  pad:'<rect x="6" y="4" width="12" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="16" r="1.2" fill="currentColor"/><path d="M9 8h6" stroke="currentColor" stroke-width="1.6"/>',
+  pull:'<path d="M5 12h14M8 9l-3 3 3 3M16 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  ack:'<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 12l3 3 5-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  door:'<rect x="6" y="4" width="12" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="14.5" cy="12" r="1" fill="currentColor"/>',
+  light:'<path d="M6 4v16M18 4v16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6 8h12M6 12h12M6 16h12" stroke="currentColor" stroke-width="1.2" stroke-dasharray="1.5 2"/>',
+  switch:'<rect x="5" y="9" width="14" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="12" r="1.8" fill="currentColor"/>',
+  load:'<path d="M5 16h14M8 16V8l4-3 4 3v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
+};
+
+/* ---------------- State ---------------- */
+let state = {selected:null, view:'welcome', edit:false, expanded:new Set(['w1','c1','a1','k1','l1']),
+  activeLayer:'L1.0', layerVis:{'L1.0':true,'L2.0':true,'L3.0':true,'L4.0':true,'L5.0':true},
+  zoom:1, sat:65};
+
+function findNode(id,nodes=TREE){
+  for(const n of nodes){ if(n.id===id) return n; if(n.children){const f=findNode(id,n.children); if(f) return f;} }
+  return null;
+}
+function pathTo(id,nodes=TREE,trail=[]){
+  for(const n of nodes){
+    const t=[...trail,n];
+    if(n.id===id) return t;
+    if(n.children){const f=pathTo(id,n.children,t); if(f) return f;}
+  }
+  return null;
+}
+
+/* ---------------- Tree ---------------- */
+function renderTree(){
+  document.getElementById('treeScroll').innerHTML = TREE.map(n=>nodeHTML(n)).join('');
+}
+function nodeHTML(n){
+  const open = state.expanded.has(n.id);
+  const hasKids = n.children && n.children.length;
+  const active = state.selected===n.id;
+  return `<div class="node ${open?'open':''}" data-id="${n.id}">
+    <div class="row ${active?'active':''}" onclick="onNode('${n.id}',event)">
+      <div class="toggle ${hasKids?'':'leaf'}" onclick="onToggle('${n.id}',event)">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+      <div class="n-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${ICONS[n.type]}</svg></div>
+      <div class="n-name">${n.name}</div>
+      <div class="n-type">${n.type}</div>
+    </div>
+    ${hasKids?`<div class="children">${n.children.map(c=>nodeHTML(c)).join('')}</div>`:''}
+  </div>`;
+}
+function onToggle(id,e){ e.stopPropagation();
+  if(state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id);
+  renderTree();
+}
+function onNode(id,e){ e.stopPropagation();
+  const n=findNode(id); state.selected=id; state.edit=false;
+  if(n.type==='Werk'){ state.view='werk'; state.expanded=new Set([id]); }
+  else if(n.type==='Anlage'){ state.view='detail'; }
+  else { if(!state.expanded.has(id)) state.expanded.add(id); else state.expanded.delete(id); }
+  renderTree(); renderContent();
+}
+
+/* ---------------- Content router ---------------- */
+function renderContent(){
+  const el=document.getElementById('content');
+  if(state.view==='welcome'){ el.innerHTML=welcomeHTML(); return; }
+  if(state.view==='werk'){ el.innerHTML=werkHTML(findNode(state.selected)); return; }
+  if(state.view==='detail'){ el.innerHTML=detailHTML(state.selected); return; }
+  if(state.view==='editor'){ renderEditor(el); return; }
+}
+
+function welcomeHTML(){
+  return `<div class="welcome"><div class="welcome-inner">
+    <svg class="glyph" width="60" height="60" viewBox="0 0 60 60" fill="none">
+      <path d="M30 6 L52 17 L30 28 L8 17 Z" fill="#0065A5"/>
+      <path d="M30 22 L52 33 L30 44 L8 33 Z" fill="#3d8bc0"/>
+      <path d="M30 38 L52 49 L30 60 L8 49 Z" fill="#939598"/>
+    </svg>
+    <h2>Anlage auswählen</h2>
+    <p>Navigiere links durch die Struktur Werk › Center › Abteilung › KST › Linie › Anlage. Wähle eine Anlage, um Stammdaten und das Ebenenmodell zu öffnen.</p>
+  </div></div>`;
+}
+
+function crumbHTML(id){
+  const p=pathTo(id)||[];
+  return `<div class="breadcrumb">${p.map((n,i)=>{
+    const last=i===p.length-1;
+    return `<span class="crumb ${last?'last':''}">${n.name.split(' – ')[0].split(' · ')[0]}</span>${last?'':'<span class="sep">›</span>'}`;
+  }).join('')}</div>`;
+}
+
+/* ---------------- Werk overview ---------------- */
+function werkHTML(n){
+  return crumbHTML(n.id)+`<div class="werk-wrap">
+    <div class="werk-head">
+      <div><h1>${n.name}</h1><p>Gesamtübersicht · Grundriss mit Fertigungszonen</p></div>
+      <button class="btn" onclick="toast('PDF Export gestartet')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M8 11l4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        PDF EXPORT
+      </button>
+    </div>
+    <div class="zone-stats">
+      <div class="stat b"><div class="k">12</div><div class="l">Anlagen</div></div>
+      <div class="stat"><div class="k">3</div><div class="l">Center</div></div>
+      <div class="stat"><div class="k">38</div><div class="l">SPS gesamt</div></div>
+      <div class="stat"><div class="k">96%</div><div class="l">Dokumentiert</div></div>
+    </div>
+    <div class="card"><div class="card-head"><h3>Werkslayout</h3><span class="badge">top-down</span></div>
+      <div class="card-body" style="padding:0">${werkPlanSVG()}</div>
+    </div>
+  </div>`;
+}
+function werkPlanSVG(){
+  return `<svg viewBox="0 0 900 380" style="width:100%;display:block;background:#F9FBFC">
+    <defs><pattern id="wgrid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M30 0H0V30" fill="none" stroke="#E3E9EE" stroke-width="1"/></pattern></defs>
+    <rect width="900" height="380" fill="url(#wgrid)"/>
+    <rect x="30" y="30" width="840" height="320" fill="none" stroke="#C9D2DA" stroke-width="2"/>
+    <g font-family="IBM Plex Mono" font-size="11">
+      <rect x="55" y="55" width="240" height="120" fill="#E6F0F7" stroke="#0065A5" stroke-width="1.5" opacity=".9"/>
+      <text x="65" y="75" fill="#004E80" font-weight="600">Karosseriebau</text>
+      <text x="65" y="90" fill="#5b6b76">KST 4711 / 4712</text>
+      <rect x="55" y="195" width="240" height="130" fill="#E4F3EE" stroke="#0E8A6E" stroke-width="1.5" opacity=".9"/>
+      <text x="65" y="215" fill="#0a6b56" font-weight="600">Montage</text>
+      <text x="65" y="230" fill="#5b6b76">KST 4820</text>
+      <rect x="320" y="55" width="270" height="270" fill="#FBF0E3" stroke="#D9822B" stroke-width="1.5" opacity=".85"/>
+      <text x="332" y="75" fill="#a15e17" font-weight="600">Presswerk</text>
+      <text x="332" y="90" fill="#5b6b76">KST 3300 · Center Süd</text>
+      <rect x="615" y="55" width="230" height="270" fill="#FBEAE8" stroke="#C0392B" stroke-width="1.5" opacity=".85"/>
+      <text x="627" y="75" fill="#8f2018" font-weight="600">Logistik / Puffer</text>
+    </g>
+    <g fill="#0065A5"><circle cx="120" cy="130" r="5"/><circle cx="180" cy="130" r="5"/><circle cx="240" cy="130" r="5"/></g>
+    <g fill="#D9822B"><circle cx="400" cy="160" r="5"/><circle cx="460" cy="220" r="5"/><circle cx="520" cy="160" r="5"/></g>
+  </svg>`;
+}
+
+/* ---------------- Detail ---------------- */
+function detailHTML(id){
+  const s=station(id), ed=state.edit;
+  const dis = ed?'':'disabled';
+  const f=(label,val,name,auto)=>`<div class="fld ${ed&&!auto?'editing':''}">
+    <label>${label}</label>
+    ${auto?`<div class="val auto">${val}</div>`:`<input value="${val}" ${dis}>`}
+  </div>`;
+  return crumbHTML(id)+`<div class="pad">
+    <div class="detail-top">
+      <div class="preview" onclick="openEditor()">
+        ${floorplanThumb()}
+        <div class="tag">layout · L1–L5</div>
+        <div class="open-hint">MODELLIEREN ›</div>
+      </div>
+      <div>
+        <div class="detail-title">
+          <h1>${s.name}</h1>
+          <div class="sub">${s.bereich} · OEM ${s.oem}</div>
+        </div>
+        <div class="chips">
+          <div class="chip blue"><span class="mono">v${s.version}</span></div>
+          <div class="chip"><span class="mono">${s.sps.length} SPS</span></div>
+          <div class="chip">${s.journal.length} Journaleinträge</div>
+          <div class="chip">Zuletzt: ${s.letzteAenderung}</div>
+        </div>
+        <div class="action-bar" style="margin-top:16px;margin-bottom:0">
+          <button class="btn ${ed?'primary':''}" onclick="toggleEdit()">
+            ${ed?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12l4 4 10-10"/></svg> SPEICHERN'
+                :'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg> EDITIEREN'}
+          </button>
+          <button class="btn solid-dark" onclick="openEditor()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/></svg>
+            MODELLIEREN
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-head"><h3>Stammdaten</h3>${ed?'<span class="badge" style="color:#0065A5;border-color:#0065A5">Bearbeitung</span>':''}</div>
+      <div class="card-body"><div class="form-grid">
+        ${f('Anlagenname',s.name,'name')}
+        ${f('Bereich',s.bereich,'bereich')}
+        ${f('OEM',s.oem,'oem')}
+        ${f('Anlagenversion',s.version,'version')}
+        ${f('Erstellt von',s.erstelltVon,'ev',true)}
+        ${f('Erstellt am',s.erstelltAm,'ea',true)}
+        ${f('Letzte Änderung',s.letzteAenderung,'la',true)}
+        <div class="fld"><label>Status</label><div class="val auto">freigegeben</div></div>
+        <div class="fld wide ${ed?'editing':''}"><label>Beschreibung</label>
+          ${ed?`<textarea rows="2" style="width:100%;resize:vertical">${s.beschr}</textarea>`:`<div class="val">${s.beschr}</div>`}
+        </div>
+      </div></div>
+    </div>
+
+    <div class="card"><div class="card-head"><h3>SPS-Konfiguration</h3><span class="badge">${s.sps.length} Steuerungen</span></div>
+      <div class="card-body">
+        <table><thead><tr>
+          <th>Name</th><th class="num">Zykluszeit [ms]</th><th class="num">Remanenz [Byte]</th><th class="num">Code-AS [kByte]</th>
+          ${ed?'<th></th>':''}
+        </tr></thead><tbody>
+        ${s.sps.map((p,i)=>`<tr>
+          <td><div class="sps-name"><span class="sps-swatch" style="background:${p.farbe}"></span>${ed?`<input value="${p.name}" style="border:none;font:inherit;font-weight:600;outline:none;background:none">`:p.name}</div></td>
+          <td class="num">${p.zyklus}</td><td class="num">${p.rem.toLocaleString('de-DE')}</td><td class="num">${p.code}</td>
+          ${ed?`<td><div class="row-act">
+            <button class="mini-btn" title="Farbe"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg></button>
+            <button class="mini-btn del" title="Zeile löschen" onclick="toast('Zeile gelöscht')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>
+          </div></td>`:''}
+        </tr>`).join('')}
+        </tbody></table>
+        ${ed?'<button class="add-row-btn" onclick="toast(\'SPS-Zeile hinzugefügt\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> SPS HINZUFÜGEN</button>':''}
+      </div>
+    </div>
+
+    <div class="card"><div class="card-head"><h3>Änderungsjournal</h3><span class="badge">append-only</span></div>
+      <div class="card-body">
+        <div class="journal-list">
+          ${s.journal.map(j=>`<div class="j-item"><div class="j-dot"></div><div class="j-body">
+            <div class="j-text">${j.t}</div><div class="j-meta">${j.a} · ${j.z}</div></div></div>`).join('')}
+        </div>
+        <div class="j-add">
+          <input id="jInput" placeholder="Neuer Eintrag …" onkeydown="if(event.key==='Enter')addJournal('${id}')">
+          <button onclick="addJournal('${id}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function floorplanThumb(){
+  return `<svg viewBox="0 0 320 240" style="width:100%;height:100%;display:block">
+    <rect width="320" height="240" fill="#F9FBFC"/>
+    <rect x="20" y="20" width="280" height="200" fill="none" stroke="#C9D2DA" stroke-width="1.5"/>
+    <rect x="45" y="50" width="90" height="70" fill="#E6F0F7" stroke="#0065A5" stroke-width="1.3"/>
+    <rect x="160" y="50" width="110" height="70" fill="#E4F3EE" stroke="#0E8A6E" stroke-width="1.3"/>
+    <rect x="45" y="140" width="225" height="55" fill="#FBF0E3" stroke="#D9822B" stroke-width="1.3"/>
+    <circle cx="80" cy="85" r="7" fill="none" stroke="#7A3FA8" stroke-width="1.5"/>
+    <circle cx="110" cy="85" r="7" fill="none" stroke="#7A3FA8" stroke-width="1.5"/>
+    <circle cx="215" cy="85" r="7" fill="none" stroke="#7A3FA8" stroke-width="1.5"/>
+    <circle cx="60" cy="167" r="4" fill="#C0392B"/><circle cx="255" cy="167" r="4" fill="#C0392B"/>
+  </svg>`;
+}
+
+/* ---------------- Editor ---------------- */
+function openEditor(){ state.view='editor'; renderContent(); }
+function backFromEditor(){ state.view='detail'; renderContent(); }
+
+function renderEditor(el){
+  const L=LAYERS.find(l=>l.id===state.activeLayer);
+  const pal=PALETTES[state.activeLayer]||[];
+  el.style.padding='0'; el.style.overflow='hidden';
+  el.innerHTML=`<div class="editor-wrap">
+    <div class="canvas-col">
+      <div class="editor-topbar">
+        <div class="ttl">${station(state.selected).name.split(' – ')[0]}
+          <span class="lyr-badge" style="background:${L.color}">${L.id} ${L.name}</span></div>
+        <div class="zoom-ctl">
+          <button onclick="zoomStep(-.1)">−</button>
+          <span class="z">${Math.round(state.zoom*100)}%</span>
+          <button onclick="zoomStep(.1)">+</button>
+        </div>
+      </div>
+      <div class="canvas-stage" id="stage">
+        <div class="canvas-inner">${editorFloorplan(L.color)}</div>
+
+        <div class="palette">
+          <h4>Palette · ${L.id}</h4>
+          <div class="pal-grid">
+            ${pal.map(([name,sym])=>`<div class="pal-item" style="color:${L.color}" onclick="toast('${name} platziert')" title="Ziehen zum Platzieren">
+              <div class="sym"><svg width="22" height="22" viewBox="0 0 24 24">${SYM[sym]}</svg></div>
+              <span>${name}</span></div>`).join('')}
+          </div>
+        </div>
+
+        <div class="sat-ctl">
+          <label>Layout-Sättigung <span id="satVal">${state.sat}%</span></label>
+          <input type="range" min="10" max="100" value="${state.sat}" oninput="onSat(this.value)">
+        </div>
+
+        <div class="exp-ctl">
+          <div class="pager">
+            <button onclick="toast('vorherige Anlage')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button onclick="toast('nächste Anlage')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+          </div>
+          <button class="btn" onclick="toast('PDF Export')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>
+          <button class="btn" onclick="toast('RAW CSV Export')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>
+          <button class="btn" onclick="backFromEditor()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ZURÜCK</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="layers">
+      <div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit & aktive Ebene</p></div>
+      <div class="layer-stack">
+        ${LAYERS.map(l=>{
+          const vis=state.layerVis[l.id], act=l.id===state.activeLayer;
+          const cnt=l.cats.reduce((a,c)=>a+c.c,0);
+          return `<div class="layer ${act?'active':''} ${vis?'':'hidden'}" style="--lc:${l.color};--lc-soft:${l.soft}" onclick="selectLayer('${l.id}')">
+            <div class="lbar"></div>
+            <div class="lmeta"><div class="lid">${l.id}</div><div class="lname">${l.name}</div><div class="lcount">${cnt} Objekte</div></div>
+            <button class="eye ${vis?'':'off'}" onclick="toggleVis('${l.id}',event)" title="Sichtbarkeit">
+              ${vis?'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>'
+                    :'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7c2 0 3.7.6 5.2 1.5M22 12s-3.5 7-10 7c-2 0-3.7-.6-5.2-1.5"/><path d="M4 4l16 16"/></svg>'}
+            </button>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div class="lp-action" style="--lc:${L.color}">
+        <button class="btn" onclick="toast('${L.action}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg>
+          ${L.action}
+        </button>
+      </div>
+
+      <div class="objlist">
+        <h4>Objektliste · ${L.id}</h4>
+        ${L.cats.map(cat=>`<div class="obj-cat">
+          <div class="obj-cat-head" style="color:${L.color}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            ${cat.n}<span class="cnt">${cat.c}</span>
+          </div>
+          ${Array.from({length:cat.c}).map((_,i)=>`<div class="obj">
+            <span class="odot" style="background:${L.color}"></span>
+            <span class="oname">${cat.n.split(' ')[0]}_${String(i+1).padStart(2,'0')}</span>
+            <div class="obj-tools">
+              <button title="Umbenennen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>
+              <button title="Etikett"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>
+              <button title="Duplizieren"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V4h12"/></svg></button>
+              <button title="Sichtbarkeit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/></svg></button>
+              <button class="del" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>
+            </div>
+          </div>`).join('')}
+        </div>`).join('')}
+      </div>
+    </aside>
+  </div>`;
+  applyZoomSat();
+}
+
+function editorFloorplan(accent){
+  return `<svg id="floorplan" viewBox="0 0 760 520" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="bp" width="26" height="26" patternUnits="userSpaceOnUse">
+        <path d="M26 0H0V26" fill="none" stroke="#D3DEE6" stroke-width="1"/></pattern>
+      <pattern id="bp2" width="130" height="130" patternUnits="userSpaceOnUse">
+        <path d="M130 0H0V130" fill="none" stroke="#B9C7D1" stroke-width="1.3"/></pattern>
+    </defs>
+    <g class="floor-bg" opacity="${state.sat/100}">
+      <rect width="760" height="520" fill="#F7FAFC"/>
+      <rect width="760" height="520" fill="url(#bp)"/>
+      <rect width="760" height="520" fill="url(#bp2)"/>
+      <rect x="40" y="40" width="680" height="440" fill="none" stroke="#8FA3B0" stroke-width="2.5"/>
+      <!-- Zonen -->
+      <rect x="70" y="80" width="280" height="160" fill="#FFFFFF" stroke="#0065A5" stroke-width="1.6" stroke-dasharray="6 4"/>
+      <text x="80" y="100" font-family="IBM Plex Mono" font-size="12" fill="#0065A5" font-weight="600">SCHUTZBEREICH SB-1</text>
+      <rect x="410" y="80" width="250" height="160" fill="#FFFFFF" stroke="#0E8A6E" stroke-width="1.6" stroke-dasharray="6 4"/>
+      <text x="420" y="100" font-family="IBM Plex Mono" font-size="12" fill="#0E8A6E" font-weight="600">ANTRIEBE / IDENT</text>
+      <rect x="70" y="300" width="590" height="150" fill="#FFFFFF" stroke="#8FA3B0" stroke-width="1.4"/>
+      <text x="80" y="320" font-family="IBM Plex Mono" font-size="12" fill="#5b6b76" font-weight="600">FÖRDERLINIE</text>
+      <!-- Förderband -->
+      <line x1="90" y1="375" x2="640" y2="375" stroke="#B9C7D1" stroke-width="14" stroke-linecap="round"/>
+      <line x1="90" y1="375" x2="640" y2="375" stroke="#DCE5EB" stroke-width="8" stroke-dasharray="4 10"/>
+    </g>
+    <!-- Symbole (Beispielbestückung, farblich nach Layer) -->
+    <g class="floor-symbols" stroke-width="2" fill="none">
+      <!-- Schaltschränke L1 -->
+      <g stroke="#0065A5" fill="#E6F0F7"><rect x="95" y="120" width="34" height="26" rx="2"/><rect x="145" y="120" width="34" height="26" rx="2"/></g>
+      <!-- Roboter L2 -->
+      <g stroke="#7A3FA8"><circle cx="230" cy="150" r="14" fill="#F0E9F7"/><circle cx="300" cy="180" r="14" fill="#F0E9F7"/><circle cx="470" cy="150" r="14" fill="#F0E9F7"/><circle cx="560" cy="180" r="14" fill="#F0E9F7"/></g>
+      <!-- Ident L3: Kamera-Raute -->
+      <g stroke="#0E8A6E" fill="#E4F3EE"><path d="M600 120l14 14-14 14-14-14z"/><path d="M640 190l12 12-12 12-12-12z"/></g>
+      <!-- Not-Halt L4 (rot-orange Kreise) -->
+      <g stroke="#D9822B" fill="#FBF0E3"><circle cx="70" cy="80" r="9"/><circle cx="350" cy="80" r="9"/><circle cx="660" cy="80" r="9"/><circle cx="70" cy="240" r="9"/><circle cx="660" cy="240" r="9"/></g>
+      <!-- Sicherheit L5: Lichtgitter + Türen -->
+      <g stroke="#C0392B"><line x1="70" y1="300" x2="70" y2="360" stroke-dasharray="4 3"/><line x1="660" y1="300" x2="660" y2="360" stroke-dasharray="4 3"/>
+        <rect x="355" y="440" width="50" height="14" fill="#FBEAE8"/></g>
+    </g>
+  </svg>`;
+}
+
+/* ---------------- Editor interactions ---------------- */
+function selectLayer(id){ state.activeLayer=id; renderContent(); }
+function toggleVis(id,e){ e.stopPropagation(); state.layerVis[id]=!state.layerVis[id];
+  toast(`${id} ${state.layerVis[id]?'eingeblendet':'ausgeblendet'}`); renderContent(); }
+function zoomStep(d){ state.zoom=Math.min(2.2,Math.max(.5,state.zoom+d)); applyZoomSat();
+  const z=document.querySelector('.zoom-ctl .z'); if(z)z.textContent=Math.round(state.zoom*100)+'%'; }
+function onSat(v){ state.sat=+v; document.getElementById('satVal').textContent=v+'%';
+  const bg=document.querySelector('.floor-bg'); if(bg)bg.setAttribute('opacity',v/100); }
+function applyZoomSat(){ const fp=document.getElementById('floorplan');
+  if(fp)fp.style.transform=`scale(${state.zoom})`; }
+
+/* ---------------- Actions ---------------- */
+function toggleEdit(){ state.edit=!state.edit; if(!state.edit)toast('Änderungen gespeichert'); renderContent(); }
+function addJournal(id){
+  const inp=document.getElementById('jInput'); const v=inp.value.trim(); if(!v)return;
+  const now=new Date();
+  const z=`${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()} · ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const s=station(id); s.journal.unshift({t:v,a:'A. Berger',z}); toast('Journaleintrag hinzugefügt'); renderContent();
+}
+
+let toastTimer;
+function toast(msg){ const t=document.getElementById('toast'); document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1900); }
+
+/* ---------------- Init ---------------- */
+renderTree(); renderContent();
+</script>
+</body>
+</html>
