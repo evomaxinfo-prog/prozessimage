@@ -354,9 +354,153 @@
     .detail-top{grid-template-columns:1fr}
     .form-grid{grid-template-columns:1fr}
   }
+
+  /* ---------- Login ---------- */
+  .login-screen{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;background:#F4F7FA;transition:opacity .3s}
+  .login-screen.hide{opacity:0;pointer-events:none}
+  .login-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;
+    background:
+      radial-gradient(680px 400px at 80% -10%, rgba(0,101,165,.15), transparent 60%),
+      radial-gradient(560px 400px at 10% 110%, rgba(147,149,152,.14), transparent 60%),
+      #F4F7FA;}
+  .login-bg::before{content:"";position:absolute;inset:0;opacity:.55;
+    background-image:linear-gradient(#DCE4EB 1px,transparent 1px),linear-gradient(90deg,#DCE4EB 1px,transparent 1px);
+    background-size:32px 32px;
+    -webkit-mask-image:radial-gradient(circle at 50% 44%,#000,transparent 70%);
+            mask-image:radial-gradient(circle at 50% 44%,#000,transparent 70%);}
+  .login-card{position:relative;width:384px;max-width:calc(100vw - 36px);background:#fff;
+    border:1px solid var(--border);border-radius:16px;box-shadow:0 24px 64px rgba(20,40,60,.15);
+    padding:30px 30px 26px}
+  .login-brand{display:flex;align-items:center;gap:13px}
+  .login-brand .lb-name{font-size:18px;font-weight:600;letter-spacing:.2px}
+  .login-brand .lb-name b{color:var(--brand-blue)}
+  .login-brand .lb-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .login-brand .lb-sub .ver{font-family:var(--font-mono)}
+  .login-tenant{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;font-weight:700;
+    letter-spacing:1px;color:var(--tenant-red);background:#FBEAE8;border:1px solid #F3CFCB;
+    padding:3px 11px;border-radius:20px;margin:14px 0 22px}
+  .login-tenant .dot{width:6px;height:6px;border-radius:50%;background:var(--tenant-red)}
+  .login-h{font-size:20px;font-weight:600;margin-bottom:18px}
+  .login-field{margin-bottom:16px}
+  .login-field label{display:block;font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--muted);font-weight:600;margin-bottom:5px}
+  .login-field input{width:100%;border:none;border-bottom:1.5px solid var(--border-strong);
+    background:none;font:inherit;font-size:14.5px;color:var(--text);padding:5px 0;outline:none;transition:border-color .15s}
+  .login-field input:focus{border-bottom-color:var(--brand-blue)}
+  .login-field input::placeholder{color:#B4BFC8}
+  .pw-wrap{position:relative;display:flex;align-items:center}
+  .pw-wrap input{padding-right:32px}
+  .pw-eye{position:absolute;right:-2px;bottom:2px;width:30px;height:30px;border:none;background:none;
+    color:var(--muted);border-radius:6px;display:grid;place-items:center;transition:.12s}
+  .pw-eye:hover,.pw-eye.on{color:var(--brand-blue)}
+  .pw-strength{display:flex;gap:4px;margin-top:9px}
+  .pw-strength i{height:3px;flex:1;border-radius:3px;background:var(--panel-2);transition:.2s}
+  .login-msg{min-height:17px;font-size:12px;color:var(--tenant-red);margin:2px 0 10px;line-height:1.35}
+  .login-msg.ok{color:var(--l3)}
+  .login-btn{width:100%;border:none;background:var(--brand-blue);color:#fff;border-radius:9px;
+    padding:12px;font-size:12.5px;font-weight:600;letter-spacing:.8px;transition:.15s;margin-top:2px}
+  .login-btn:hover{background:var(--brand-blue-dark)}
+  .login-links{display:flex;justify-content:center;margin-top:16px}
+  .login-links .link{border:none;background:none;color:var(--brand-blue);font:inherit;font-size:12.5px;
+    font-weight:500;cursor:pointer;padding:4px}
+  .login-links .link:hover{text-decoration:underline}
+  .login-hint{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);
+    font-family:var(--font-mono);font-size:10.5px;color:var(--muted);text-align:center;line-height:1.6}
+  .login-foot{position:relative;margin-top:22px;font-size:11px;color:var(--muted);text-align:center;padding:0 20px}
+  @media (max-width:440px){.login-card{padding:24px 20px}}
 </style>
 </head>
 <body>
+
+<!-- ================= LOGIN ================= -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-bg"></div>
+  <div class="login-card">
+    <div class="login-brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+        <path d="M17 3 L30 9.5 L17 16 L4 9.5 Z" fill="#0065A5"/>
+        <path d="M17 12.5 L30 19 L17 25.5 L4 19 Z" fill="#3d8bc0"/>
+        <path d="M17 22 L30 28.5 L17 35 L4 28.5 Z" fill="#939598"/>
+      </svg>
+      <div>
+        <div class="lb-name">ProMod<b>X</b>gOEM</div>
+        <div class="lb-sub">Anlagendokumentation · <span class="ver">v0.24.1</span></div>
+      </div>
+    </div>
+    <div class="login-tenant"><span class="dot"></span>UMGEBUNG: TEST</div>
+
+    <!-- Panel: Anmelden -->
+    <div id="panelLogin">
+      <h1 class="login-h">Anmelden</h1>
+      <div class="login-field">
+        <label>Benutzer · E-Mail</label>
+        <input id="loginEmail" type="email" placeholder="name@evomax.de" autocomplete="username"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-field">
+        <label>Passwort</label>
+        <div class="pw-wrap">
+          <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter')doLogin()">
+          <button class="pw-eye" onclick="togglePw('loginPass',this)" title="Passwort anzeigen">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="login-msg" id="loginMsg"></div>
+      <button class="login-btn" onclick="doLogin()">ANMELDEN</button>
+      <div class="login-links">
+        <button class="link" onclick="showPanel('change')">Passwort ändern</button>
+      </div>
+      <div class="login-hint">Demo-Zugang &nbsp;·&nbsp; a.berger@evomax.de &nbsp;/&nbsp; evomax2026</div>
+    </div>
+
+    <!-- Panel: Passwort ändern -->
+    <div id="panelChange" style="display:none">
+      <h1 class="login-h">Passwort ändern</h1>
+      <div class="login-field">
+        <label>Benutzer · E-Mail</label>
+        <input id="chgEmail" type="email" placeholder="name@evomax.de" autocomplete="username">
+      </div>
+      <div class="login-field">
+        <label>Aktuelles Passwort</label>
+        <div class="pw-wrap">
+          <input id="chgOld" type="password" placeholder="••••••••" autocomplete="current-password">
+          <button class="pw-eye" onclick="togglePw('chgOld',this)" title="Passwort anzeigen">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="login-field">
+        <label>Neues Passwort</label>
+        <div class="pw-wrap">
+          <input id="chgNew" type="password" placeholder="mind. 8 Zeichen" autocomplete="new-password" oninput="updateStrength()">
+          <button class="pw-eye" onclick="togglePw('chgNew',this)" title="Passwort anzeigen">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="pw-strength" id="pwBars"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="login-field">
+        <label>Neues Passwort bestätigen</label>
+        <div class="pw-wrap">
+          <input id="chgNew2" type="password" placeholder="••••••••" autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter')doChange()">
+          <button class="pw-eye" onclick="togglePw('chgNew2',this)" title="Passwort anzeigen">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="login-msg" id="chgMsg"></div>
+      <button class="login-btn" onclick="doChange()">PASSWORT SPEICHERN</button>
+      <div class="login-links">
+        <button class="link" onclick="showPanel('login')">‹ Zurück zur Anmeldung</button>
+      </div>
+    </div>
+  </div>
+  <div class="login-foot">evomax GmbH · evolution and a maximum of efficiency for our clients</div>
+</div>
 
 <header>
   <div class="brand">
@@ -378,10 +522,10 @@
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.4-1.5 1.6-2.3 3-2.3s2.6.8 3 2.3M14 9.5h4M14 13h3"/></svg>
     </button>
     <div class="user-chip">
-      <div class="avatar">AB</div>
-      <span>A. Berger</span>
+      <div class="avatar" id="userAvatar">AB</div>
+      <span id="userName">A. Berger</span>
     </div>
-    <button class="icon-btn" title="Logout">
+    <button class="icon-btn" title="Abmelden" onclick="logout()">
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 12H3M6 8l-4 4 4 4"/></svg>
     </button>
   </div>
@@ -918,8 +1062,90 @@ let toastTimer;
 function toast(msg){ const t=document.getElementById('toast'); document.getElementById('toastMsg').textContent=msg;
   t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1900); }
 
+/* ---------------- Auth (Mockup, In-Memory) ---------------- */
+const AUTH = {email:'a.berger@evomax.de', pass:'evomax2026', loggedIn:false};
+
+function isEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+function togglePw(id,btn){ const i=document.getElementById(id); const show=i.type==='password';
+  i.type=show?'text':'password'; btn.classList.toggle('on',show); }
+
+function showPanel(which){
+  document.getElementById('panelLogin').style.display  = which==='login' ?'block':'none';
+  document.getElementById('panelChange').style.display = which==='change'?'block':'none';
+  document.getElementById('loginMsg').textContent='';
+  const cm=document.getElementById('chgMsg'); cm.textContent=''; cm.classList.remove('ok');
+  if(which==='change'){
+    const e=document.getElementById('loginEmail').value.trim();
+    if(e) document.getElementById('chgEmail').value=e;
+    setTimeout(()=>document.getElementById('chgEmail').focus(),50);
+  } else {
+    setTimeout(()=>document.getElementById('loginEmail').focus(),50);
+  }
+}
+
+function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const msg=document.getElementById('loginMsg');
+  if(!isEmail(email)){ msg.textContent='Bitte eine gültige E-Mail-Adresse eingeben.'; return; }
+  if(email.toLowerCase()!==AUTH.email.toLowerCase() || pass!==AUTH.pass){
+    msg.textContent='E-Mail oder Passwort ist nicht korrekt.'; return; }
+  msg.textContent=''; enterApp(email);
+}
+
+function enterApp(email){
+  AUTH.loggedIn=true;
+  document.getElementById('userName').textContent=email;
+  const initials=(email.split('@')[0].split(/[.\-_]/).filter(Boolean).slice(0,2)
+    .map(s=>s[0].toUpperCase()).join('')) || 'U';
+  document.getElementById('userAvatar').textContent=initials;
+  const ls=document.getElementById('loginScreen'); ls.classList.add('hide');
+  setTimeout(()=>ls.style.display='none',300);
+}
+
+function logout(){
+  AUTH.loggedIn=false;
+  const ls=document.getElementById('loginScreen');
+  ls.style.display='flex'; requestAnimationFrame(()=>ls.classList.remove('hide'));
+  document.getElementById('loginPass').value='';
+  showPanel('login');
+}
+
+function pwScore(v){ let s=0;
+  if(v.length>=8)s++; if(/[a-z]/.test(v)&&/[A-Z]/.test(v))s++; if(/\d/.test(v))s++; if(/[^A-Za-z0-9]/.test(v))s++;
+  return Math.min(s,4); }
+function updateStrength(){
+  const s=pwScore(document.getElementById('chgNew').value);
+  const col=['','#C0392B','#D9822B','#0E8A6E','#0E8A6E'][s];
+  document.querySelectorAll('#pwBars i').forEach((b,i)=>{ b.style.background = i<s ? col : 'var(--panel-2)'; });
+}
+
+function doChange(){
+  const email=document.getElementById('chgEmail').value.trim();
+  const oldp=document.getElementById('chgOld').value;
+  const np=document.getElementById('chgNew').value;
+  const np2=document.getElementById('chgNew2').value;
+  const msg=document.getElementById('chgMsg'); msg.classList.remove('ok');
+  if(!isEmail(email)){ msg.textContent='Bitte eine gültige E-Mail-Adresse eingeben.'; return; }
+  if(email.toLowerCase()!==AUTH.email.toLowerCase() || oldp!==AUTH.pass){
+    msg.textContent='E-Mail oder aktuelles Passwort ist nicht korrekt.'; return; }
+  if(np.length<8){ msg.textContent='Das neue Passwort muss mindestens 8 Zeichen haben.'; return; }
+  if(np===oldp){ msg.textContent='Das neue Passwort muss sich vom aktuellen unterscheiden.'; return; }
+  if(np!==np2){ msg.textContent='Die neuen Passwörter stimmen nicht überein.'; return; }
+  AUTH.pass=np;
+  msg.classList.add('ok'); msg.textContent='Passwort geändert. Bitte neu anmelden.';
+  ['chgOld','chgNew','chgNew2'].forEach(id=>document.getElementById(id).value='');
+  updateStrength();
+  setTimeout(()=>{ showPanel('login');
+    document.getElementById('loginEmail').value=email;
+    document.getElementById('loginPass').value='';
+    document.getElementById('loginPass').focus();
+  },1300);
+}
+
 /* ---------------- Init ---------------- */
 renderTree(); renderContent();
+showPanel('login');
 </script>
 </body>
 </html>
