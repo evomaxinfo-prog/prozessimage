@@ -41,7 +41,12 @@
     $('panelChange').style.display = which === 'change' ? 'block' : 'none';
     $('loginMsg').textContent = '';
     const cm = $('chgMsg'); cm.textContent = ''; cm.classList.remove('ok');
-    setTimeout(() => { const el = which === 'change' ? $('chgOld') : $('loginEmail'); if (el) el.focus(); }, 50);
+    if (which === 'change') { if (!$('chgEmail').value) $('chgEmail').value = $('loginEmail').value.trim(); }
+    else if (which === 'login') { if ($('chgEmail').value) $('loginEmail').value = $('chgEmail').value.trim(); }
+    setTimeout(() => {
+      const el = which === 'change' ? ($('chgEmail').value ? $('chgOld') : $('chgEmail')) : $('loginEmail');
+      if (el) el.focus();
+    }, 50);
   }
   function togglePw(id, btn) { const i = $(id); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; btn.classList.toggle('on', show); }
   function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
@@ -70,18 +75,31 @@
   }
 
   async function doChange() {
+    const email = $('chgEmail').value.trim();
     const oldp = $('chgOld').value, np = $('chgNew').value, np2 = $('chgNew2').value;
     const msg = $('chgMsg'); msg.classList.remove('ok');
+    if (!isEmail(email)) { msg.textContent = 'Bitte eine gültige E-Mail-Adresse eingeben.'; return; }
+    if (!oldp) { msg.textContent = 'Bitte das aktuelle Passwort eingeben.'; return; }
     if (np.length < 8) { msg.textContent = 'Das neue Passwort muss mindestens 8 Zeichen haben.'; return; }
     if (np === oldp) { msg.textContent = 'Das neue Passwort muss sich vom aktuellen unterscheiden.'; return; }
     if (np !== np2) { msg.textContent = 'Die neuen Passwörter stimmen nicht überein.'; return; }
+    msg.textContent = 'Passwort wird geändert …';
     try {
+      // Mit aktuellem Passwort anmelden, um einen gültigen Token zu erhalten
+      const res = await Api.login(email, oldp);
+      Api.token = res.accessToken;
+      // Passwort ändern
       await Api.changePassword(oldp, np);
+      // Session wieder schließen
+      try { await Api.logout(); } catch (e) { /* egal */ }
+      Api.token = null;
       msg.classList.add('ok'); msg.textContent = 'Passwort geändert. Bitte neu anmelden.';
+      $('loginEmail').value = email;
       ['chgOld', 'chgNew', 'chgNew2'].forEach((id) => { $(id).value = ''; }); updateStrength();
-      setTimeout(() => { Api.token = null; showLogin(); }, 1200);
+      setTimeout(() => showPanel('login'), 1200);
     } catch (e) {
-      msg.textContent = e.status === 422 ? 'Aktuelles Passwort ist nicht korrekt.' : ('Fehler: ' + e.message);
+      Api.token = null;
+      msg.textContent = e.status === 422 ? 'E-Mail oder aktuelles Passwort ist nicht korrekt.' : ('Fehler: ' + e.message);
     }
   }
 
@@ -1037,6 +1055,8 @@
     $('loginEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
     $('btnChange').addEventListener('click', doChange);
     $('chgNew').addEventListener('input', updateStrength);
+    $('chgEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('chgOld').focus(); });
+    $('chgOld').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('chgNew').focus(); });
     $('chgNew2').addEventListener('keydown', (e) => { if (e.key === 'Enter') doChange(); });
     document.querySelectorAll('.pw-eye').forEach((b) => b.addEventListener('click', () => togglePw(b.getAttribute('data-toggle'), b)));
     document.querySelectorAll('[data-panel]').forEach((b) => b.addEventListener('click', () => showPanel(b.getAttribute('data-panel'))));
