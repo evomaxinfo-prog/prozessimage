@@ -203,7 +203,7 @@
     const n = findNode(id); if (!n) return;
     state.selected = id; state.confirmDelete = null;
     if (n.type === 'werk') { renderWerk(n); }
-    else if (n.type === 'anlage') { renderAnlage(n); }
+    else if (n.type === 'anlage') { openAnlage(n); }
     else { toggleNode(id); return; }
     renderTree();
   }
@@ -279,14 +279,177 @@
     } catch (e) { /* leer lassen */ }
   }
 
-  function renderAnlage(node) {
-    $('content').innerHTML = breadcrumb(node.id) + '<div class="pad">'
-      + '<div class="detail-title" style="margin-bottom:14px"><h1>' + esc(node.name) + '</h1>'
-      + '<div class="sub">Anlage · stationId ' + esc(node.stationId || '–') + '</div></div>'
-      + '<div class="card"><div class="card-body">'
-      + '<p style="color:var(--muted)">Die vollständige Detailansicht (Stammdaten, SPS, Journal) und der Modellierungs-Editor werden in den nächsten Schritten angebunden. '
-      + 'Die API dafür ist bereits vorhanden (<span class="mono">/stations/' + esc(node.stationId || '') + '/full</span>).</p>'
-      + '</div></div></div>';
+  /* -------- Detailansicht (Schritt 2) -------- */
+  async function openAnlage(node) {
+    if (!node.stationId) {
+      $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">Für diese Anlage existiert keine Station.</div></div></div>';
+      return;
+    }
+    $('content').innerHTML = breadcrumb(node.id) + '<div class="pad" style="color:var(--muted)">Lädt …</div>';
+    try {
+      const full = await Api.getStationFull(node.stationId);
+      if (!full.nodeId) full.nodeId = node.id;
+      state.detail = full; state.detailEdit = false; state.detailDraft = null;
+      renderDetail();
+    } catch (e) {
+      $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">Detail konnte nicht geladen werden.</div></div></div>';
+    }
+  }
+
+  function fmtDate(iso) { if (!iso) return '–'; const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleDateString('de-DE'); }
+  function fmtDateTime(iso) { if (!iso) return '–'; const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); }
+
+  function schemaThumb() {
+    return '<svg viewBox="0 0 320 240" style="width:100%;height:100%;display:block">'
+      + '<defs><pattern id="tgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#E3E9EE" stroke-width="1"/></pattern></defs>'
+      + '<rect width="320" height="240" fill="#F9FBFC"/><rect width="320" height="240" fill="url(#tgrid)"/>'
+      + '<rect x="20" y="20" width="280" height="200" fill="none" stroke="#8FA3B0" stroke-width="1.6"/></svg>';
+  }
+
+  function renderDetail() {
+    const s = state.detail, ed = state.detailEdit, d = state.detailDraft || {};
+    const name = ed ? d.name : s.anlagenname;
+    const plcs = ed ? d.plcs : (s.plcs || []);
+
+    const fld = (label, val, field, auto) => '<div class="fld ' + ((ed && !auto) ? 'editing' : '') + '"><label>' + label + '</label>'
+      + (auto ? '<div class="val auto">' + esc(val || '–') + '</div>'
+        : (ed ? '<input data-field="' + field + '" value="' + esc(val == null ? '' : val) + '">'
+          : '<div class="val">' + esc(val || '–') + '</div>')) + '</div>';
+
+    const numin = 'style="width:100px;text-align:right;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font:inherit"';
+    const plcRow = (p, i) => {
+      if (!ed) {
+        return '<tr><td><div class="sps-name"><span class="sps-swatch" style="background:' + esc(p.color) + '"></span>' + esc(p.name) + '</div></td>'
+          + '<td class="num">' + (p.cycleTimeMs || 0) + '</td><td class="num">' + Number(p.retentiveBytes || 0).toLocaleString('de-DE') + '</td><td class="num">' + (p.codeMemoryKb || 0) + '</td></tr>';
+      }
+      return '<tr>'
+        + '<td><div class="sps-name"><input type="color" data-plc="' + i + '" data-pf="color" value="' + esc(p.color || '#0065A5') + '" style="width:22px;height:22px;padding:0;border:none;background:none;cursor:pointer">'
+        + '<input data-plc="' + i + '" data-pf="name" value="' + esc(p.name) + '" style="border:none;font:inherit;font-weight:600;outline:none;background:none;min-width:120px"></div></td>'
+        + '<td class="num"><input data-plc="' + i + '" data-pf="cycleTimeMs" value="' + (p.cycleTimeMs || 0) + '" ' + numin + '></td>'
+        + '<td class="num"><input data-plc="' + i + '" data-pf="retentiveBytes" value="' + (p.retentiveBytes || 0) + '" ' + numin + '></td>'
+        + '<td class="num"><input data-plc="' + i + '" data-pf="codeMemoryKb" value="' + (p.codeMemoryKb || 0) + '" ' + numin + '></td>'
+        + '<td><button class="mini-btn del" data-act="plc-del" data-idx="' + i + '" title="Zeile löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button></td></tr>';
+    };
+
+    const journal = (s.journal || []);
+    const jlist = journal.length
+      ? journal.map((j) => '<div class="j-item"><div class="j-dot"></div><div class="j-body"><div class="j-text">' + esc(j.text) + '</div><div class="j-meta">' + esc(j.author || '–') + ' · ' + fmtDateTime(j.createdAt) + '</div></div></div>').join('')
+      : '<div style="color:var(--muted);font-size:13px;padding:6px 2px">Noch keine Einträge.</div>';
+
+    const html = '<div class="pad">'
+      + '<div class="detail-top">'
+      + '<div class="preview">' + schemaThumb()
+      + '<div class="tag">' + (s.hasLayout ? 'eigenes Layout' : 'Schema-Layout · L1–L5') + '</div>'
+      + '<div class="open-hint" data-act="open-editor">MODELLIEREN ›</div></div>'
+      + '<div><div class="detail-title"><h1>' + esc(name) + '</h1><div class="sub">' + esc(s.bereich || '–') + ' · OEM ' + esc(s.oem || '–') + '</div></div>'
+      + '<div class="chips">'
+      + '<div class="chip blue"><span class="mono">v' + esc(s.anlagenversion || '–') + '</span></div>'
+      + '<div class="chip"><span class="mono">' + plcs.length + ' SPS</span></div>'
+      + '<div class="chip">' + journal.length + ' Journaleinträge</div>'
+      + '<div class="chip">Zuletzt: ' + fmtDate(s.letzteAenderung) + '</div></div>'
+      + '<div class="action-bar" style="margin-top:16px;margin-bottom:0">'
+      + '<button class="btn ' + (ed ? 'primary' : '') + '" data-act="toggle-edit">' + (ed ? 'SPEICHERN' : 'EDITIEREN') + '</button>'
+      + '<button class="btn solid-dark" data-act="open-editor">MODELLIEREN</button>'
+      + '</div></div></div>'
+
+      + '<div class="card"><div class="card-head"><h3>Stammdaten</h3>' + (ed ? '<span class="badge" style="color:#0065A5;border-color:#0065A5">Bearbeitung</span>' : '') + '</div>'
+      + '<div class="card-body"><div class="form-grid">'
+      + fld('Anlagenname', name, 'name')
+      + fld('Bereich', ed ? d.bereich : s.bereich, 'bereich')
+      + fld('OEM', ed ? d.oem : s.oem, 'oem')
+      + fld('Anlagenversion', ed ? d.anlagenversion : s.anlagenversion, 'anlagenversion')
+      + fld('Erstellt am', fmtDate(s.erstelltAm), 'ea', true)
+      + fld('Letzte Änderung', fmtDate(s.letzteAenderung), 'la', true)
+      + '<div class="fld wide ' + (ed ? 'editing' : '') + '"><label>Beschreibung</label>'
+      + (ed ? '<textarea data-field="beschreibung" rows="2" style="width:100%;resize:vertical">' + esc(d.beschreibung || '') + '</textarea>' : '<div class="val">' + esc(s.beschreibung || '–') + '</div>') + '</div>'
+      + '</div></div></div>'
+
+      + '<div class="card"><div class="card-head"><h3>SPS-Konfiguration</h3><span class="badge">' + plcs.length + ' Steuerungen</span></div>'
+      + '<div class="card-body"><table><thead><tr><th>Name</th><th class="num">Zykluszeit [ms]</th><th class="num">Remanenz [Byte]</th><th class="num">Code-AS [kByte]</th>' + (ed ? '<th></th>' : '') + '</tr></thead><tbody>'
+      + (plcs.length ? plcs.map(plcRow).join('') : '<tr><td colspan="' + (ed ? 5 : 4) + '" style="color:var(--muted)">Keine SPS erfasst.</td></tr>')
+      + '</tbody></table>'
+      + (ed ? '<button class="add-row-btn" data-act="plc-add"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> SPS HINZUFÜGEN</button>' : '')
+      + '</div></div>'
+
+      + '<div class="card"><div class="card-head"><h3>Änderungsjournal</h3><span class="badge">append-only</span></div>'
+      + '<div class="card-body"><div class="journal-list">' + jlist + '</div>'
+      + '<div class="j-add"><input id="jInput" placeholder="Neuer Eintrag …"><button data-act="journal-add"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>'
+      + '</div></div>'
+      + '</div>';
+
+    $('content').innerHTML = breadcrumb(s.nodeId) + html;
+  }
+
+  function enterEdit() {
+    const s = state.detail;
+    state.detailEdit = true;
+    state.detailDraft = {
+      name: s.anlagenname, bereich: s.bereich, oem: s.oem,
+      anlagenversion: s.anlagenversion, beschreibung: s.beschreibung,
+      plcs: (s.plcs || []).map((p) => Object.assign({}, p)), _deleted: [],
+    };
+    renderDetail();
+  }
+
+  async function saveDetail() {
+    const s = state.detail, d = state.detailDraft, sid = s.id;
+    try {
+      if ((d.name || '') !== (s.anlagenname || '')) await Api.updateNode(s.nodeId, { name: d.name });
+      const patch = {};
+      ['bereich', 'oem', 'anlagenversion', 'beschreibung'].forEach((k) => { if ((d[k] || '') !== (s[k] || '')) patch[k] = d[k]; });
+      if (Object.keys(patch).length) await Api.updateStation(sid, patch);
+      for (const id of d._deleted) await Api.deletePlc(id);
+      const orig = {}; (s.plcs || []).forEach((p) => { orig[p.id] = p; });
+      for (const p of d.plcs) {
+        const payload = { name: p.name, cycleTimeMs: +p.cycleTimeMs || 0, retentiveBytes: +p.retentiveBytes || 0, codeMemoryKb: +p.codeMemoryKb || 0, color: p.color };
+        if (!p.id) { await Api.addPlc(sid, payload); }
+        else {
+          const o = orig[p.id];
+          if (o && (o.name !== p.name || (+o.cycleTimeMs) !== (+p.cycleTimeMs) || (+o.retentiveBytes) !== (+p.retentiveBytes) || (+o.codeMemoryKb) !== (+p.codeMemoryKb) || o.color !== p.color)) {
+            await Api.updatePlc(p.id, payload);
+          }
+        }
+      }
+      toast('Gespeichert');
+    } catch (e) { toast('Speichern fehlgeschlagen: ' + e.message); }
+    state.detailEdit = false; state.detailDraft = null;
+    try { const full = await Api.getStationFull(sid); full.nodeId = s.nodeId; state.detail = full; } catch (e) { /* ignore */ }
+    await loadTree();
+    renderDetail();
+  }
+
+  async function addJournalEntry() {
+    const inp = document.getElementById('jInput'); if (!inp) return;
+    const text = inp.value.trim(); if (!text) return;
+    inp.value = '';
+    try { await Api.addJournal(state.detail.id, text); } catch (e) { toast('Journaleintrag fehlgeschlagen'); return; }
+    try { const full = await Api.getStationFull(state.detail.id); full.nodeId = state.detail.nodeId; state.detail = full; } catch (e) { /* ignore */ }
+    renderDetail();
+  }
+
+  function onContentClick(e) {
+    const el = e.target.closest('[data-act]'); if (!el) return;
+    const act = el.getAttribute('data-act');
+    if (act === 'toggle-edit') { state.detailEdit ? saveDetail() : enterEdit(); }
+    else if (act === 'plc-add') { state.detailDraft.plcs.push({ id: null, name: 'Neue SPS', cycleTimeMs: 0, retentiveBytes: 0, codeMemoryKb: 0, color: '#0065A5' }); renderDetail(); }
+    else if (act === 'plc-del') { const i = +el.getAttribute('data-idx'); const p = state.detailDraft.plcs[i]; if (p && p.id) state.detailDraft._deleted.push(p.id); state.detailDraft.plcs.splice(i, 1); renderDetail(); }
+    else if (act === 'journal-add') { addJournalEntry(); }
+    else if (act === 'open-editor') { toast('Modellierungs-Editor folgt in Schritt 3'); }
+  }
+  function onContentInput(e) {
+    if (!state.detailDraft) return;
+    const f = e.target.closest('[data-field]');
+    if (f) { state.detailDraft[f.getAttribute('data-field')] = f.value; return; }
+    const p = e.target.closest('[data-plc]');
+    if (p) {
+      const i = +p.getAttribute('data-plc'), pf = p.getAttribute('data-pf');
+      let v = p.value;
+      if (pf === 'cycleTimeMs' || pf === 'retentiveBytes' || pf === 'codeMemoryKb') v = parseInt(v || '0', 10) || 0;
+      state.detailDraft.plcs[i][pf] = v;
+    }
+  }
+  function onContentKey(e) {
+    if (e.target && e.target.id === 'jInput' && e.key === 'Enter') { e.preventDefault(); addJournalEntry(); }
   }
 
   /* ---------------- Verdrahtung ---------------- */
@@ -313,6 +476,12 @@
     ts.addEventListener('click', onTreeClick);
     ts.addEventListener('keydown', onTreeKey);
     ts.addEventListener('blur', onTreeBlur, true);
+
+    // Detailansicht (Schritt 2)
+    const c = $('content');
+    c.addEventListener('click', onContentClick);
+    c.addEventListener('input', onContentInput);
+    c.addEventListener('keydown', onContentKey);
 
     window.addEventListener('promodx:unauthorized', () => { toast('Sitzung abgelaufen'); showLogin(); });
   }
