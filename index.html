@@ -112,13 +112,21 @@
   .toggle.leaf{visibility:hidden}
   .n-icon{width:17px;height:17px;flex-shrink:0;color:var(--brand-gray);display:grid;place-items:center}
   .row.active .n-icon{color:var(--brand-blue)}
-  .n-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .n-type{font-family:var(--font-mono);font-size:9.5px;color:var(--muted);margin-left:auto;
-    opacity:0;transition:.12s;letter-spacing:.5px}
-  .row:hover .n-type{opacity:.7}
+  .n-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+  .node-tools{margin-left:auto;display:flex;gap:1px;opacity:0;transition:opacity .12s;flex-shrink:0}
+  .row:hover .node-tools{opacity:1}
+  .node-tools button{width:24px;height:24px;border:none;background:none;border-radius:5px;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+  .node-tools button:hover{background:var(--panel-2);color:var(--brand-blue)}
+  .node-tools button.del:hover{background:#fdecea;color:var(--tenant-red)}
+  .n-edit{flex:1;min-width:0;border:none;border-bottom:1.5px solid var(--brand-blue);background:none;
+    font:inherit;font-size:13px;color:var(--text);padding:1px 0;outline:none}
+  .node-confirm{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tenant-red);flex-shrink:0}
+  .node-confirm button{border:none;border-radius:5px;font:inherit;font-size:11px;font-weight:600;padding:2px 9px;cursor:pointer}
+  .node-confirm .yes{background:var(--tenant-red);color:#fff}
+  .node-confirm .no{background:var(--panel-2);color:var(--text)}
   .children{margin-left:11px;border-left:1px solid var(--border);padding-left:5px;
     overflow:hidden;max-height:0;transition:max-height .2s ease}
-  .node.open>.children{max-height:2000px}
+  .node.open>.children{max-height:6000px}
 
   /* ---------- Content ---------- */
   main.content{flex:1;overflow-y:auto;background:var(--panel);position:relative}
@@ -267,20 +275,42 @@
   .preview img{width:100%;height:100%;object-fit:cover;display:block}
   .canvas-doc.drop-hi{outline:2px dashed var(--brand-blue);outline-offset:4px}
   .placed-layer{position:absolute;inset:0;pointer-events:none}
-  .placed{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;
-    display:flex;flex-direction:column;align-items:center;z-index:3}
+  .placed{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:grab;
+    display:flex;flex-direction:column;align-items:center;z-index:3;touch-action:none;-webkit-user-select:none;user-select:none}
+  .placed:active{cursor:grabbing}
   .placed .p-sym{width:38px;height:38px;display:grid;place-items:center;background:#fff;
     border:1.8px solid currentColor;border-radius:9px;box-shadow:0 2px 8px rgba(30,42,51,.16);
-    transition:box-shadow .12s,transform .12s;-webkit-user-select:none;user-select:none}
+    transition:box-shadow .12s,transform .12s}
   .placed:hover .p-sym{box-shadow:0 5px 15px rgba(30,42,51,.24);transform:translateY(-1px)}
-  .placed.open .p-sym{outline:2px solid currentColor;outline-offset:2px}
-  .ptags{display:none;flex-direction:column;gap:4px;margin-top:7px;align-items:center;animation:tagsIn .15s ease}
-  .placed.open .ptags{display:flex}
+  .ptags{display:flex;flex-direction:column;gap:4px;margin-top:7px;align-items:center;animation:tagsIn .15s ease}
   @keyframes tagsIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
   .ptag{font-family:var(--font-mono);font-size:10px;color:var(--text);background:#fff;
     border:1px solid var(--border);border-left:3px solid currentColor;border-radius:5px;
-    padding:2px 8px;white-space:nowrap;box-shadow:0 2px 6px rgba(30,42,51,.13);display:flex;gap:6px;align-items:center}
-  .ptag b{color:var(--muted);font-weight:600;font-size:8.5px;letter-spacing:.5px;text-transform:uppercase}
+    padding:2px 8px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    box-shadow:0 2px 6px rgba(30,42,51,.13)}
+
+  /* Metatag-Dialog */
+  .modal-backdrop{position:fixed;inset:0;z-index:250;background:rgba(20,32,42,.42);
+    display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);animation:mIn .15s ease}
+  @keyframes mIn{from{opacity:0}to{opacity:1}}
+  .modal-card{background:#fff;border:1px solid var(--border);border-radius:14px;width:390px;max-width:100%;
+    box-shadow:0 24px 64px rgba(20,40,60,.24);overflow:hidden;animation:mUp .18s ease}
+  @keyframes mUp{from{transform:translateY(10px);opacity:.5}to{transform:none;opacity:1}}
+  .modal-head{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--border)}
+  .modal-sym{width:40px;height:40px;flex-shrink:0;display:grid;place-items:center;background:#fff;border:1.8px solid currentColor;border-radius:10px}
+  .modal-title{font-size:15px;font-weight:600}
+  .modal-sub{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin-top:1px}
+  .modal-x{margin-left:auto;width:32px;height:32px;border:none;background:none;border-radius:7px;color:var(--muted);font-size:22px;line-height:1;display:grid;place-items:center}
+  .modal-x:hover{background:var(--panel-2);color:var(--text)}
+  .modal-body{padding:18px}
+  .m-field{margin-bottom:14px}
+  .m-field:last-child{margin-bottom:0}
+  .m-field label{display:block;font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:5px}
+  .m-field input{width:100%;border:1px solid var(--border-strong);border-radius:8px;padding:9px 11px;font:inherit;font-size:14px;outline:none;transition:border-color .15s}
+  .m-field input:focus{border-color:var(--brand-blue)}
+  .modal-foot{display:flex;align-items:center;gap:8px;padding:14px 18px;border-top:1px solid var(--border);background:var(--panel)}
+  .del-btn{color:var(--tenant-red);border-color:transparent;background:none;padding:8px 10px}
+  .del-btn:hover{background:#fdecea;border-color:transparent;color:var(--tenant-red)}
 
   .palette{
     position:absolute;top:16px;left:16px;background:rgba(255,255,255,.96);border:1px solid var(--border);
@@ -567,7 +597,7 @@
     <div class="tree-head"><h2>Anlagenstruktur</h2></div>
     <div class="tree-scroll" id="treeScroll"></div>
     <div class="tree-foot">
-      <button class="btn-add" onclick="toast('Projekt hinzufügen')">
+      <button class="btn-add" onclick="addWerk()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
         PROJEKT HINZUFÜGEN
       </button>
@@ -577,6 +607,29 @@
 </div>
 
 <input type="file" id="layoutFile" accept="image/*" style="display:none">
+<div class="modal-backdrop" id="tagModal" style="display:none">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span class="modal-sym" id="mSym"></span>
+      <div><div class="modal-title" id="mTitle">Objekt</div><div class="modal-sub" id="mSub"></div></div>
+      <button class="modal-x" onclick="closeTagModal()" title="Schließen">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-field"><label>Metatag 1</label><input id="mTag1" placeholder="frei belegbar …" onkeydown="if(event.key==='Enter')saveTags()"></div>
+      <div class="m-field"><label>Metatag 2</label><input id="mTag2" placeholder="frei belegbar …" onkeydown="if(event.key==='Enter')saveTags()"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn del-btn" onclick="deletePlaced()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg>
+        Löschen
+      </button>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn" onclick="closeTagModal()">Abbrechen</button>
+        <button class="btn primary" onclick="saveTags()">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"><span class="tdot"></span><span id="toastMsg"></span></div>
 
 <script>
@@ -708,7 +761,7 @@ const SYM = {
 /* ---------------- State ---------------- */
 let state = {selected:null, view:'welcome', edit:false, expanded:new Set(['w1','c1','a1','k1','l1']),
   activeLayer:'L1.0', layerVis:{'L1.0':true,'L2.0':true,'L3.0':true,'L4.0':true,'L5.0':true},
-  zoom:1, sat:65};
+  zoom:1, sat:65, editingNodeId:null, confirmDelete:null};
 
 function findNode(id,nodes=TREE){
   for(const n of nodes){ if(n.id===id) return n; if(n.children){const f=findNode(id,n.children); if(f) return f;} }
@@ -731,17 +784,86 @@ function nodeHTML(n){
   const open = state.expanded.has(n.id);
   const hasKids = n.children && n.children.length;
   const active = state.selected===n.id;
+  const editing = state.editingNodeId===n.id;
+  const confirming = state.confirmDelete===n.id;
+  const child = nextType(n.type);
+  let right;
+  if(editing){
+    right = `<input class="n-edit" value="${esc(n.name)}" onclick="event.stopPropagation()"
+        onkeydown="onRenameKey(event,'${n.id}')" onblur="commitRename('${n.id}',this.value)">`;
+  } else if(confirming){
+    right = `<div class="node-confirm" onclick="event.stopPropagation()">
+        <span>Löschen?</span>
+        <button class="yes" onclick="confirmDeleteNode('${n.id}',event)">Ja</button>
+        <button class="no" onclick="cancelDelete(event)">Nein</button>
+      </div>`;
+  } else {
+    right = `<div class="node-tools">
+        ${child?`<button title="${child} hinzufügen" onclick="addChild('${n.id}',event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button>`:''}
+        <button title="Umbenennen" onclick="startRename('${n.id}',event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>
+        <button class="del" title="Löschen" onclick="askDelete('${n.id}',event)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>
+      </div>`;
+  }
   return `<div class="node ${open?'open':''}" data-id="${n.id}">
     <div class="row ${active?'active':''}" onclick="onNode('${n.id}',event)">
       <div class="toggle ${hasKids?'':'leaf'}" onclick="onToggle('${n.id}',event)">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
       </div>
       <div class="n-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${ICONS[n.type]}</svg></div>
-      <div class="n-name">${n.name}</div>
-      <div class="n-type">${n.type}</div>
+      ${editing?'':`<div class="n-name">${esc(n.name)}</div>`}
+      ${right}
     </div>
     ${hasKids?`<div class="children">${n.children.map(c=>nodeHTML(c)).join('')}</div>`:''}
   </div>`;
+}
+
+/* ---- Baum bearbeiten: hinzufügen / umbenennen / löschen ---- */
+const TYPE_ORDER=['Werk','Center','Abteilung','KST','Linie','Anlage'];
+function nextType(t){ const i=TYPE_ORDER.indexOf(t); return (i>=0 && i<TYPE_ORDER.length-1)?TYPE_ORDER[i+1]:null; }
+let nodeSeq=0;
+function newNodeId(){ return 'n'+Date.now().toString(36)+(++nodeSeq); }
+function locate(id, list=TREE, parent=null){
+  for(let i=0;i<list.length;i++){
+    if(list[i].id===id) return {parent, list, index:i, node:list[i]};
+    if(list[i].children){ const r=locate(id, list[i].children, list[i]); if(r) return r; }
+  }
+  return null;
+}
+function focusEdit(id){ setTimeout(()=>{ const el=document.querySelector(`.node[data-id="${id}"] > .row .n-edit`); if(el){ el.focus(); el.select(); } },30); }
+
+function addWerk(){
+  const id=newNodeId();
+  TREE.push({id, type:'Werk', name:'Neues Werk', children:[]});
+  state.editingNodeId=id; state.confirmDelete=null;
+  renderTree(); focusEdit(id);
+}
+function addChild(parentId,e){ e.stopPropagation();
+  const p=findNode(parentId); const ct=nextType(p.type); if(!ct) return;
+  if(!p.children) p.children=[];
+  const id=newNodeId();
+  p.children.push({id, type:ct, name:`Neue ${ct}`, children: nextType(ct)?[]:undefined});
+  state.expanded.add(parentId); state.editingNodeId=id; state.confirmDelete=null;
+  renderTree(); focusEdit(id);
+}
+function startRename(id,e){ e.stopPropagation(); state.editingNodeId=id; state.confirmDelete=null; renderTree(); focusEdit(id); }
+function onRenameKey(e,id){
+  if(e.key==='Enter'){ e.preventDefault(); commitRename(id, e.target.value); }
+  else if(e.key==='Escape'){ state.editingNodeId=null; renderTree(); }
+}
+function commitRename(id,val){
+  if(state.editingNodeId!==id) return;
+  const n=findNode(id); const v=(val||'').trim();
+  if(n && v) n.name=v;
+  state.editingNodeId=null; renderTree();
+  if(state.selected===id) renderContent();
+}
+function askDelete(id,e){ e.stopPropagation(); state.confirmDelete=id; state.editingNodeId=null; renderTree(); }
+function cancelDelete(e){ e.stopPropagation(); state.confirmDelete=null; renderTree(); }
+function confirmDeleteNode(id,e){ e.stopPropagation();
+  const loc=locate(id); if(loc) loc.list.splice(loc.index,1);
+  state.confirmDelete=null;
+  if(state.selected && !findNode(state.selected)){ state.selected=null; state.view='welcome'; }
+  renderTree(); renderContent(); toast('Gelöscht');
 }
 function onToggle(id,e){ e.stopPropagation();
   if(state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id);
@@ -1082,15 +1204,66 @@ function onCanvasDrop(e){
   const num=String(list.filter(o=>o.kind===data.kind).length+1).padStart(2,'0');
   const L=LAYERS.find(l=>l.id===state.activeLayer);
   list.push({id:'o'+(++placedSeq), kind:data.kind, name:`${base}_${num}`, color:data.color||L.color,
-    x, y, showTags:false, tags:[`${base}_${num}`, `${L.id} · ${L.name}`]});
+    layerId:state.activeLayer, x, y, tags:['','']});
   toast(`${data.name} platziert`);
   renderContent();
 }
 
-function toggleTags(oid){
-  const o=placedList(state.selected).find(x=>x.id===oid); if(!o) return;
-  o.showTags=!o.showTags; renderContent();
+/* Freies Verschieben platzierter Symbole (Pointer-Drag) */
+let dragMove=null;
+function startMove(e, oid){
+  if(e.button!==undefined && e.button!==0) return;
+  const doc=document.getElementById('canvasDoc'); if(!doc) return;
+  dragMove={oid, el:e.currentTarget, sx:e.clientX, sy:e.clientY, moved:false, doc, nx:null, ny:null};
 }
+function onMove(e){
+  if(!dragMove) return;
+  if(!dragMove.moved && Math.hypot(e.clientX-dragMove.sx, e.clientY-dragMove.sy)<4) return;
+  dragMove.moved=true;
+  const r=dragMove.doc.getBoundingClientRect();
+  const x=Math.max(3,Math.min(97,(e.clientX-r.left)/r.width*100));
+  const y=Math.max(4,Math.min(96,(e.clientY-r.top)/r.height*100));
+  dragMove.nx=x; dragMove.ny=y;
+  dragMove.el.style.left=x+'%'; dragMove.el.style.top=y+'%'; dragMove.el.style.cursor='grabbing';
+}
+function endMove(){
+  if(!dragMove) return;
+  if(dragMove.moved && dragMove.nx!=null){
+    const o=placedList(state.selected).find(x=>x.id===dragMove.oid);
+    if(o){ o.x=dragMove.nx; o.y=dragMove.ny; }
+  }
+  if(dragMove.el) dragMove.el.style.cursor='';
+  dragMove=null;
+}
+
+/* Metatag-Dialog (2 frei editierbare Metatags, gilt für alle Symbole) */
+let modalOid=null;
+function openTagModal(oid){
+  const o=placedList(state.selected).find(x=>x.id===oid); if(!o) return;
+  modalOid=oid;
+  const L=LAYERS.find(l=>l.id===o.layerId);
+  const sym=document.getElementById('mSym'); sym.style.color=o.color;
+  sym.innerHTML=`<svg width="24" height="24" viewBox="0 0 24 24">${SYM[o.kind]||SYM.box}</svg>`;
+  document.getElementById('mTitle').textContent=o.name;
+  document.getElementById('mSub').textContent=L?`${L.id} · ${L.name}`:'';
+  document.getElementById('mTag1').value=o.tags[0]||'';
+  document.getElementById('mTag2').value=o.tags[1]||'';
+  document.getElementById('tagModal').style.display='flex';
+  setTimeout(()=>{ const t=document.getElementById('mTag1'); t.focus(); t.select(); },60);
+}
+function saveTags(){
+  const o=placedList(state.selected).find(x=>x.id===modalOid);
+  if(o){ o.tags=[document.getElementById('mTag1').value.trim(), document.getElementById('mTag2').value.trim()]; }
+  closeTagModal(); toast('Metatags gespeichert'); renderContent();
+}
+function deletePlaced(){
+  const list=placedList(state.selected); const i=list.findIndex(x=>x.id===modalOid);
+  if(i>=0) list.splice(i,1);
+  closeTagModal(); toast('Objekt gelöscht'); renderContent();
+}
+function closeTagModal(){ document.getElementById('tagModal').style.display='none'; modalOid=null; }
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function editorFloorplan(){
   const img = layoutImg(state.selected);
@@ -1125,15 +1298,15 @@ function editorFloorplan(){
       </g>
     </svg>`;
   const badge = img ? `<div class="layout-badge">eigenes Layout</div>` : `<div class="layout-badge muted">Schema-Layout</div>`;
-  const placed = placedList(state.selected).map(o=>`
-    <div class="placed ${o.showTags?'open':''}" style="left:${o.x}%;top:${o.y}%;color:${o.color}"
-         ondblclick="toggleTags('${o.id}')" title="Doppelklick: Metatags">
+  const placed = placedList(state.selected).map(o=>{
+    const chips=[o.tags[0],o.tags[1]].filter(Boolean);
+    return `<div class="placed" style="left:${o.x}%;top:${o.y}%;color:${o.color}"
+         onpointerdown="startMove(event,'${o.id}')" ondblclick="openTagModal('${o.id}')"
+         title="${esc(o.name)} — ziehen zum Verschieben · Doppelklick für Metatags">
       <span class="p-sym"><svg width="26" height="26" viewBox="0 0 24 24">${SYM[o.kind]||SYM.box}</svg></span>
-      <div class="ptags">
-        <span class="ptag"><b>ID</b>${o.tags[0]}</span>
-        <span class="ptag"><b>Layer</b>${o.tags[1]}</span>
-      </div>
-    </div>`).join('');
+      ${chips.length?`<div class="ptags">${chips.map(t=>`<span class="ptag">${esc(t)}</span>`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
   return `<div class="canvas-doc" id="canvasDoc"
       ondragover="event.preventDefault();this.classList.add('drop-hi')"
       ondragleave="this.classList.remove('drop-hi')"
@@ -1247,6 +1420,10 @@ function doChange(){
 
 /* ---------------- Init ---------------- */
 document.getElementById('layoutFile').addEventListener('change', onLayoutFile);
+document.addEventListener('pointermove', onMove);
+document.addEventListener('pointerup', endMove);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeTagModal(); if(state.confirmDelete){ state.confirmDelete=null; renderTree(); } } });
+document.getElementById('tagModal').addEventListener('click', e=>{ if(e.target.id==='tagModal') closeTagModal(); });
 renderTree(); renderContent();
 showPanel('login');
 </script>
