@@ -1167,15 +1167,15 @@
     else if (act === 'tab') { a.tab = el.getAttribute('data-tab'); a.userForm = a.groupForm = a.pwForm = null; renderAdmin(); }
     else if (act === 'form-cancel') { a.userForm = a.groupForm = a.pwForm = null; renderAdmin(); }
     else if (act === 'user-new') { a.userForm = { name: '', email: '', password: '', groupId: (a.groups[0] || {}).id || '' }; renderAdmin(); }
-    else if (act === 'user-edit') { const u = a.users.find((x) => x.id === el.getAttribute('data-id')); if (u) { a.userForm = { id: u.id, name: u.name, email: u.email, groupId: u.group ? u.group.id : '', active: u.active }; renderAdmin(); } }
+    else if (act === 'user-edit') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.userForm = { id: u.id, name: u.name, email: u.email, groupId: u.group ? u.group.id : '', active: u.active }; renderAdmin(); } }
     else if (act === 'user-save') { saveUser(); }
-    else if (act === 'user-pw') { const u = a.users.find((x) => x.id === el.getAttribute('data-id')); if (u) { a.pwForm = { id: u.id, name: u.name }; renderAdmin(); } }
+    else if (act === 'user-pw') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.pwForm = { id: u.id, name: u.name }; renderAdmin(); } }
     else if (act === 'pw-save') { savePw(); }
-    else if (act === 'user-del') { const u = a.users.find((x) => x.id === el.getAttribute('data-id')); if (u && window.confirm('Benutzer „' + u.name + '" wirklich löschen?')) delUser(u.id); }
+    else if (act === 'user-del') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u && window.confirm('Benutzer „' + u.name + '" wirklich löschen?')) delUser(u.id); }
     else if (act === 'group-new') { a.groupForm = { name: '', role: 'viewer', allWerke: false, werkIds: new Set() }; renderAdmin(); }
-    else if (act === 'group-edit') { const g = a.groups.find((x) => x.id === el.getAttribute('data-id')); if (g) { a.groupForm = { id: g.id, name: g.name, role: g.role, allWerke: g.allWerke, werkIds: new Set(g.werke.map((w) => w.id)) }; renderAdmin(); } }
+    else if (act === 'group-edit') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g) { a.groupForm = { id: g.id, name: g.name, role: g.role, allWerke: g.allWerke, werkIds: new Set(g.werke.map((w) => w.id)) }; renderAdmin(); } }
     else if (act === 'group-save') { saveGroup(); }
-    else if (act === 'group-del') { const g = a.groups.find((x) => x.id === el.getAttribute('data-id')); if (g && window.confirm('Gruppe „' + g.name + '" wirklich löschen?')) delGroup(g.id); }
+    else if (act === 'group-del') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g && window.confirm('Gruppe „' + g.name + '" wirklich löschen?')) delGroup(g.id); }
   }
 
   function onAdminChange(e) {
