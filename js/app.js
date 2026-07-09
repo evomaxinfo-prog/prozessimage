@@ -290,6 +290,7 @@
       const full = await Api.getStationFull(node.stationId);
       if (!full.nodeId) full.nodeId = node.id;
       state.detail = full; state.detailEdit = false; state.detailDraft = null;
+      await ensureLayoutBlob();
       renderDetail();
     } catch (e) {
       $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">Detail konnte nicht geladen werden.</div></div></div>';
@@ -338,7 +339,9 @@
 
     const html = '<div class="pad">'
       + '<div class="detail-top">'
-      + '<div class="preview">' + schemaThumb()
+      + '<div class="preview">'
+      + ((s.hasLayout && state.layoutBlobUrl) ? '<img src="' + state.layoutBlobUrl + '" alt="Layout" style="width:100%;height:100%;object-fit:cover;display:block">' : schemaThumb())
+      + '<button class="preview-upload" data-act="detail-upload" title="Layout hochladen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (s.hasLayout ? 'Layout ersetzen' : 'Layout hochladen') + '</button>'
       + '<div class="tag">' + (s.hasLayout ? 'eigenes Layout' : 'Schema-Layout · L1–L5') + '</div>'
       + '<div class="open-hint" data-act="open-editor">MODELLIEREN ›</div></div>'
       + '<div><div class="detail-title"><h1>' + esc(name) + '</h1><div class="sub">' + esc(s.bereich || '–') + ' · OEM ' + esc(s.oem || '–') + '</div></div>'
@@ -437,6 +440,7 @@
     else if (act === 'open-editor') { openEditor(); }
     else if (act === 'editor-back') { leaveEditor(); }
     else if (act === 'editor-upload') { triggerUpload(); }
+    else if (act === 'detail-upload') { triggerUpload(); }
     else if (act === 'zoom-in') { zoomStep(0.1); }
     else if (act === 'zoom-out') { zoomStep(-0.1); }
     else if (act === 'layer-select') { selectLayer(el.getAttribute('data-layer')); }
@@ -515,11 +519,22 @@
   }
 
   async function ensureLayoutBlob() {
-    if (state.layoutBlobUrl) { URL.revokeObjectURL(state.layoutBlobUrl); state.layoutBlobUrl = null; }
+    const sid = state.detail && state.detail.id;
+    if (state.layoutBlobUrl && state.layoutBlobStation === sid && state.detail.hasLayout) return;
+    if (state.layoutBlobUrl) { URL.revokeObjectURL(state.layoutBlobUrl); state.layoutBlobUrl = null; state.layoutBlobStation = null; state.layoutDim = null; }
     if (state.detail && state.detail.hasLayout) {
       try {
-        const res = await Api.raw('/stations/' + state.detail.id + '/layout');
-        if (res.ok) { state.layoutBlobUrl = URL.createObjectURL(await res.blob()); }
+        const res = await Api.raw('/stations/' + sid + '/layout');
+        if (res.ok) {
+          state.layoutBlobUrl = URL.createObjectURL(await res.blob());
+          state.layoutBlobStation = sid;
+          state.layoutDim = await new Promise((resolve) => {
+            const im = new Image();
+            im.onload = () => resolve({ w: im.naturalWidth, h: im.naturalHeight });
+            im.onerror = () => resolve(null);
+            im.src = state.layoutBlobUrl;
+          });
+        }
       } catch (e) { /* ignore */ }
     }
   }
@@ -527,7 +542,7 @@
   function editorFloorplan() {
     const op = (state.sat || 100) / 100;
     const bg = state.layoutBlobUrl
-      ? '<img class="floor-bg floor-photo" src="' + state.layoutBlobUrl + '" alt="Anlagenlayout" style="opacity:' + op + '">'
+      ? '<img class="floor-bg floor-photo" src="' + state.layoutBlobUrl + '" alt="Anlagenlayout" style="opacity:' + op + ';object-fit:fill">'
       : '<svg class="floor-bg floor-schema" viewBox="0 0 760 520" preserveAspectRatio="xMidYMid meet" style="opacity:' + op + '" xmlns="http://www.w3.org/2000/svg">'
         + '<defs><pattern id="bp" width="26" height="26" patternUnits="userSpaceOnUse"><path d="M26 0H0V26" fill="none" stroke="#D3DEE6" stroke-width="1"/></pattern>'
         + '<pattern id="bp2" width="130" height="130" patternUnits="userSpaceOnUse"><path d="M130 0H0V130" fill="none" stroke="#B9C7D1" stroke-width="1.3"/></pattern></defs>'
@@ -546,7 +561,11 @@
         + '</div>';
     }).join('');
 
-    return '<div class="canvas-doc" id="canvasDoc">' + bg + '<div class="placed-layer">' + placed + '</div>' + badge + '</div>';
+    // Zeichenfläche übernimmt das Seitenverhältnis des Layoutbilds -> Symbole sitzen passgenau
+    const docStyle = (state.layoutBlobUrl && state.layoutDim && state.layoutDim.w && state.layoutDim.h)
+      ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
+
+    return '<div class="canvas-doc" id="canvasDoc"' + docStyle + '>' + bg + '<div class="placed-layer">' + placed + '</div>' + badge + '</div>';
   }
 
   function renderEditor() {
@@ -719,8 +738,10 @@
     try {
       await Api.uploadLayout(state.detail.id, f);
       state.detail.hasLayout = true;
+      state.layoutBlobStation = null;
       await ensureLayoutBlob();
-      toast('Layout hochgeladen'); renderEditor();
+      toast('Layout hochgeladen');
+      if (state.view === 'editor') renderEditor(); else renderDetail();
     } catch (e2) { toast('Upload fehlgeschlagen: ' + e2.message); }
   }
 

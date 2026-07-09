@@ -460,3 +460,7 @@
     font-family:var(--font-mono);font-size:10.5px;color:var(--muted);text-align:center;line-height:1.6}
   .login-foot{position:relative;margin-top:22px;font-size:11px;color:var(--muted);text-align:center;padding:0 20px}
   @media (max-width:440px){.login-card{padding:24px 20px}}
+
+/* Drag-Fix: Palette-Symbole immer über das gesamte Item ziehen (nicht das SVG separat) */
+.pal-item{ -webkit-user-select:none; user-select:none; -webkit-user-drag:element; }
+.pal-item .sym, .pal-item .sym svg, .pal-item span{ pointer-events:none; -webkit-user-drag:none; user-select:none; }
