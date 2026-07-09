@@ -934,20 +934,18 @@ function werkPlanSVG(){
     <rect width="900" height="380" fill="url(#wgrid)"/>
     <rect x="30" y="30" width="840" height="320" fill="none" stroke="#C9D2DA" stroke-width="2"/>
     <g font-family="IBM Plex Mono" font-size="11">
-      <rect x="55" y="55" width="240" height="120" fill="#E6F0F7" stroke="#0065A5" stroke-width="1.5" opacity=".9"/>
-      <text x="65" y="75" fill="#004E80" font-weight="600">Karosseriebau</text>
+      <rect x="55" y="55" width="240" height="120" fill="#FFFFFF" stroke="#8FA3B0" stroke-width="1.5"/>
+      <text x="65" y="75" fill="#1E2A33" font-weight="600">Karosseriebau</text>
       <text x="65" y="90" fill="#5b6b76">KST 4711 / 4712</text>
-      <rect x="55" y="195" width="240" height="130" fill="#E4F3EE" stroke="#0E8A6E" stroke-width="1.5" opacity=".9"/>
-      <text x="65" y="215" fill="#0a6b56" font-weight="600">Montage</text>
+      <rect x="55" y="195" width="240" height="130" fill="#FFFFFF" stroke="#8FA3B0" stroke-width="1.5"/>
+      <text x="65" y="215" fill="#1E2A33" font-weight="600">Montage</text>
       <text x="65" y="230" fill="#5b6b76">KST 4820</text>
-      <rect x="320" y="55" width="270" height="270" fill="#FBF0E3" stroke="#D9822B" stroke-width="1.5" opacity=".85"/>
-      <text x="332" y="75" fill="#a15e17" font-weight="600">Presswerk</text>
+      <rect x="320" y="55" width="270" height="270" fill="#FFFFFF" stroke="#8FA3B0" stroke-width="1.5"/>
+      <text x="332" y="75" fill="#1E2A33" font-weight="600">Presswerk</text>
       <text x="332" y="90" fill="#5b6b76">KST 3300 · Center Süd</text>
-      <rect x="615" y="55" width="230" height="270" fill="#FBEAE8" stroke="#C0392B" stroke-width="1.5" opacity=".85"/>
-      <text x="627" y="75" fill="#8f2018" font-weight="600">Logistik / Puffer</text>
+      <rect x="615" y="55" width="230" height="270" fill="#FFFFFF" stroke="#8FA3B0" stroke-width="1.5"/>
+      <text x="627" y="75" fill="#1E2A33" font-weight="600">Logistik / Puffer</text>
     </g>
-    <g fill="#0065A5"><circle cx="120" cy="130" r="5"/><circle cx="180" cy="130" r="5"/><circle cx="240" cy="130" r="5"/></g>
-    <g fill="#D9822B"><circle cx="400" cy="160" r="5"/><circle cx="460" cy="220" r="5"/><circle cx="520" cy="160" r="5"/></g>
   </svg>`;
 }
 
@@ -1048,15 +1046,10 @@ function floorplanThumb(id){
   const img=layoutImg(id);
   if(img) return `<img src="${img}" alt="Anlagenlayout">`;
   return `<svg viewBox="0 0 320 240" style="width:100%;height:100%;display:block">
+    <defs><pattern id="tgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#E3E9EE" stroke-width="1"/></pattern></defs>
     <rect width="320" height="240" fill="#F9FBFC"/>
-    <rect x="20" y="20" width="280" height="200" fill="none" stroke="#C9D2DA" stroke-width="1.5"/>
-    <rect x="45" y="50" width="90" height="70" fill="#E6F0F7" stroke="#0065A5" stroke-width="1.3"/>
-    <rect x="160" y="50" width="110" height="70" fill="#E4F3EE" stroke="#0E8A6E" stroke-width="1.3"/>
-    <rect x="45" y="140" width="225" height="55" fill="#FBF0E3" stroke="#D9822B" stroke-width="1.3"/>
-    <circle cx="80" cy="85" r="7" fill="none" stroke="#7A3FA8" stroke-width="1.5"/>
-    <circle cx="110" cy="85" r="7" fill="none" stroke="#7A3FA8" stroke-width="1.5"/>
-    <circle cx="215" cy="85" r="7" fill="none" stroke="#7A3FA8" stroke-width="1.5"/>
-    <circle cx="60" cy="167" r="4" fill="#C0392B"/><circle cx="255" cy="167" r="4" fill="#C0392B"/>
+    <rect width="320" height="240" fill="url(#tgrid)"/>
+    <rect x="20" y="20" width="280" height="200" fill="none" stroke="#8FA3B0" stroke-width="1.6"/>
   </svg>`;
 }
 
@@ -1279,24 +1272,8 @@ function editorFloorplan(){
         <rect width="760" height="520" fill="url(#bp)"/>
         <rect width="760" height="520" fill="url(#bp2)"/>
         <rect x="40" y="40" width="680" height="440" fill="none" stroke="#8FA3B0" stroke-width="2.5"/>
-        <rect x="70" y="80" width="280" height="160" fill="#FFFFFF" stroke="#0065A5" stroke-width="1.6" stroke-dasharray="6 4"/>
-        <text x="80" y="100" font-family="IBM Plex Mono" font-size="12" fill="#0065A5" font-weight="600">SCHUTZBEREICH SB-1</text>
-        <rect x="410" y="80" width="250" height="160" fill="#FFFFFF" stroke="#0E8A6E" stroke-width="1.6" stroke-dasharray="6 4"/>
-        <text x="420" y="100" font-family="IBM Plex Mono" font-size="12" fill="#0E8A6E" font-weight="600">ANTRIEBE / IDENT</text>
-        <rect x="70" y="300" width="590" height="150" fill="#FFFFFF" stroke="#8FA3B0" stroke-width="1.4"/>
-        <text x="80" y="320" font-family="IBM Plex Mono" font-size="12" fill="#5b6b76" font-weight="600">FÖRDERLINIE</text>
-        <line x1="90" y1="375" x2="640" y2="375" stroke="#B9C7D1" stroke-width="14" stroke-linecap="round"/>
-        <line x1="90" y1="375" x2="640" y2="375" stroke="#DCE5EB" stroke-width="8" stroke-dasharray="4 10"/>
       </svg>`;
-  const overlay = `<svg class="symbol-overlay" viewBox="0 0 760 520" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-      <g class="floor-symbols" stroke-width="2" fill="none">
-        <g stroke="#0065A5" fill="#E6F0F7"><rect x="95" y="120" width="34" height="26" rx="2"/><rect x="145" y="120" width="34" height="26" rx="2"/></g>
-        <g stroke="#7A3FA8"><circle cx="230" cy="150" r="14" fill="#F0E9F7"/><circle cx="300" cy="180" r="14" fill="#F0E9F7"/><circle cx="470" cy="150" r="14" fill="#F0E9F7"/><circle cx="560" cy="180" r="14" fill="#F0E9F7"/></g>
-        <g stroke="#0E8A6E" fill="#E4F3EE"><path d="M600 120l14 14-14 14-14-14z"/><path d="M640 190l12 12-12 12-12-12z"/></g>
-        <g stroke="#D9822B" fill="#FBF0E3"><circle cx="70" cy="80" r="9"/><circle cx="350" cy="80" r="9"/><circle cx="660" cy="80" r="9"/><circle cx="70" cy="240" r="9"/><circle cx="660" cy="240" r="9"/></g>
-        <g stroke="#C0392B"><line x1="70" y1="300" x2="70" y2="360" stroke-dasharray="4 3"/><line x1="660" y1="300" x2="660" y2="360" stroke-dasharray="4 3"/><rect x="355" y="440" width="50" height="14" fill="#FBEAE8"/></g>
-      </g>
-    </svg>`;
+  const overlay = '';
   const badge = img ? `<div class="layout-badge">eigenes Layout</div>` : `<div class="layout-badge muted">Schema-Layout</div>`;
   const placed = placedList(state.selected).map(o=>{
     const chips=[o.tags[0],o.tags[1]].filter(Boolean);
