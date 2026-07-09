@@ -5,6 +5,8 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+  const PLC_COLORS = ['#0065A5', '#C0392B', '#0E8A6E', '#D9822B', '#7A3FA8', '#2C82C9', '#16A085', '#E67E22'];
 
   const TYPE_ORDER = ['werk', 'center', 'abteilung', 'kst', 'linie', 'anlage'];
   const TYPE_LABEL = { werk: 'Werk', center: 'Center', abteilung: 'Abteilung', kst: 'KST', linie: 'Linie', anlage: 'Anlage' };
@@ -22,6 +24,7 @@
   const state = {
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
+    drawZone: false, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null,
   };
 
   /* ---------------- Toast ---------------- */
@@ -198,6 +201,15 @@
   }
 
   function toggleNode(id) { if (state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id); renderTree(); }
+
+  function allExpandableIds() {
+    const ids = [];
+    const walk = (nodes) => nodes.forEach((n) => { if (n.children && n.children.length) { ids.push(n.id); walk(n.children); } });
+    walk(state.tree);
+    return ids;
+  }
+  function expandAll() { state.expanded = new Set(allExpandableIds()); renderTree(); }
+  function collapseAll() { state.expanded = new Set(); renderTree(); }
 
   function selectNode(id) {
     const n = findNode(id); if (!n) return;
@@ -431,10 +443,23 @@
   }
 
   function onContentClick(e) {
+    // Schutzbereich zeichnen: Klick auf die Zeichenfläche setzt Stützpunkte
+    if (state.drawZone) {
+      const doc = e.target.closest('#canvasDoc');
+      if (doc) {
+        const r = doc.getBoundingClientRect();
+        const x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+        if (state.zoneDraft.length >= 3) {
+          const f = state.zoneDraft[0];
+          if (Math.hypot((f.x - x) * r.width, (f.y - y) * r.height) < 12) { finishZone(); return; }
+        }
+        state.zoneDraft.push({ x, y }); renderEditor(); return;
+      }
+    }
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.getAttribute('data-act');
     if (act === 'toggle-edit') { state.detailEdit ? saveDetail() : enterEdit(); }
-    else if (act === 'plc-add') { state.detailDraft.plcs.push({ id: null, name: 'Neue SPS', cycleTimeMs: 0, retentiveBytes: 0, codeMemoryKb: 0, color: '#0065A5' }); renderDetail(); }
+    else if (act === 'plc-add') { state.detailDraft.plcs.push({ id: null, name: 'Neue SPS', cycleTimeMs: 0, retentiveBytes: 0, codeMemoryKb: 0, color: PLC_COLORS[state.detailDraft.plcs.length % PLC_COLORS.length] }); renderDetail(); }
     else if (act === 'plc-del') { const i = +el.getAttribute('data-idx'); const p = state.detailDraft.plcs[i]; if (p && p.id) state.detailDraft._deleted.push(p.id); state.detailDraft.plcs.splice(i, 1); renderDetail(); }
     else if (act === 'journal-add') { addJournalEntry(); }
     else if (act === 'open-editor') { openEditor(); }
@@ -450,6 +475,7 @@
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
     else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
+    else if (act === 'toggle-zone') { state.drawZone = !state.drawZone; state.zoneDraft = []; state.zoneCursor = null; if (state.drawZone) state.selectedZone = null; renderEditor(); }
   }
   function onContentInput(e) {
     if (e.target && e.target.id === 'satRange') { onSat(e.target.value); return; }
@@ -552,7 +578,7 @@
 
     const visible = {};
     (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
-    const placed = (state.detail.objects || []).filter((o) => visible[o.layerId] !== false).map((o) => {
+    const placed = (state.detail.objects || []).filter((o) => o.symbolType !== 'sb_zone' && visible[o.layerId] !== false).map((o) => {
       const chips = o.metatags.map((m) => m.value).filter(Boolean);
       return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(o.color) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
@@ -565,7 +591,34 @@
     const docStyle = (state.layoutBlobUrl && state.layoutDim && state.layoutDim.w && state.layoutDim.h)
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
-    return '<div class="canvas-doc" id="canvasDoc"' + docStyle + '>' + bg + '<div class="placed-layer">' + placed + '</div>' + badge + '</div>';
+    return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
+      + bg + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + zoneHandleLayer() + badge + '</div>';
+  }
+
+  function zoneOverlaySvg(visible) {
+    const zones = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
+    const polys = zones.map((z) => {
+      const pts = z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' ');
+      const sel = state.selectedZone === z.id;
+      const col = esc(zoneColor(z));
+      return '<polygon id="zone-poly-' + z.id + '" points="' + pts + '" fill="' + col + '" fill-opacity="0.13" stroke="' + col + '" stroke-width="' + (sel ? 2.4 : 1.6) + '" ' + (sel ? 'stroke-dasharray="4 3" ' : '') + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
+    }).join('');
+    let draft = '';
+    if (state.drawZone && state.zoneDraft.length) {
+      const L = layerById(state.activeLayer); const col = esc(L ? L.color : '#0065A5');
+      const dpts = state.zoneDraft.map((p) => (p.x * 100) + ',' + (p.y * 100));
+      draft = '<polyline id="zone-draft" points="' + dpts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>'
+        + state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
+    }
+    return '<svg class="zone-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2">' + polys + draft + '</svg>';
+  }
+
+  function zoneHandleLayer() {
+    if (state.drawZone || !state.selectedZone) return '';
+    const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && o.symbolType === 'sb_zone' && o.points);
+    if (!z) return '';
+    return '<div class="zone-handle-layer">' + z.points.map((p, i) =>
+      '<div class="zone-vertex" data-zone="' + z.id + '" data-vidx="' + i + '" style="left:' + (p.x * 100) + '%;top:' + (p.y * 100) + '%"></div>').join('') + '</div>';
   }
 
   function renderEditor() {
@@ -581,7 +634,7 @@
       '<div class="pal-item" style="color:' + L.color + '" draggable="true" data-sym="' + sym + '" data-name="' + esc(name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
       + '<div class="sym"><svg width="22" height="22" viewBox="0 0 24 24">' + (SYM[sym] || SYM.box) + '</svg></div><span>' + esc(name) + '</span></div>').join('');
 
-    const layerStack = (state.detail.layers || []).map((l) => {
+    const layerStack = (state.detail.layers || []).slice().reverse().map((l) => {
       const act = l.id === L.id, vis = l.visible !== false;
       const eye = vis
         ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>'
@@ -621,6 +674,13 @@
       + '</div></div></div>'
       + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'
       + '<div class="layer-stack">' + layerStack + '</div>'
+      + '<div class="lp-action">'
+      + '<button class="btn zone-btn ' + (state.drawZone ? 'active' : '') + '" data-act="toggle-zone" style="width:100%;justify-content:center">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> '
+      + (state.drawZone ? 'ZEICHNEN AKTIV' : 'SB SCHUTZBEREICH') + '</button>'
+      + (state.drawZone
+        ? '<div class="zone-hint">Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab</div>'
+        : '<div class="zone-hint">Polygon zeichnen; Stützpunkte danach verschiebbar. Bereich anklicken &amp; <b>Entf</b> löscht ihn.</div>') + '</div>'
       + '<div class="objlist"><h4>Objektliste · ' + esc(L.code) + '</h4>' + objlist + '</div>'
       + '</aside></div>';
 
@@ -672,6 +732,11 @@
     try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
   }
   function onMove(e) {
+    if (state.zoneDrag) { onZoneDrag(e); return; }
+    if (state.drawZone && state.zoneDraft.length) {
+      const doc = document.getElementById('canvasDoc');
+      if (doc) { const r = doc.getBoundingClientRect(); state.zoneCursor = { x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height) }; updateDraftDom(); }
+    }
     if (!dragMove) return;
     if (!dragMove.moved && Math.hypot(e.clientX - dragMove.sx, e.clientY - dragMove.sy) < 4) return;
     dragMove.moved = true;
@@ -682,6 +747,24 @@
     dragMove.el.style.left = (x * 100) + '%'; dragMove.el.style.top = (y * 100) + '%'; dragMove.el.style.cursor = 'grabbing';
   }
   async function endMove() {
+    if (state.zoneDrag) {
+      const zd = state.zoneDrag; state.zoneDrag = null;
+      const z = (state.detail.objects || []).find((o) => o.id === zd.id);
+      if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
+        try { await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }); } catch (e2) { toast('Speichern fehlgeschlagen'); }
+        renderEditor(); return;
+      }
+      // Klick ohne Bewegung: Auswahl bzw. Doppelklick (zeitbasiert, re-render-fest)
+      if (z) {
+        const now = Date.now();
+        const dbl = state.lastZoneUp && state.lastZoneUp.id === z.id && (now - state.lastZoneUp.t) < 400;
+        state.lastZoneUp = dbl ? null : { id: z.id, t: now };
+        if (dbl) { openZoneAssignModal(z.id); return; }
+        if (state.selectedZone !== z.id) { state.selectedZone = z.id; renderEditor(); }
+        return;
+      }
+      return;
+    }
     if (!dragMove) return;
     const dm = dragMove; dragMove = null;
     if (dm.el) dm.el.style.cursor = '';
@@ -770,8 +853,181 @@
     let data; try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (_) { return; }
     if (data && data.sym) placeFromDrop(e.clientX, e.clientY, data.sym, data.name, data.color);
   }
-  function onContentDblClick(e) { const pl = e.target.closest('.placed'); if (pl) openTagModal(pl.getAttribute('data-obj')); }
-  function onContentPointerDown(e) { const pl = e.target.closest('.placed'); if (pl) startMove(e, pl.getAttribute('data-obj')); }
+  function onContentDblClick(e) {
+    if (state.drawZone) return;
+    const pl = e.target.closest('.placed');
+    if (pl) { openTagModal(pl.getAttribute('data-obj')); }
+  }
+
+  function openZoneAssignModal(zoneId) {
+    closeZoneModal();
+    const z = (state.detail.objects || []).find((o) => o.id === zoneId); if (!z) return;
+    const plcs = state.detail.plcs || [];
+    const cur = z.plcConfigId || null;
+    const rows = plcs.length
+      ? plcs.map((p) => '<button class="za-row ' + (cur === p.id ? 'sel' : '') + '" data-plc="' + p.id + '" data-color="' + esc(p.color) + '">'
+        + '<span class="za-swatch" style="background:' + esc(p.color) + '"></span><span class="za-name">' + esc(p.name) + '</span>'
+        + (cur === p.id ? '<span class="za-check">✓</span>' : '') + '</button>').join('')
+      : '<div class="za-empty">Für diese Anlage sind noch keine SPS angelegt. Lege sie in der Detailansicht an (EDITIEREN › SPS hinzufügen).</div>';
+    const html = '<div class="za-backdrop" id="zaBackdrop"><div class="za-card">'
+      + '<div class="za-head"><div><div class="za-title">Schutzbereich zuordnen</div><div class="za-sub">' + esc(z.name) + '</div></div>'
+      + '<button class="za-x" data-za="close" title="Schließen">×</button></div>'
+      + '<div class="za-body">' + rows + '</div>'
+      + '<div class="za-foot"><button class="btn ' + (cur ? 'del-btn' : '') + '" data-za="none">Keine Zuordnung</button>'
+      + '<button class="btn" data-za="close">Schließen</button></div></div></div>';
+    const wrap = document.createElement('div'); wrap.innerHTML = html;
+    document.body.appendChild(wrap.firstChild);
+    const bd = document.getElementById('zaBackdrop');
+    bd.addEventListener('click', (ev) => {
+      if (ev.target.id === 'zaBackdrop') { closeZoneModal(); return; }
+      const za = ev.target.closest('[data-za]');
+      if (za) { const a = za.getAttribute('data-za'); if (a === 'close') { closeZoneModal(); } else if (a === 'none') { assignZone(zoneId, null, null); } return; }
+      const row = ev.target.closest('.za-row');
+      if (row) assignZone(zoneId, row.getAttribute('data-plc'), row.getAttribute('data-color'));
+    });
+  }
+  function closeZoneModal() { const b = document.getElementById('zaBackdrop'); if (b) b.remove(); }
+  async function assignZone(zoneId, plcId, plcColor) {
+    const z = (state.detail.objects || []).find((o) => o.id === zoneId); if (!z) { closeZoneModal(); return; }
+    const L = layerById(z.layerId);
+    const color = plcId ? (plcColor || z.color) : (L ? L.color : z.color);
+    try {
+      await Api.updateObject(zoneId, { plcConfigId: plcId, color });
+      z.plcConfigId = plcId || null; z.color = color;
+      toast(plcId ? 'SPS zugeordnet' : 'Zuordnung entfernt');
+    } catch (e) { toast('Zuordnung fehlgeschlagen'); }
+    closeZoneModal(); renderEditor();
+  }
+  function onContentPointerDown(e) {
+    // Stützpunkt eines Schutzbereichs greifen
+    const v = e.target.closest('.zone-vertex');
+    if (v) {
+      e.preventDefault();
+      state.zoneDrag = { type: 'vertex', id: v.getAttribute('data-zone'), idx: +v.getAttribute('data-vidx'), moved: false };
+      try { v.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      return;
+    }
+    // Symbol verschieben
+    const pl = e.target.closest('.placed');
+    if (pl) { startMove(e, pl.getAttribute('data-obj')); return; }
+    // Schutzbereich auswählen / verschieben (nicht im Zeichenmodus)
+    if (!state.drawZone) {
+      const doc = e.target.closest('#canvasDoc');
+      if (doc) {
+        const r = doc.getBoundingClientRect();
+        const x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+        const z = zoneAt(x, y);
+        if (z) {
+          if (z.id === state.selectedZone) {
+            state.zoneDrag = { type: 'move', id: z.id, sx: x, sy: y, moved: false, orig: z.points.map((p) => ({ x: p.x, y: p.y })) };
+          } else {
+            state.zoneDrag = { type: 'select', id: z.id, sx: x, sy: y, moved: false };
+          }
+          try { doc.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+        } else if (state.selectedZone) {
+          state.selectedZone = null; renderEditor();
+        }
+      }
+    }
+  }
+
+  function onZoneDrag(e) {
+    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const r = doc.getBoundingClientRect();
+    const x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+    const z = (state.detail.objects || []).find((o) => o.id === state.zoneDrag.id); if (!z) return;
+    if (state.zoneDrag.type === 'vertex') {
+      z.points[state.zoneDrag.idx] = { x, y }; state.zoneDrag.moved = true; updateZoneDom(z);
+    } else if (state.zoneDrag.type === 'move') {
+      const dx = x - state.zoneDrag.sx, dy = y - state.zoneDrag.sy;
+      if (!state.zoneDrag.moved && Math.hypot(dx * r.width, dy * r.height) < 4) return;
+      state.zoneDrag.moved = true;
+      z.points = state.zoneDrag.orig.map((p) => ({ x: clamp01(p.x + dx), y: clamp01(p.y + dy) }));
+      updateZoneDom(z);
+    } else if (state.zoneDrag.type === 'select') {
+      const dx = x - state.zoneDrag.sx, dy = y - state.zoneDrag.sy;
+      if (Math.hypot(dx * r.width, dy * r.height) >= 4) state.zoneDrag.moved = true;
+    }
+  }
+
+  function zoneColor(z) {
+    if (z.plcConfigId) {
+      const p = (state.detail.plcs || []).find((x) => x.id === z.plcConfigId);
+      if (p && p.color) return p.color;
+    }
+    return z.color;
+  }
+
+  function zoneAt(x, y) {
+    const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
+    const zones = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && visible[o.layerId] !== false);
+    for (let i = zones.length - 1; i >= 0; i--) { if (pointInZone(zones[i], x, y)) return zones[i]; }
+    return null;
+  }
+  function pointInZone(z, x, y) {
+    const p = z.points; if (!p || p.length < 3) return false;
+    let inside = false;
+    for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+      const xi = p[i].x, yi = p[i].y, xj = p[j].x, yj = p[j].y;
+      const denom = (yj - yi) || 1e-9;
+      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / denom + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  async function finishZone() {
+    if (!state.drawZone || state.zoneDraft.length < 3) { toast('Mindestens 3 Stützpunkte nötig'); return; }
+    const pts = state.zoneDraft.slice();
+    const L = layerById(state.activeLayer);
+    const num = String((state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone').length + 1).padStart(2, '0');
+    state.drawZone = false; state.zoneDraft = []; state.zoneCursor = null;
+    try {
+      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Schutzbereich_' + num, symbolType: 'sb_zone', color: L.color, x: pts[0].x, y: pts[0].y, points: pts });
+      state.detail.objects.push(obj); state.selectedZone = obj.id;
+      toast('Schutzbereich erstellt');
+    } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
+    renderEditor();
+  }
+
+  async function deleteSelectedZone() {
+    const id = state.selectedZone; const z = (state.detail.objects || []).find((o) => o.id === id);
+    if (!z) return;
+    state.selectedZone = null;
+    try { await Api.deleteObject(id); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
+    state.detail.objects = state.detail.objects.filter((o) => o.id !== id);
+    toast('Schutzbereich gelöscht'); renderEditor();
+  }
+
+  function updateZoneDom(z) {
+    const poly = document.getElementById('zone-poly-' + z.id);
+    if (poly) poly.setAttribute('points', z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' '));
+    z.points.forEach((p, i) => {
+      const h = document.querySelector('.zone-vertex[data-zone="' + z.id + '"][data-vidx="' + i + '"]');
+      if (h) { h.style.left = (p.x * 100) + '%'; h.style.top = (p.y * 100) + '%'; }
+    });
+  }
+  function updateDraftDom() {
+    const pl = document.getElementById('zone-draft'); if (!pl) return;
+    const dpts = state.zoneDraft.map((p) => (p.x * 100) + ',' + (p.y * 100));
+    if (state.zoneCursor) dpts.push((state.zoneCursor.x * 100) + ',' + (state.zoneCursor.y * 100));
+    pl.setAttribute('points', dpts.join(' '));
+  }
+
+  function onEditorKey(e) {
+    if (state.view !== 'editor') return;
+    const t = document.activeElement;
+    const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
+    if (state.drawZone) {
+      if (e.key === 'Enter') { e.preventDefault(); finishZone(); }
+      else if (e.key === 'Escape') { e.preventDefault(); state.drawZone = false; state.zoneDraft = []; state.zoneCursor = null; renderEditor(); }
+      else if (e.key === 'Backspace' && !inField) { e.preventDefault(); state.zoneDraft.pop(); renderEditor(); }
+      return;
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedZone && !inField) {
+      e.preventDefault(); deleteSelectedZone();
+    }
+  }
 
   /* ---------------- Verdrahtung ---------------- */
   function wire() {
@@ -793,6 +1049,8 @@
 
     // Baum
     $('btnAddWerk').addEventListener('click', addWerk);
+    $('btnExpandAll').addEventListener('click', expandAll);
+    $('btnCollapseAll').addEventListener('click', collapseAll);
     const ts = $('treeScroll');
     ts.addEventListener('click', onTreeClick);
     ts.addEventListener('keydown', onTreeKey);
@@ -811,6 +1069,7 @@
     c.addEventListener('pointerdown', onContentPointerDown);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', endMove);
+    window.addEventListener('keydown', onEditorKey);
 
     // Layout-Upload + Metatag-Modal
     $('layoutFile').addEventListener('change', onLayoutFile);

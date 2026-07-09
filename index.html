@@ -124,7 +124,12 @@
 <!-- ================= APP ================= -->
 <div class="app">
   <aside class="tree">
-    <div class="tree-head"><h2>Anlagenstruktur</h2></div>
+    <div class="tree-head"><h2>Anlagenstruktur</h2>
+      <div class="tree-head-actions">
+        <button id="btnExpandAll" title="Alles aufklappen" aria-label="Alles aufklappen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button id="btnCollapseAll" title="Alles zuklappen" aria-label="Alles zuklappen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/></svg></button>
+      </div>
+    </div>
     <div class="tree-scroll" id="treeScroll"></div>
     <div class="tree-foot">
       <button class="btn-add" id="btnAddWerk">
