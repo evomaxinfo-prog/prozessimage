@@ -109,7 +109,7 @@
   </div>
   <div class="tenant"><span class="dot"></span><span id="tenantName">TEST</span></div>
   <div class="head-right">
-    <button class="icon-btn" title="Team / Nutzergruppe">
+    <button class="icon-btn" id="btnAdmin" title="Benutzerverwaltung" style="display:none">
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 5.5a3 3 0 0 1 0 5.7M18 20c0-2.4-1-4.3-2.6-5.3"/></svg>
     </button>
     <button class="icon-btn" title="Kontaktkarte / Profil">
@@ -171,6 +171,8 @@
     </div>
   </div>
 </div>
+
+<div id="adminOverlay"></div>
 
 <script src="js/api.js"></script>
 <script src="js/app.js"></script>

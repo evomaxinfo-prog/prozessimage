@@ -68,7 +68,7 @@
       Api.token = res.accessToken;
       msg.textContent = '';
       $('loginPass').value = '';
-      enterApp(res.user, res.tenants);
+      enterApp(res);
     } catch (e) {
       msg.textContent = e.status === 422 ? 'E-Mail oder Passwort ist nicht korrekt.' : ('Fehler: ' + e.message);
     }
@@ -108,11 +108,23 @@
       .map((s) => s[0].toUpperCase()).join('')) || 'U';
   }
 
-  function enterApp(user, tenants) {
-    state.user = user;
-    $('userName').textContent = user.email;
-    $('userAvatar').textContent = initials(user.email);
-    if (tenants && tenants[0]) $('tenantName').textContent = tenants[0].name;
+  function canEdit() { return state.role === 'editor' || state.role === 'admin'; }
+
+  function applyRoleUi() {
+    $('btnAdmin').style.display = state.isAdmin ? '' : 'none';
+    const add = $('btnAddWerk'); if (add) add.style.display = canEdit() ? '' : 'none';
+  }
+
+  function enterApp(ctx) {
+    state.user = ctx.user;
+    state.role = ctx.role || 'viewer';
+    state.isAdmin = !!ctx.isAdmin;
+    state.group = ctx.group || null;
+    state.visibleWerke = ctx.visibleWerke || null;
+    $('userName').textContent = ctx.user.email;
+    $('userAvatar').textContent = initials(ctx.user.email);
+    if (ctx.tenants && ctx.tenants[0]) $('tenantName').textContent = ctx.tenants[0].name;
+    applyRoleUi();
     const ls = $('loginScreen'); ls.classList.add('hide');
     setTimeout(() => { ls.style.display = 'none'; }, 300);
     loadTree();
@@ -130,7 +142,7 @@
     try {
       const res = await Api.me();
       $('loginScreen').style.display = 'none';
-      enterApp(res.user, res.tenants);
+      enterApp(res);
     } catch (e) {
       showLogin();
     }
@@ -170,12 +182,14 @@
       right = '<div class="node-confirm"><span>Löschen?</span>'
         + '<button class="yes" data-act="del-yes" data-id="' + n.id + '">Ja</button>'
         + '<button class="no" data-act="del-no">Nein</button></div>';
-    } else {
+    } else if (canEdit()) {
       right = '<div class="node-tools">'
         + (ct ? '<button data-act="add" data-id="' + n.id + '" title="' + TYPE_LABEL[ct] + ' hinzufügen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button>' : '')
         + '<button data-act="rename" data-id="' + n.id + '" title="Umbenennen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
         + '<button class="del" data-act="del" data-id="' + n.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
         + '</div>';
+    } else {
+      right = '';
     }
 
     return '<div class="node ' + (open ? 'open' : '') + '" data-id="' + n.id + '">'
@@ -381,7 +395,7 @@
       + '<div class="chip">' + journal.length + ' Journaleinträge</div>'
       + '<div class="chip">Zuletzt: ' + fmtDate(s.letzteAenderung) + '</div></div>'
       + '<div class="action-bar" style="margin-top:16px;margin-bottom:0">'
-      + '<button class="btn ' + (ed ? 'primary' : '') + '" data-act="toggle-edit">' + (ed ? 'SPEICHERN' : 'EDITIEREN') + '</button>'
+      + (canEdit() ? '<button class="btn ' + (ed ? 'primary' : '') + '" data-act="toggle-edit">' + (ed ? 'SPEICHERN' : 'EDITIEREN') + '</button>' : '')
       + '<button class="btn solid-dark" data-act="open-editor">MODELLIEREN</button>'
       + '</div></div></div>'
 
@@ -406,7 +420,7 @@
 
       + '<div class="card"><div class="card-head"><h3>Änderungsjournal</h3><span class="badge">append-only</span></div>'
       + '<div class="card-body"><div class="journal-list">' + jlist + '</div>'
-      + '<div class="j-add"><input id="jInput" placeholder="Neuer Eintrag …"><button data-act="journal-add"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>'
+      + (canEdit() ? '<div class="j-add"><input id="jInput" placeholder="Neuer Eintrag …"><button data-act="journal-add"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' : '')
       + '</div></div>'
       + '</div>';
 
@@ -487,7 +501,7 @@
     else if (act === 'zoom-in') { zoomStep(0.1); }
     else if (act === 'zoom-out') { zoomStep(-0.1); }
     else if (act === 'layer-select') { selectLayer(el.getAttribute('data-layer')); }
-    else if (act === 'layer-eye') { e.stopPropagation(); toggleLayerVis(el.getAttribute('data-layer')); }
+    else if (act === 'layer-eye') { e.stopPropagation(); if (!canEdit()) { toast('Nur Lesezugriff'); return; } toggleLayerVis(el.getAttribute('data-layer')); }
     else if (act === 'export-pdf') { exportFile('pdf'); }
     else if (act === 'export-csv') { exportFile('csv'); }
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
@@ -679,11 +693,11 @@
       + '<div class="editor-topbar"><div class="ttl">' + esc((state.detail.anlagenname || '').split(' · ')[0])
       + '<span class="lyr-badge" style="background:' + L.color + '">' + esc(L.code) + ' ' + esc(L.name) + '</span></div>'
       + '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'
-      + '<button class="up-btn" data-act="editor-upload"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? 'LAYOUT ERSETZEN' : 'LAYOUT HOCHLADEN') + '</button>'
+      + (canEdit() ? '<button class="up-btn" data-act="editor-upload"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? 'LAYOUT ERSETZEN' : 'LAYOUT HOCHLADEN') + '</button>' : '')
       + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>'
-      + '<div class="palette"><h4>Palette · ' + esc(L.code) + '</h4><div class="pal-grid">' + pal + '</div></div>'
+      + (canEdit() ? '<div class="palette"><h4>Palette · ' + esc(L.code) + '</h4><div class="pal-grid">' + pal + '</div></div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
@@ -692,13 +706,13 @@
       + '</div></div></div>'
       + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'
       + '<div class="layer-stack">' + layerStack + '</div>'
-      + '<div class="lp-action">'
+      + (canEdit() ? ('<div class="lp-action">'
       + '<button class="btn zone-btn ' + (state.drawZone ? 'active' : '') + '" data-act="toggle-zone" style="width:100%;justify-content:center">'
       + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> '
       + (state.drawZone ? 'ZEICHNEN AKTIV' : 'SB SCHUTZBEREICH') + '</button>'
       + (state.drawZone
         ? '<div class="zone-hint">Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab</div>'
-        : '<div class="zone-hint">Polygon zeichnen; Stützpunkte danach verschiebbar. Bereich anklicken &amp; <b>Entf</b> löscht ihn.</div>') + '</div>'
+        : '<div class="zone-hint">Polygon zeichnen; Stützpunkte danach verschiebbar. Bereich anklicken &amp; <b>Entf</b> löscht ihn.</div>') + '</div>') : '')
       + '<div class="objlist"><h4>Objektliste · ' + esc(L.code) + '</h4>' + objlist + '</div>'
       + '</aside></div>';
 
@@ -706,11 +720,12 @@
   }
 
   function objCatBlock(name, list, color) {
+    const tools = canEdit();
     const rows = list.map((o) => '<div class="obj"><span class="odot" style="background:' + esc(o.color) + '"></span><span class="oname">' + esc(o.name) + '</span>'
-      + '<div class="obj-tools">'
+      + (tools ? ('<div class="obj-tools">'
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
-      + '</div></div>').join('');
+      + '</div>') : '') + '</div>').join('');
     return '<div class="obj-cat"><div class="obj-cat-head" style="color:' + color + '">' + esc(name) + '<span class="cnt">' + list.length + '</span></div>' + rows + '</div>';
   }
 
@@ -866,13 +881,14 @@
   function onContentDragOver(e) { const doc = e.target.closest('#canvasDoc'); if (doc) { e.preventDefault(); doc.classList.add('drop-hi'); } }
   function onContentDragLeave(e) { const doc = e.target.closest('#canvasDoc'); if (doc) doc.classList.remove('drop-hi'); }
   function onContentDrop(e) {
+    if (!canEdit()) return;
     const doc = e.target.closest('#canvasDoc'); if (!doc) return;
     e.preventDefault(); doc.classList.remove('drop-hi');
     let data; try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (_) { return; }
     if (data && data.sym) placeFromDrop(e.clientX, e.clientY, data.sym, data.name, data.color);
   }
   function onContentDblClick(e) {
-    if (state.drawZone) return;
+    if (!canEdit() || state.drawZone) return;
     const pl = e.target.closest('.placed');
     if (pl) { openTagModal(pl.getAttribute('data-obj')); }
   }
@@ -917,6 +933,7 @@
     closeZoneModal(); renderEditor();
   }
   function onContentPointerDown(e) {
+    if (!canEdit()) return;
     // Stützpunkt eines Schutzbereichs greifen
     const v = e.target.closest('.zone-vertex');
     if (v) {
@@ -1033,7 +1050,7 @@
   }
 
   function onEditorKey(e) {
-    if (state.view !== 'editor') return;
+    if (state.view !== 'editor' || !canEdit()) return;
     const t = document.activeElement;
     const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
     if (state.drawZone) {
@@ -1045,6 +1062,185 @@
     if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedZone && !inField) {
       e.preventDefault(); deleteSelectedZone();
     }
+  }
+
+  /* ================= Benutzerverwaltung (admin) ================= */
+  const ROLE_LABEL = { admin: 'Administrator', editor: 'Editor', viewer: 'Betrachter' };
+  function roleLabel(r) { return ROLE_LABEL[r] || r; }
+
+  async function openAdmin() {
+    if (!state.isAdmin) return;
+    state.admin = { tab: 'users', groups: [], users: [], werke: [], userForm: null, groupForm: null, pwForm: null, loading: true };
+    renderAdmin();
+    try {
+      const [groups, users, werke] = await Promise.all([Api.getGroups(), Api.getUsers(), Api.getWerke()]);
+      state.admin.groups = groups; state.admin.users = users; state.admin.werke = werke;
+    } catch (e) { toast('Verwaltung konnte nicht geladen werden'); }
+    state.admin.loading = false;
+    renderAdmin();
+  }
+  function closeAdmin() { state.admin = null; $('adminOverlay').innerHTML = ''; }
+
+  function renderAdmin() {
+    const a = state.admin;
+    if (!a) { $('adminOverlay').innerHTML = ''; return; }
+    const tabBtn = (id, label) => '<button class="adm-tab ' + (a.tab === id ? 'active' : '') + '" data-adm="tab" data-tab="' + id + '">' + label + '</button>';
+    let body;
+    if (a.loading) body = '<div class="adm-loading">Lädt …</div>';
+    else if (a.pwForm) body = renderPwForm(a);
+    else if (a.tab === 'users') body = a.userForm ? renderUserForm(a) : renderAdminUsers(a);
+    else body = a.groupForm ? renderGroupForm(a) : renderAdminGroups(a);
+    $('adminOverlay').innerHTML = '<div class="adm-backdrop" id="admBackdrop"><div class="adm-card">'
+      + '<div class="adm-head"><div class="adm-title">Benutzerverwaltung</div>'
+      + '<div class="adm-tabs">' + tabBtn('users', 'Benutzer') + tabBtn('groups', 'Gruppen') + '</div>'
+      + '<button class="adm-x" data-adm="close" title="Schließen">×</button></div>'
+      + '<div class="adm-body">' + body + '</div></div></div>';
+  }
+
+  function renderAdminUsers(a) {
+    const rows = a.users.length ? a.users.map((u) =>
+      '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td>'
+      + '<td>' + (u.group ? esc(u.group.name) + ' <span class="adm-role r-' + u.group.role + '">' + roleLabel(u.group.role) + '</span>' : '—') + '</td>'
+      + '<td>' + (u.active ? '<span class="adm-ok">aktiv</span>' : '<span class="adm-off">deaktiviert</span>') + '</td>'
+      + '<td class="adm-actions">'
+      + '<button data-adm="user-edit" data-id="' + u.id + '" title="Bearbeiten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
+      + '<button data-adm="user-pw" data-id="' + u.id + '" title="Passwort zurücksetzen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l2 2M14 9l2 2"/></svg></button>'
+      + '<button class="del" data-adm="user-del" data-id="' + u.id + '" title="Löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
+      + '</td></tr>').join('') : '<tr><td colspan="5" class="adm-empty">Noch keine Benutzer.</td></tr>';
+    return '<div class="adm-toolbar"><button class="btn primary" data-adm="user-new">+ Benutzer hinzufügen</button></div>'
+      + '<table class="adm-table"><thead><tr><th>Name</th><th>E-Mail</th><th>Gruppe</th><th>Status</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function renderUserForm(a) {
+    const f = a.userForm, isNew = !f.id;
+    const opts = a.groups.map((g) => '<option value="' + g.id + '"' + (f.groupId === g.id ? ' selected' : '') + '>' + esc(g.name) + ' · ' + roleLabel(g.role) + '</option>').join('');
+    return '<div class="adm-form"><h3>' + (isNew ? 'Neuer Benutzer' : 'Benutzer bearbeiten') + '</h3>'
+      + '<label>Name</label><input id="admUName" value="' + esc(f.name || '') + '">'
+      + '<label>E-Mail</label><input id="admUEmail" type="email" value="' + esc(f.email || '') + '"' + (isNew ? '' : ' disabled') + '>'
+      + (isNew ? '<label>Startpasswort</label><input id="admUPass" type="text" placeholder="mind. 8 Zeichen">' : '')
+      + '<label>Gruppe</label><select id="admUGroup">' + (opts || '<option value="">— keine Gruppen —</option>') + '</select>'
+      + (isNew ? '' : '<label class="adm-check"><input type="checkbox" id="admUActive"' + (f.active ? ' checked' : '') + '> aktiv</label>')
+      + '<div class="adm-msg" id="admMsg"></div>'
+      + '<div class="adm-form-actions"><button class="btn" data-adm="form-cancel">Abbrechen</button><button class="btn primary" data-adm="user-save">Speichern</button></div></div>';
+  }
+
+  function renderPwForm(a) {
+    const f = a.pwForm;
+    return '<div class="adm-form"><h3>Passwort zurücksetzen</h3><p class="adm-sub">' + esc(f.name) + '</p>'
+      + '<label>Neues Passwort</label><input id="admPw" type="text" placeholder="mind. 8 Zeichen">'
+      + '<div class="adm-msg" id="admMsg"></div>'
+      + '<div class="adm-form-actions"><button class="btn" data-adm="form-cancel">Abbrechen</button><button class="btn primary" data-adm="pw-save">Setzen</button></div></div>';
+  }
+
+  function renderAdminGroups(a) {
+    const rows = a.groups.length ? a.groups.map((g) =>
+      '<tr><td>' + esc(g.name) + '</td><td><span class="adm-role r-' + g.role + '">' + roleLabel(g.role) + '</span></td>'
+      + '<td>' + (g.allWerke ? '<i>alle Werke</i>' : (g.werke.length ? g.werke.map((w) => esc(w.name)).join(', ') : '—')) + '</td>'
+      + '<td>' + g.userCount + '</td>'
+      + '<td class="adm-actions">'
+      + '<button data-adm="group-edit" data-id="' + g.id + '" title="Bearbeiten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
+      + '<button class="del" data-adm="group-del" data-id="' + g.id + '" title="Löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
+      + '</td></tr>').join('') : '<tr><td colspan="5" class="adm-empty">Noch keine Gruppen.</td></tr>';
+    return '<div class="adm-toolbar"><button class="btn primary" data-adm="group-new">+ Gruppe hinzufügen</button></div>'
+      + '<table class="adm-table"><thead><tr><th>Name</th><th>Rolle</th><th>Werke</th><th>Mitglieder</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function renderGroupForm(a) {
+    const f = a.groupForm, isNew = !f.id;
+    const roleOpts = ['viewer', 'editor', 'admin'].map((r) => '<option value="' + r + '"' + (f.role === r ? ' selected' : '') + '>' + roleLabel(r) + '</option>').join('');
+    const werkChecks = a.werke.length ? a.werke.map((w) => '<label class="adm-werk"><input type="checkbox" class="admWerk" value="' + w.id + '"' + (f.werkIds.has(w.id) ? ' checked' : '') + (f.allWerke ? ' disabled' : '') + '> ' + esc(w.name) + '</label>').join('') : '<div class="adm-empty">Keine Werke vorhanden.</div>';
+    return '<div class="adm-form"><h3>' + (isNew ? 'Neue Gruppe' : 'Gruppe bearbeiten') + '</h3>'
+      + '<label>Name</label><input id="admGName" value="' + esc(f.name || '') + '">'
+      + '<label>Rolle</label><select id="admGRole">' + roleOpts + '</select>'
+      + '<label class="adm-check"><input type="checkbox" id="admGAll" data-adm="group-allwerke"' + (f.allWerke ? ' checked' : '') + '> Alle Werke sichtbar</label>'
+      + '<label>Sichtbare Werke</label><div class="adm-werke">' + werkChecks + '</div>'
+      + '<div class="adm-msg" id="admMsg"></div>'
+      + '<div class="adm-form-actions"><button class="btn" data-adm="form-cancel">Abbrechen</button><button class="btn primary" data-adm="group-save">Speichern</button></div></div>';
+  }
+
+  function onAdminClick(e) {
+    const a = state.admin; if (!a) return;
+    if (e.target.id === 'admBackdrop') { closeAdmin(); return; }
+    const el = e.target.closest('[data-adm]'); if (!el) return;
+    const act = el.getAttribute('data-adm');
+    if (act === 'close') { closeAdmin(); }
+    else if (act === 'tab') { a.tab = el.getAttribute('data-tab'); a.userForm = a.groupForm = a.pwForm = null; renderAdmin(); }
+    else if (act === 'form-cancel') { a.userForm = a.groupForm = a.pwForm = null; renderAdmin(); }
+    else if (act === 'user-new') { a.userForm = { name: '', email: '', password: '', groupId: (a.groups[0] || {}).id || '' }; renderAdmin(); }
+    else if (act === 'user-edit') { const u = a.users.find((x) => x.id === el.getAttribute('data-id')); if (u) { a.userForm = { id: u.id, name: u.name, email: u.email, groupId: u.group ? u.group.id : '', active: u.active }; renderAdmin(); } }
+    else if (act === 'user-save') { saveUser(); }
+    else if (act === 'user-pw') { const u = a.users.find((x) => x.id === el.getAttribute('data-id')); if (u) { a.pwForm = { id: u.id, name: u.name }; renderAdmin(); } }
+    else if (act === 'pw-save') { savePw(); }
+    else if (act === 'user-del') { const u = a.users.find((x) => x.id === el.getAttribute('data-id')); if (u && window.confirm('Benutzer „' + u.name + '" wirklich löschen?')) delUser(u.id); }
+    else if (act === 'group-new') { a.groupForm = { name: '', role: 'viewer', allWerke: false, werkIds: new Set() }; renderAdmin(); }
+    else if (act === 'group-edit') { const g = a.groups.find((x) => x.id === el.getAttribute('data-id')); if (g) { a.groupForm = { id: g.id, name: g.name, role: g.role, allWerke: g.allWerke, werkIds: new Set(g.werke.map((w) => w.id)) }; renderAdmin(); } }
+    else if (act === 'group-save') { saveGroup(); }
+    else if (act === 'group-del') { const g = a.groups.find((x) => x.id === el.getAttribute('data-id')); if (g && window.confirm('Gruppe „' + g.name + '" wirklich löschen?')) delGroup(g.id); }
+  }
+
+  function onAdminChange(e) {
+    const a = state.admin; if (!a) return;
+    if (e.target.id === 'admGAll' && a.groupForm) { a.groupForm.allWerke = e.target.checked; renderAdmin(); return; }
+    if (e.target.classList && e.target.classList.contains('admWerk') && a.groupForm) {
+      const id = e.target.value;
+      if (e.target.checked) a.groupForm.werkIds.add(id); else a.groupForm.werkIds.delete(id);
+    }
+  }
+
+  async function saveUser() {
+    const a = state.admin, f = a.userForm, msg = document.getElementById('admMsg');
+    const name = document.getElementById('admUName').value.trim();
+    const groupId = document.getElementById('admUGroup').value;
+    if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
+    if (!groupId) { msg.textContent = 'Bitte eine Gruppe wählen (ggf. zuerst eine anlegen).'; return; }
+    try {
+      if (!f.id) {
+        const email = document.getElementById('admUEmail').value.trim();
+        const password = document.getElementById('admUPass').value;
+        if (!isEmail(email)) { msg.textContent = 'Bitte eine gültige E-Mail eingeben.'; return; }
+        if (password.length < 8) { msg.textContent = 'Passwort mindestens 8 Zeichen.'; return; }
+        await Api.createUser({ name, email, password, groupId });
+      } else {
+        const active = document.getElementById('admUActive').checked;
+        await Api.updateUser(f.id, { name, groupId, active });
+      }
+      a.userForm = null;
+      a.users = await Api.getUsers(); a.groups = await Api.getGroups();
+      renderAdmin(); toast('Gespeichert');
+    } catch (err) { msg.textContent = (err.data && err.data.message) || ('Fehler: ' + err.message); }
+  }
+
+  async function savePw() {
+    const a = state.admin, f = a.pwForm, msg = document.getElementById('admMsg');
+    const pw = document.getElementById('admPw').value;
+    if (pw.length < 8) { msg.textContent = 'Passwort mindestens 8 Zeichen.'; return; }
+    try { await Api.resetUserPassword(f.id, pw); a.pwForm = null; renderAdmin(); toast('Passwort gesetzt'); }
+    catch (err) { msg.textContent = (err.data && err.data.message) || ('Fehler: ' + err.message); }
+  }
+
+  async function delUser(id) {
+    try { await Api.deleteUser(id); state.admin.users = await Api.getUsers(); renderAdmin(); toast('Benutzer gelöscht'); }
+    catch (err) { toast((err.data && err.data.message) || 'Löschen fehlgeschlagen'); }
+  }
+
+  async function saveGroup() {
+    const a = state.admin, f = a.groupForm, msg = document.getElementById('admMsg');
+    const name = document.getElementById('admGName').value.trim();
+    const role = document.getElementById('admGRole').value;
+    const allWerke = document.getElementById('admGAll').checked;
+    if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
+    const werkIds = allWerke ? [] : Array.from(f.werkIds);
+    try {
+      if (!f.id) await Api.createGroup({ name, role, allWerke, werkIds });
+      else await Api.updateGroup(f.id, { name, role, allWerke, werkIds });
+      a.groupForm = null; a.groups = await Api.getGroups();
+      renderAdmin(); toast('Gespeichert');
+    } catch (err) { msg.textContent = (err.data && err.data.message) || ('Fehler: ' + err.message); }
+  }
+
+  async function delGroup(id) {
+    try { await Api.deleteGroup(id); state.admin.groups = await Api.getGroups(); renderAdmin(); toast('Gruppe gelöscht'); }
+    catch (err) { toast((err.data && err.data.message) || 'Löschen fehlgeschlagen'); }
   }
 
   /* ---------------- Verdrahtung ---------------- */
@@ -1090,6 +1286,9 @@
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', endMove);
     window.addEventListener('keydown', onEditorKey);
+    $('btnAdmin').addEventListener('click', openAdmin);
+    $('adminOverlay').addEventListener('click', onAdminClick);
+    $('adminOverlay').addEventListener('change', onAdminChange);
 
     // Layout-Upload + Metatag-Modal
     $('layoutFile').addEventListener('change', onLayoutFile);

@@ -124,6 +124,18 @@
       return data;
     },
     layoutUrl(stationId) { return API_BASE + '/stations/' + stationId + '/layout'; },
+
+    // ---- Benutzer- & Gruppenverwaltung (admin) ----
+    getWerke() { return this.request('/werke'); },
+    getGroups() { return this.request('/groups'); },
+    createGroup(data) { return this.request('/groups', { method: 'POST', body: data }); },
+    updateGroup(id, data) { return this.request('/groups/' + id, { method: 'PATCH', body: data }); },
+    deleteGroup(id) { return this.request('/groups/' + id, { method: 'DELETE' }); },
+    getUsers() { return this.request('/users'); },
+    createUser(data) { return this.request('/users', { method: 'POST', body: data }); },
+    updateUser(id, data) { return this.request('/users/' + id, { method: 'PATCH', body: data }); },
+    resetUserPassword(id, newPassword) { return this.request('/users/' + id + '/reset-password', { method: 'POST', body: { newPassword } }); },
+    deleteUser(id) { return this.request('/users/' + id, { method: 'DELETE' }); },
     exportCsvUrl(stationId) { return API_BASE + '/stations/' + stationId + '/export.csv'; },
     exportPdfUrl(stationId) { return API_BASE + '/stations/' + stationId + '/export.pdf'; },
   };
