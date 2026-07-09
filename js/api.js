@@ -103,6 +103,26 @@
     updateObject(id, patch) { return this.request('/objects/' + id, { method: 'PATCH', body: patch }); },
     deleteObject(id) { return this.request('/objects/' + id, { method: 'DELETE' }); },
     setMetatags(objectId, metatags) { return this.request('/objects/' + objectId + '/metatags', { method: 'PUT', body: { metatags } }); },
+    async uploadLayout(stationId, file) {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(API_BASE + '/stations/' + stationId + '/layout', {
+        method: 'POST',
+        headers: Object.assign(
+          { 'Accept': 'application/json' },
+          this.token ? { 'Authorization': 'Bearer ' + this.token } : {}
+        ),
+        body: fd, // KEIN Content-Type setzen – Browser setzt multipart-Boundary
+      });
+      if (res.status === 401) {
+        this.token = null;
+        global.dispatchEvent(new CustomEvent('promodx:unauthorized'));
+        throw new ApiError(401, 'Nicht angemeldet.');
+      }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new ApiError(res.status, (data && data.message) || 'Upload fehlgeschlagen.', data);
+      return data;
+    },
     layoutUrl(stationId) { return API_BASE + '/stations/' + stationId + '/layout'; },
     exportCsvUrl(stationId) { return API_BASE + '/stations/' + stationId + '/export.csv'; },
     exportPdfUrl(stationId) { return API_BASE + '/stations/' + stationId + '/export.pdf'; },

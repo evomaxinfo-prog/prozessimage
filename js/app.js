@@ -434,9 +434,21 @@
     else if (act === 'plc-add') { state.detailDraft.plcs.push({ id: null, name: 'Neue SPS', cycleTimeMs: 0, retentiveBytes: 0, codeMemoryKb: 0, color: '#0065A5' }); renderDetail(); }
     else if (act === 'plc-del') { const i = +el.getAttribute('data-idx'); const p = state.detailDraft.plcs[i]; if (p && p.id) state.detailDraft._deleted.push(p.id); state.detailDraft.plcs.splice(i, 1); renderDetail(); }
     else if (act === 'journal-add') { addJournalEntry(); }
-    else if (act === 'open-editor') { toast('Modellierungs-Editor folgt in Schritt 3'); }
+    else if (act === 'open-editor') { openEditor(); }
+    else if (act === 'editor-back') { leaveEditor(); }
+    else if (act === 'editor-upload') { triggerUpload(); }
+    else if (act === 'zoom-in') { zoomStep(0.1); }
+    else if (act === 'zoom-out') { zoomStep(-0.1); }
+    else if (act === 'layer-select') { selectLayer(el.getAttribute('data-layer')); }
+    else if (act === 'layer-eye') { e.stopPropagation(); toggleLayerVis(el.getAttribute('data-layer')); }
+    else if (act === 'export-pdf') { exportFile('pdf'); }
+    else if (act === 'export-csv') { exportFile('csv'); }
+    else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
+    else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
+    else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
   }
   function onContentInput(e) {
+    if (e.target && e.target.id === 'satRange') { onSat(e.target.value); return; }
     if (!state.detailDraft) return;
     const f = e.target.closest('[data-field]');
     if (f) { state.detailDraft[f.getAttribute('data-field')] = f.value; return; }
@@ -451,6 +463,294 @@
   function onContentKey(e) {
     if (e.target && e.target.id === 'jInput' && e.key === 'Enter') { e.preventDefault(); addJournalEntry(); }
   }
+
+  /* ================= Modellierungs-Editor (Schritt 3) ================= */
+
+  const SYM = {
+    cab: '<rect x="5" y="4" width="14" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/>',
+    zone: '<rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2.5"/>',
+    panel: '<rect x="4" y="7" width="16" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><path d="M13 10h4M13 14h4" stroke="currentColor" stroke-width="1.6"/>',
+    box: '<rect x="6" y="6" width="12" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+    robot: '<circle cx="12" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v4l5 4M12 11l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    ctrl: '<rect x="5" y="5" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="1.6"/>',
+    grip: '<path d="M12 4v6M8 10v6M16 10v6M8 10h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    cell: '<path d="M5 5h14v14H5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="4 3"/>',
+    motor: '<circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v8M9 10l6 4M15 10l-6 4" stroke="currentColor" stroke-width="1.4"/>',
+    cam: '<rect x="4" y="8" width="12" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 11l4-2v6l-4-2" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+    rfid: '<path d="M7 8a7 7 0 0 1 0 8M10 6a11 11 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="12" r="2" fill="currentColor"/>',
+    mark: '<path d="M6 18L14 6l4 3-8 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 18l2-.5" stroke="currentColor" stroke-width="1.8"/>',
+    estop: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/>',
+    pad: '<rect x="6" y="4" width="12" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="16" r="1.2" fill="currentColor"/><path d="M9 8h6" stroke="currentColor" stroke-width="1.6"/>',
+    pull: '<path d="M5 12h14M8 9l-3 3 3 3M16 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    ack: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 12l3 3 5-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+    door: '<rect x="6" y="4" width="12" height="16" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="14.5" cy="12" r="1" fill="currentColor"/>',
+    light: '<path d="M6 4v16M18 4v16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6 8h12M6 12h12M6 16h12" stroke="currentColor" stroke-width="1.2" stroke-dasharray="1.5 2"/>',
+    switch: '<rect x="5" y="9" width="14" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="12" r="1.8" fill="currentColor"/>',
+    load: '<path d="M5 16h14M8 16V8l4-3 4 3v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  };
+
+  const LAYER_META = {
+    'L1.0': { soft: '#E6F0F7', action: 'SB EINZEICHNEN', palette: [['Schaltschrank', 'cab'], ['Schutzbereich', 'zone'], ['Bedienpult', 'panel'], ['Klemmkasten', 'box']] },
+    'L2.0': { soft: '#F0E9F7', action: 'ROBOTER SETZEN', palette: [['Roboter', 'robot'], ['Techno-Steuerung', 'ctrl'], ['Greifer', 'grip'], ['Zelle', 'cell']] },
+    'L3.0': { soft: '#E4F3EE', action: 'IDENT PLATZIEREN', palette: [['Antrieb', 'motor'], ['2D-Kamera', 'cam'], ['RFID', 'rfid'], ['Ritzpräger', 'mark']] },
+    'L4.0': { soft: '#FBF0E3', action: 'NOTHALT GENERIEREN', palette: [['Not-Halt', 'estop'], ['SmartPad', 'pad'], ['Reißleine', 'pull'], ['Quittier', 'ack']] },
+    'L5.0': { soft: '#FBEAE8', action: 'SCHUTZZAUN ZIEHEN', palette: [['Sicherheitstür', 'door'], ['Lichtgitter', 'light'], ['Sicherheitsschalter', 'switch'], ['Beladestelle', 'load']] },
+  };
+
+  function layerById(id) { return (state.detail.layers || []).find((l) => l.id === id) || null; }
+  function objectsOfLayer(id) { return (state.detail.objects || []).filter((o) => o.layerId === id); }
+
+  async function openEditor() {
+    state.view = 'editor';
+    if (!state.activeLayer && state.detail.layers && state.detail.layers[0]) state.activeLayer = state.detail.layers[0].id;
+    if (state.sat == null) state.sat = 100;
+    if (state.zoom == null) state.zoom = 1;
+    await ensureLayoutBlob();
+    renderEditor();
+  }
+  function leaveEditor() {
+    state.view = 'detail';
+    $('content').style.padding = '';
+    renderDetail();
+  }
+
+  async function ensureLayoutBlob() {
+    if (state.layoutBlobUrl) { URL.revokeObjectURL(state.layoutBlobUrl); state.layoutBlobUrl = null; }
+    if (state.detail && state.detail.hasLayout) {
+      try {
+        const res = await Api.raw('/stations/' + state.detail.id + '/layout');
+        if (res.ok) { state.layoutBlobUrl = URL.createObjectURL(await res.blob()); }
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  function editorFloorplan() {
+    const op = (state.sat || 100) / 100;
+    const bg = state.layoutBlobUrl
+      ? '<img class="floor-bg floor-photo" src="' + state.layoutBlobUrl + '" alt="Anlagenlayout" style="opacity:' + op + '">'
+      : '<svg class="floor-bg floor-schema" viewBox="0 0 760 520" preserveAspectRatio="xMidYMid meet" style="opacity:' + op + '" xmlns="http://www.w3.org/2000/svg">'
+        + '<defs><pattern id="bp" width="26" height="26" patternUnits="userSpaceOnUse"><path d="M26 0H0V26" fill="none" stroke="#D3DEE6" stroke-width="1"/></pattern>'
+        + '<pattern id="bp2" width="130" height="130" patternUnits="userSpaceOnUse"><path d="M130 0H0V130" fill="none" stroke="#B9C7D1" stroke-width="1.3"/></pattern></defs>'
+        + '<rect width="760" height="520" fill="#F7FAFC"/><rect width="760" height="520" fill="url(#bp)"/><rect width="760" height="520" fill="url(#bp2)"/>'
+        + '<rect x="40" y="40" width="680" height="440" fill="none" stroke="#8FA3B0" stroke-width="2.5"/></svg>';
+    const badge = state.layoutBlobUrl ? '<div class="layout-badge">eigenes Layout</div>' : '<div class="layout-badge muted">Schema-Layout</div>';
+
+    const visible = {};
+    (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
+    const placed = (state.detail.objects || []).filter((o) => visible[o.layerId] !== false).map((o) => {
+      const chips = o.metatags.map((m) => m.value).filter(Boolean);
+      return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(o.color) + '"'
+        + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
+        + '<span class="p-sym"><svg width="26" height="26" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg></span>'
+        + (chips.length ? '<div class="ptags">' + chips.map((t) => '<span class="ptag">' + esc(t) + '</span>').join('') + '</div>' : '')
+        + '</div>';
+    }).join('');
+
+    return '<div class="canvas-doc" id="canvasDoc">' + bg + '<div class="placed-layer">' + placed + '</div>' + badge + '</div>';
+  }
+
+  function renderEditor() {
+    const c = $('content'); c.style.padding = '0';
+    const L = layerById(state.activeLayer) || (state.detail.layers || [])[0];
+    if (!L) { c.innerHTML = '<div class="pad">Keine Ebenen vorhanden.</div>'; return; }
+    const meta = LAYER_META[L.code] || { soft: '#eef3f7', action: 'OBJEKT SETZEN', palette: [] };
+
+    const counts = {};
+    (state.detail.objects || []).forEach((o) => { counts[o.layerId] = (counts[o.layerId] || 0) + 1; });
+
+    const pal = (meta.palette || []).map(([name, sym]) =>
+      '<div class="pal-item" style="color:' + L.color + '" draggable="true" data-sym="' + sym + '" data-name="' + esc(name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
+      + '<div class="sym"><svg width="22" height="22" viewBox="0 0 24 24">' + (SYM[sym] || SYM.box) + '</svg></div><span>' + esc(name) + '</span></div>').join('');
+
+    const layerStack = (state.detail.layers || []).map((l) => {
+      const act = l.id === L.id, vis = l.visible !== false;
+      const eye = vis
+        ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>'
+        : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7c2 0 3.7.6 5.2 1.5M22 12s-3.5 7-10 7c-2 0-3.7-.6-5.2-1.5"/><path d="M4 4l16 16"/></svg>';
+      const lmeta = LAYER_META[l.code] || { soft: '#eef3f7' };
+      return '<div class="layer ' + (act ? 'active' : '') + ' ' + (vis ? '' : 'hidden') + '" style="--lc:' + l.color + ';--lc-soft:' + lmeta.soft + '" data-act="layer-select" data-layer="' + l.id + '">'
+        + '<div class="lbar"></div><div class="lmeta"><div class="lid">' + esc(l.code) + '</div><div class="lname">' + esc(l.name) + '</div><div class="lcount">' + (counts[l.id] || 0) + ' Objekte</div></div>'
+        + '<button class="eye ' + (vis ? '' : 'off') + '" data-act="layer-eye" data-layer="' + l.id + '" title="Sichtbarkeit">' + eye + '</button></div>';
+    }).join('');
+
+    // Objektliste der aktiven Ebene, nach Kategorie gruppiert
+    const objs = objectsOfLayer(L.id);
+    const cats = (L.categories || []).slice();
+    const byCat = {}; objs.forEach((o) => { const k = o.categoryId || '_'; (byCat[k] = byCat[k] || []).push(o); });
+    const catBlocks = [];
+    cats.forEach((cat) => {
+      const list = byCat[cat.id] || [];
+      catBlocks.push(objCatBlock(cat.name, list, L.color));
+    });
+    if (byCat['_'] && byCat['_'].length) catBlocks.push(objCatBlock('Ohne Kategorie', byCat['_'], L.color));
+    const objlist = catBlocks.length ? catBlocks.join('') : '<div style="color:var(--muted);font-size:13px;padding:4px 2px">Noch keine Objekte auf dieser Ebene.</div>';
+
+    c.innerHTML = '<div class="editor-wrap"><div class="canvas-col">'
+      + '<div class="editor-topbar"><div class="ttl">' + esc((state.detail.anlagenname || '').split(' · ')[0])
+      + '<span class="lyr-badge" style="background:' + L.color + '">' + esc(L.code) + ' ' + esc(L.name) + '</span></div>'
+      + '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'
+      + '<button class="up-btn" data-act="editor-upload"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? 'LAYOUT ERSETZEN' : 'LAYOUT HOCHLADEN') + '</button>'
+      + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
+      + '</div></div>'
+      + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>'
+      + '<div class="palette"><h4>Palette · ' + esc(L.code) + '</h4><div class="pal-grid">' + pal + '</div></div>'
+      + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
+      + '<div class="exp-ctl">'
+      + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
+      + '<button class="btn" data-act="export-csv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>'
+      + '<button class="btn" data-act="editor-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ZURÜCK</button>'
+      + '</div></div></div>'
+      + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'
+      + '<div class="layer-stack">' + layerStack + '</div>'
+      + '<div class="objlist"><h4>Objektliste · ' + esc(L.code) + '</h4>' + objlist + '</div>'
+      + '</aside></div>';
+
+    applyZoomSat();
+  }
+
+  function objCatBlock(name, list, color) {
+    const rows = list.map((o) => '<div class="obj"><span class="odot" style="background:' + esc(o.color) + '"></span><span class="oname">' + esc(o.name) + '</span>'
+      + '<div class="obj-tools">'
+      + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
+      + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
+      + '</div></div>').join('');
+    return '<div class="obj-cat"><div class="obj-cat-head" style="color:' + color + '">' + esc(name) + '<span class="cnt">' + list.length + '</span></div>' + rows + '</div>';
+  }
+
+  function applyZoomSat() { const doc = document.getElementById('canvasDoc'); if (doc) doc.style.transform = 'scale(' + (state.zoom || 1) + ')'; }
+  function zoomStep(d) { state.zoom = Math.min(2.2, Math.max(0.5, (state.zoom || 1) + d)); applyZoomSat(); const z = document.querySelector('.zoom-ctl .z'); if (z) z.textContent = Math.round(state.zoom * 100) + '%'; }
+  function onSat(v) { state.sat = +v; const sv = document.getElementById('satVal'); if (sv) sv.textContent = v + '%'; const bg = document.querySelector('.floor-bg'); if (bg) bg.style.opacity = (+v / 100); }
+
+  function selectLayer(id) { state.activeLayer = id; renderEditor(); }
+  async function toggleLayerVis(id) {
+    const lay = layerById(id); if (!lay) return;
+    const nv = !(lay.visible !== false); lay.visible = nv;
+    try { await Api.setLayerVisibility(state.detail.id, id, nv); } catch (e) { lay.visible = !nv; toast('Sichtbarkeit nicht gespeichert'); }
+    renderEditor();
+  }
+
+  async function placeFromDrop(clientX, clientY, sym, name, color) {
+    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const r = doc.getBoundingClientRect();
+    const x = Math.min(0.97, Math.max(0.03, (clientX - r.left) / r.width));
+    const y = Math.min(0.96, Math.max(0.04, (clientY - r.top) / r.height));
+    const L = layerById(state.activeLayer);
+    const base = (name || 'Objekt').replace(/\s+/g, '_');
+    const num = String((state.detail.objects || []).filter((o) => o.symbolType === sym).length + 1).padStart(2, '0');
+    try {
+      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: base + '_' + num, symbolType: sym, color: color || L.color, x, y });
+      state.detail.objects.push(obj);
+      toast(name + ' platziert'); renderEditor();
+    } catch (e) { toast('Platzieren fehlgeschlagen: ' + e.message); }
+  }
+
+  let dragMove = null;
+  function startMove(e, oid) {
+    if (e.button !== undefined && e.button !== 0) return;
+    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const el = e.target.closest('.placed'); if (!el) return;
+    dragMove = { oid, el, doc, sx: e.clientX, sy: e.clientY, moved: false, nx: null, ny: null };
+    try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+  }
+  function onMove(e) {
+    if (!dragMove) return;
+    if (!dragMove.moved && Math.hypot(e.clientX - dragMove.sx, e.clientY - dragMove.sy) < 4) return;
+    dragMove.moved = true;
+    const r = dragMove.doc.getBoundingClientRect();
+    const x = Math.min(0.97, Math.max(0.03, (e.clientX - r.left) / r.width));
+    const y = Math.min(0.96, Math.max(0.04, (e.clientY - r.top) / r.height));
+    dragMove.nx = x; dragMove.ny = y;
+    dragMove.el.style.left = (x * 100) + '%'; dragMove.el.style.top = (y * 100) + '%'; dragMove.el.style.cursor = 'grabbing';
+  }
+  async function endMove() {
+    if (!dragMove) return;
+    const dm = dragMove; dragMove = null;
+    if (dm.el) dm.el.style.cursor = '';
+    if (dm.moved && dm.nx != null) {
+      const o = (state.detail.objects || []).find((x) => x.id === dm.oid);
+      if (o) { o.x = dm.nx; o.y = dm.ny; try { await Api.updateObject(o.id, { x: dm.nx, y: dm.ny }); } catch (e) { toast('Verschieben nicht gespeichert'); } }
+    }
+  }
+
+  function openTagModal(oid) {
+    const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
+    state.modalObjId = oid;
+    const L = layerById(o.layerId);
+    const sym = $('mSym'); sym.style.color = o.color; sym.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg>';
+    $('mTitle').textContent = o.name;
+    $('mSub').textContent = L ? (L.code + ' · ' + L.name) : '';
+    $('mTag1').value = (o.metatags.find((m) => m.position === 1) || {}).value || '';
+    $('mTag2').value = (o.metatags.find((m) => m.position === 2) || {}).value || '';
+    $('tagModal').style.display = 'flex';
+    setTimeout(() => { $('mTag1').focus(); $('mTag1').select(); }, 60);
+  }
+  async function saveTags() {
+    const o = (state.detail.objects || []).find((x) => x.id === state.modalObjId);
+    if (!o) { closeTagModal(); return; }
+    const t1 = $('mTag1').value.trim(), t2 = $('mTag2').value.trim();
+    const metatags = [];
+    if (t1) metatags.push({ position: 1, value: t1 });
+    if (t2) metatags.push({ position: 2, value: t2 });
+    try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast('Metatags nicht gespeichert'); }
+    closeTagModal(); toast('Metatags gespeichert'); renderEditor();
+  }
+  async function deletePlaced() {
+    const oid = state.modalObjId; const o = (state.detail.objects || []).find((x) => x.id === oid);
+    closeTagModal(); if (!o) return;
+    try { await Api.deleteObject(oid); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
+    state.detail.objects = state.detail.objects.filter((x) => x.id !== oid);
+    toast('Objekt gelöscht'); renderEditor();
+  }
+  async function deleteObjectById(oid) {
+    try { await Api.deleteObject(oid); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
+    state.detail.objects = state.detail.objects.filter((x) => x.id !== oid);
+    toast('Objekt gelöscht'); renderEditor();
+  }
+  function closeTagModal() { $('tagModal').style.display = 'none'; state.modalObjId = null; }
+
+  function triggerUpload() { $('layoutFile').click(); }
+  async function onLayoutFile(e) {
+    const f = e.target.files && e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    if (!f.type.startsWith('image/')) { toast('Bitte eine Bilddatei wählen'); return; }
+    if (f.size > 8 * 1024 * 1024) { toast('Bild zu groß (max. 8 MB)'); return; }
+    if (!state.detail) { toast('Bitte zuerst eine Anlage wählen'); return; }
+    toast('Layout wird hochgeladen …');
+    try {
+      await Api.uploadLayout(state.detail.id, f);
+      state.detail.hasLayout = true;
+      await ensureLayoutBlob();
+      toast('Layout hochgeladen'); renderEditor();
+    } catch (e2) { toast('Upload fehlgeschlagen: ' + e2.message); }
+  }
+
+  async function exportFile(kind) {
+    try {
+      const res = await Api.raw('/stations/' + state.detail.id + '/export.' + kind);
+      if (!res.ok) { toast('Export fehlgeschlagen'); return; }
+      const url = URL.createObjectURL(await res.blob());
+      if (kind === 'pdf') { window.open(url, '_blank'); }
+      else { const a = document.createElement('a'); a.href = url; a.download = (state.detail.anlagenname || 'anlage').replace(/[^A-Za-z0-9_\-]+/g, '_') + '.csv'; document.body.appendChild(a); a.click(); a.remove(); }
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) { toast('Export fehlgeschlagen'); }
+  }
+
+  // Editor-spezifische Content-Handler (Drag & Drop, Move, Doppelklick)
+  function onContentDragStart(e) {
+    const p = e.target.closest('.pal-item'); if (!p) return;
+    e.dataTransfer.setData('text/plain', JSON.stringify({ sym: p.getAttribute('data-sym'), name: p.getAttribute('data-name'), color: p.getAttribute('data-color') }));
+    e.dataTransfer.effectAllowed = 'copy';
+  }
+  function onContentDragOver(e) { const doc = e.target.closest('#canvasDoc'); if (doc) { e.preventDefault(); doc.classList.add('drop-hi'); } }
+  function onContentDragLeave(e) { const doc = e.target.closest('#canvasDoc'); if (doc) doc.classList.remove('drop-hi'); }
+  function onContentDrop(e) {
+    const doc = e.target.closest('#canvasDoc'); if (!doc) return;
+    e.preventDefault(); doc.classList.remove('drop-hi');
+    let data; try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (_) { return; }
+    if (data && data.sym) placeFromDrop(e.clientX, e.clientY, data.sym, data.name, data.color);
+  }
+  function onContentDblClick(e) { const pl = e.target.closest('.placed'); if (pl) openTagModal(pl.getAttribute('data-obj')); }
+  function onContentPointerDown(e) { const pl = e.target.closest('.placed'); if (pl) startMove(e, pl.getAttribute('data-obj')); }
 
   /* ---------------- Verdrahtung ---------------- */
   function wire() {
@@ -477,11 +777,29 @@
     ts.addEventListener('keydown', onTreeKey);
     ts.addEventListener('blur', onTreeBlur, true);
 
-    // Detailansicht (Schritt 2)
+    // Detailansicht (Schritt 2) + Editor (Schritt 3)
     const c = $('content');
     c.addEventListener('click', onContentClick);
     c.addEventListener('input', onContentInput);
     c.addEventListener('keydown', onContentKey);
+    c.addEventListener('dragstart', onContentDragStart);
+    c.addEventListener('dragover', onContentDragOver);
+    c.addEventListener('dragleave', onContentDragLeave);
+    c.addEventListener('drop', onContentDrop);
+    c.addEventListener('dblclick', onContentDblClick);
+    c.addEventListener('pointerdown', onContentPointerDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', endMove);
+
+    // Layout-Upload + Metatag-Modal
+    $('layoutFile').addEventListener('change', onLayoutFile);
+    $('mSave').addEventListener('click', saveTags);
+    $('mDelete').addEventListener('click', deletePlaced);
+    $('mClose').addEventListener('click', closeTagModal);
+    $('mX').addEventListener('click', closeTagModal);
+    $('mTag1').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveTags(); });
+    $('mTag2').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveTags(); });
+    $('tagModal').addEventListener('click', (e) => { if (e.target.id === 'tagModal') closeTagModal(); });
 
     window.addEventListener('promodx:unauthorized', () => { toast('Sitzung abgelaufen'); showLogin(); });
   }
