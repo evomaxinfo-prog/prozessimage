@@ -624,7 +624,7 @@
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + zoneHandleLayer() + badge + '</div>';
+      + bg + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
   }
 
   function zoneOverlaySvg(visible) {
@@ -642,7 +642,7 @@
       draft = '<polyline id="zone-draft" points="' + dpts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>'
         + state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
     }
-    return '<svg class="zone-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2">' + polys + draft + '</svg>';
+    return '<svg class="zone-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2">' + techLinesSvg(visible) + polys + draft + '</svg>';
   }
 
   function zoneHandleLayer() {
@@ -651,6 +651,42 @@
     if (!z) return '';
     return '<div class="zone-handle-layer">' + z.points.map((p, i) =>
       '<div class="zone-vertex" data-zone="' + z.id + '" data-vidx="' + i + '" style="left:' + (p.x * 100) + '%;top:' + (p.y * 100) + '%"></div>').join('') + '</div>';
+  }
+
+  const TECH_CODE = {
+    'Punkt Schweißen - Stahl': 'PS', 'MIG-Schweißen': 'SM', 'Bolzen-Schweißen': 'BS',
+    'Bolzen-Schweißen (Rotationskopf)': 'BR', 'Bolzen (stationär)': 'B', 'Kleben': 'KL',
+    'Laser': 'LA', 'Halbholstanznieten': 'HN', 'Fließlochschrauben': 'FS', 'Inline messen': 'IM',
+  };
+  function techCode(name) {
+    if (TECH_CODE[name]) return TECH_CODE[name];
+    const w = String(name).replace(/[^A-Za-zÄÖÜäöüß ]/g, '').split(/\s+/).filter(Boolean);
+    return w.map((x) => x[0]).join('').slice(0, 2).toUpperCase() || '•';
+  }
+  function techInfo(o) {
+    if (o.symbolType !== 'robot') return null;
+    const m = (o.metatags || []).find((t) => t.position === 2 && t.value);
+    if (!m || !m.value) return null;
+    const bx = Math.min(o.x + 0.12, 0.95), by = Math.max(o.y - 0.12, 0.06);
+    return { name: m.value, code: techCode(m.value), bx, by };
+  }
+  function techLinesSvg(visible) {
+    return (state.detail.objects || []).map((o) => {
+      if (visible[o.layerId] === false) return '';
+      const t = techInfo(o); if (!t) return '';
+      return '<line x1="' + (o.x * 100) + '" y1="' + (o.y * 100) + '" x2="' + (t.bx * 100) + '" y2="' + (t.by * 100) + '" stroke="#E67E22" stroke-width="1.3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+    }).join('');
+  }
+  function techBadgeLayer() {
+    const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
+    const badges = (state.detail.objects || []).map((o) => {
+      if (visible[o.layerId] === false) return '';
+      const t = techInfo(o); if (!t) return '';
+      return '<div class="tech-badge" style="left:' + (t.bx * 100) + '%;top:' + (t.by * 100) + '%">'
+        + '<span class="tb-dot">' + esc(t.code) + '</span>'
+        + '<span class="tb-name">' + esc(t.name) + '</span></div>';
+    }).join('');
+    return '<div class="tech-badge-layer">' + badges + '</div>';
   }
 
   function renderEditor() {
@@ -807,6 +843,19 @@
     }
   }
 
+  const ROBOT_RISK = ['CK (Hohes Risiko)', 'K (Hohes Risiko, nachbar SB)', 'C (Geringes Risiko)', 'BS (Bedienerschutz)', 'T (sichere Werkzeugumschaltung)', 'Kein Risiko'];
+  const ROBOT_TECH = ['Punkt Schweißen - Stahl', 'MIG-Schweißen', 'Bolzen-Schweißen', 'Bolzen-Schweißen (Rotationskopf)', 'Bolzen (stationär)', 'Kleben', 'Laser', 'Halbholstanznieten', 'Fließlochschrauben', 'Inline messen'];
+
+  function tagFieldSelect(id, label, opts, val) {
+    const list = (val && !opts.includes(val)) ? [val].concat(opts) : opts;
+    const options = '<option value="">— bitte wählen —</option>'
+      + list.map((o) => '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>').join('');
+    return '<div class="m-field"><label>' + esc(label) + '</label><select id="' + id + '" data-label="' + esc(label) + '">' + options + '</select></div>';
+  }
+  function tagFieldInput(id, label, val) {
+    return '<div class="m-field"><label>' + esc(label) + '</label><input id="' + id + '" data-label="" placeholder="frei belegbar …" value="' + esc(val) + '"></div>';
+  }
+
   function openTagModal(oid) {
     const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
     state.modalObjId = oid;
@@ -814,18 +863,25 @@
     const sym = $('mSym'); sym.style.color = o.color; sym.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg>';
     $('mTitle').textContent = o.name;
     $('mSub').textContent = L ? (L.code + ' · ' + L.name) : '';
-    $('mTag1').value = (o.metatags.find((m) => m.position === 1) || {}).value || '';
-    $('mTag2').value = (o.metatags.find((m) => m.position === 2) || {}).value || '';
+    const v1 = (o.metatags.find((m) => m.position === 1) || {}).value || '';
+    const v2 = (o.metatags.find((m) => m.position === 2) || {}).value || '';
+    if (o.symbolType === 'robot') {
+      $('mBody').innerHTML = tagFieldSelect('mTag1', 'Safe Funktion', ROBOT_RISK, v1) + tagFieldSelect('mTag2', 'Technologie', ROBOT_TECH, v2);
+    } else {
+      $('mBody').innerHTML = tagFieldInput('mTag1', 'Metatag 1', v1) + tagFieldInput('mTag2', 'Metatag 2', v2);
+    }
     $('tagModal').style.display = 'flex';
-    setTimeout(() => { $('mTag1').focus(); $('mTag1').select(); }, 60);
+    setTimeout(() => { const f = $('mTag1'); if (f) { f.focus(); if (f.tagName === 'INPUT') f.select(); } }, 60);
   }
   async function saveTags() {
     const o = (state.detail.objects || []).find((x) => x.id === state.modalObjId);
     if (!o) { closeTagModal(); return; }
-    const t1 = $('mTag1').value.trim(), t2 = $('mTag2').value.trim();
+    const e1 = $('mTag1'), e2 = $('mTag2');
+    const t1 = (e1 ? e1.value : '').trim(), t2 = (e2 ? e2.value : '').trim();
+    const l1 = e1 ? (e1.getAttribute('data-label') || '') : '', l2 = e2 ? (e2.getAttribute('data-label') || '') : '';
     const metatags = [];
-    if (t1) metatags.push({ position: 1, value: t1 });
-    if (t2) metatags.push({ position: 2, value: t2 });
+    if (t1) metatags.push(l1 ? { position: 1, label: l1, value: t1 } : { position: 1, value: t1 });
+    if (t2) metatags.push(l2 ? { position: 2, label: l2, value: t2 } : { position: 2, value: t2 });
     try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast('Metatags nicht gespeichert'); }
     closeTagModal(); toast('Metatags gespeichert'); renderEditor();
   }
@@ -1296,8 +1352,7 @@
     $('mDelete').addEventListener('click', deletePlaced);
     $('mClose').addEventListener('click', closeTagModal);
     $('mX').addEventListener('click', closeTagModal);
-    $('mTag1').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveTags(); });
-    $('mTag2').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveTags(); });
+    $('mBody').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') saveTags(); });
     $('tagModal').addEventListener('click', (e) => { if (e.target.id === 'tagModal') closeTagModal(); });
 
     window.addEventListener('promodx:unauthorized', () => { toast('Sitzung abgelaufen'); showLogin(); });

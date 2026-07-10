@@ -618,3 +618,19 @@ header{padding:0 22px}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms!important;transition-duration:.001ms!important}
 }
+
+/* Metatag-Dialog: Auswahllisten (z. B. Roboter) wie die Textfelder stylen */
+.m-field select{width:100%;border:1px solid var(--border-strong);border-radius:8px;padding:9px 11px;
+  font:inherit;font-size:14px;color:var(--text);background:#fff;outline:none;transition:border-color .15s var(--ease)}
+.m-field select:focus{border-color:var(--brand-blue)}
+
+/* Technologie-Blase am Roboter (Icon + Verbindungslinie) */
+.tech-badge-layer{position:absolute;inset:0;pointer-events:none;z-index:4}
+.tech-badge{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;
+  align-items:center;gap:3px;pointer-events:none}
+.tb-dot{width:26px;height:26px;border-radius:50%;background:#E67E22;color:#fff;font-size:10px;
+  font-weight:700;letter-spacing:.3px;display:grid;place-items:center;border:2px solid #fff;
+  box-shadow:0 2px 7px rgba(230,126,34,.4)}
+.tb-name{font-size:9.5px;font-weight:500;color:var(--text);background:rgba(255,255,255,.94);
+  border-radius:5px;padding:1px 6px;white-space:nowrap;max-width:150px;overflow:hidden;
+  text-overflow:ellipsis;box-shadow:0 1px 3px rgba(30,42,51,.16)}
