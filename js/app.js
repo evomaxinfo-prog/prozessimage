@@ -679,7 +679,7 @@
     return a !== b;
   }
   async function pollCollab() {
-    if (!state.detail || state.view !== 'editor' || document.hidden) return;
+    if (!state.detail || state.view !== 'editor') return;
     if (state.collab.inflight) return;
     state.collab.inflight = true;
     let res;
