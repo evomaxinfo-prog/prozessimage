@@ -667,26 +667,40 @@
     if (o.symbolType !== 'robot') return null;
     const m = (o.metatags || []).find((t) => t.position === 2 && t.value);
     if (!m || !m.value) return null;
-    const bx = Math.min(o.x + 0.12, 0.95), by = Math.max(o.y - 0.12, 0.06);
-    return { name: m.value, code: techCode(m.value), bx, by };
+    let bx, by;
+    if (o.points && o.points.length >= 1 && o.points[0]) { bx = o.points[0].x; by = o.points[0].y; }
+    else { bx = Math.min(o.x + 0.12, 0.94); by = Math.max(o.y - 0.12, 0.07); }
+    return { id: o.id, name: m.value, code: techCode(m.value), rx: o.x, ry: o.y, bx, by };
   }
   function techLinesSvg(visible) {
     return (state.detail.objects || []).map((o) => {
       if (visible[o.layerId] === false) return '';
       const t = techInfo(o); if (!t) return '';
-      return '<line x1="' + (o.x * 100) + '" y1="' + (o.y * 100) + '" x2="' + (t.bx * 100) + '" y2="' + (t.by * 100) + '" stroke="#E67E22" stroke-width="1.3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      return '<line id="tech-line-' + t.id + '" x1="' + (t.rx * 100) + '" y1="' + (t.ry * 100) + '" x2="' + (t.bx * 100) + '" y2="' + (t.by * 100) + '" stroke="#E67E22" stroke-width="1.3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
     }).join('');
   }
   function techBadgeLayer() {
     const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
+    const editable = canEdit();
     const badges = (state.detail.objects || []).map((o) => {
       if (visible[o.layerId] === false) return '';
       const t = techInfo(o); if (!t) return '';
-      return '<div class="tech-badge" style="left:' + (t.bx * 100) + '%;top:' + (t.by * 100) + '%">'
-        + '<span class="tb-dot">' + esc(t.code) + '</span>'
+      return '<div class="tech-badge" data-tech="' + t.id + '" style="left:' + (t.bx * 100) + '%;top:' + (t.by * 100) + '%">'
+        + '<span class="tb-dot"' + (editable ? ' data-techdrag="' + t.id + '" title="Verschieben"' : '') + '>' + esc(t.code) + '</span>'
         + '<span class="tb-name">' + esc(t.name) + '</span></div>';
     }).join('');
     return '<div class="tech-badge-layer">' + badges + '</div>';
+  }
+  function onTechDrag(e) {
+    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const r = doc.getBoundingClientRect();
+    const x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+    const o = (state.detail.objects || []).find((z) => z.id === state.techDrag.id); if (!o) return;
+    o.points = [{ x, y }]; state.techDrag.moved = true;
+    const line = document.getElementById('tech-line-' + o.id);
+    if (line) { line.setAttribute('x2', x * 100); line.setAttribute('y2', y * 100); }
+    const badge = document.querySelector('.tech-badge[data-tech="' + o.id + '"]');
+    if (badge) { badge.style.left = (x * 100) + '%'; badge.style.top = (y * 100) + '%'; }
   }
 
   function renderEditor() {
@@ -801,6 +815,7 @@
     try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
   }
   function onMove(e) {
+    if (state.techDrag) { onTechDrag(e); return; }
     if (state.zoneDrag) { onZoneDrag(e); return; }
     if (state.drawZone && state.zoneDraft.length) {
       const doc = document.getElementById('canvasDoc');
@@ -816,6 +831,12 @@
     dragMove.el.style.left = (x * 100) + '%'; dragMove.el.style.top = (y * 100) + '%'; dragMove.el.style.cursor = 'grabbing';
   }
   async function endMove() {
+    if (state.techDrag) {
+      const td = state.techDrag; state.techDrag = null;
+      const o = (state.detail.objects || []).find((z) => z.id === td.id);
+      if (td.moved && o) { try { await Api.updateObject(o.id, { points: o.points }); } catch (e2) { toast('Position nicht gespeichert'); } }
+      renderEditor(); return;
+    }
     if (state.zoneDrag) {
       const zd = state.zoneDrag; state.zoneDrag = null;
       const z = (state.detail.objects || []).find((o) => o.id === zd.id);
@@ -990,6 +1011,9 @@
   }
   function onContentPointerDown(e) {
     if (!canEdit()) return;
+    // Technologie-Blase greifen
+    const td = e.target.closest('[data-techdrag]');
+    if (td) { e.preventDefault(); state.techDrag = { id: td.getAttribute('data-techdrag'), moved: false }; try { td.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } return; }
     // Stützpunkt eines Schutzbereichs greifen
     const v = e.target.closest('.zone-vertex');
     if (v) {

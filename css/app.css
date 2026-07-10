@@ -626,11 +626,14 @@ header{padding:0 22px}
 
 /* Technologie-Blase am Roboter (Icon + Verbindungslinie) */
 .tech-badge-layer{position:absolute;inset:0;pointer-events:none;z-index:4}
-.tech-badge{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;
-  align-items:center;gap:3px;pointer-events:none}
-.tb-dot{width:26px;height:26px;border-radius:50%;background:#E67E22;color:#fff;font-size:10px;
-  font-weight:700;letter-spacing:.3px;display:grid;place-items:center;border:2px solid #fff;
-  box-shadow:0 2px 7px rgba(230,126,34,.4)}
-.tb-name{font-size:9.5px;font-weight:500;color:var(--text);background:rgba(255,255,255,.94);
-  border-radius:5px;padding:1px 6px;white-space:nowrap;max-width:150px;overflow:hidden;
-  text-overflow:ellipsis;box-shadow:0 1px 3px rgba(30,42,51,.16)}
+.tech-badge{position:absolute;width:0;height:0;pointer-events:none}
+.tb-dot{position:absolute;left:-13px;top:-13px;width:26px;height:26px;border-radius:50%;
+  background:#E67E22;color:#fff;font-size:10px;font-weight:700;letter-spacing:.3px;
+  display:grid;place-items:center;border:2px solid #fff;box-shadow:0 2px 7px rgba(230,126,34,.4)}
+.tb-dot[data-techdrag]{pointer-events:auto;cursor:grab;touch-action:none}
+.tb-dot[data-techdrag]:hover{box-shadow:0 3px 10px rgba(230,126,34,.55)}
+.tb-dot[data-techdrag]:active{cursor:grabbing}
+.tb-name{position:absolute;top:17px;left:50%;transform:translateX(-50%);font-size:9.5px;
+  font-weight:500;color:var(--text);background:rgba(255,255,255,.94);border-radius:5px;
+  padding:1px 6px;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;
+  box-shadow:0 1px 3px rgba(30,42,51,.16)}
