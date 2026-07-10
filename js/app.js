@@ -1685,9 +1685,8 @@
   /* ---------------- Verdrahtung ---------------- */
   function wire() {
     // Login
-    $('btnLogin').addEventListener('click', doLogin);
-    $('loginPass').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
-    $('loginEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+    // Login: über das Formular (Enter + Button lösen submit aus) -> Passwort-Manager funktioniert korrekt
+    $('loginForm').addEventListener('submit', (e) => { e.preventDefault(); doLogin(); });
     $('btnChange').addEventListener('click', doChange);
     $('chgNew').addEventListener('input', updateStrength);
     $('chgEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('chgOld').focus(); });

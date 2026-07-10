@@ -40,21 +40,23 @@
     <!-- Panel: Anmelden -->
     <div id="panelLogin">
       <h1 class="login-h">Anmelden</h1>
+      <form id="loginForm" autocomplete="on">
       <div class="login-field">
         <label>Benutzer · E-Mail</label>
-        <input id="loginEmail" type="email" placeholder="name@evomax.de" autocomplete="username">
+        <input id="loginEmail" name="username" type="email" placeholder="name@evomax.de" autocomplete="username">
       </div>
       <div class="login-field">
         <label>Passwort</label>
         <div class="pw-wrap">
-          <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password">
-          <button class="pw-eye" data-toggle="loginPass" title="Passwort anzeigen">
+          <input id="loginPass" name="password" type="password" placeholder="••••••••" autocomplete="current-password">
+          <button type="button" class="pw-eye" data-toggle="loginPass" title="Passwort anzeigen">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
       </div>
       <div class="login-msg" id="loginMsg"></div>
-      <button class="login-btn" id="btnLogin">ANMELDEN</button>
+      <button class="login-btn" id="btnLogin" type="submit">ANMELDEN</button>
+      </form>
       <div class="login-links">
         <button class="link" data-panel="change">Passwort ändern</button>
       </div>
