@@ -768,6 +768,15 @@
   }
   // Markiert ein Objekt kurz als "lokal frisch geändert", damit ein Poll die noch nicht bestätigte Änderung nicht überschreibt/entfernt.
   function protectObj(id) { if (id) state.collab.protect[String(id)] = Date.now() + 6000; }
+  // Vergleicht zwei Punktlisten mit Toleranz (Server rundet ggf. Floats).
+  function pointsMatch(a, b) {
+    a = a || []; b = b || [];
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (Math.abs((a[i].x || 0) - (b[i].x || 0)) > 0.001 || Math.abs((a[i].y || 0) - (b[i].y || 0)) > 0.001) return false;
+    }
+    return true;
+  }
   function shapeVisualKey(o) {
     const art = (o.metatags || []).find((m) => m.label === 'Förderart');
     return [o.color, o.plcConfigId || '', art ? art.value : '', o.layerId].join('|');
@@ -1169,7 +1178,12 @@
       const z = (state.detail.objects || []).find((o) => o.id === zd.id);
       if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
         protectObj(z.id);
-        try { await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }); } catch (e2) { toast('Speichern fehlgeschlagen (' + (e2 && (e2.status || e2.message) || '?') + ')'); }
+        try {
+          const upd = await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
+          if (upd && upd.points !== undefined && !pointsMatch(upd.points, z.points)) {
+            toast('Server hat die Punkte NICHT gespeichert – Backend (ObjectController) veraltet');
+          }
+        } catch (e2) { toast('Speichern fehlgeschlagen (' + (e2 && (e2.status || e2.message) || '?') + ')'); }
         renderEditor(); return;
       }
       // Klick ohne Bewegung: Auswahl bzw. Doppelklick (zeitbasiert, re-render-fest)
