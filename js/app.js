@@ -829,6 +829,18 @@
     const y = Math.min(0.96, Math.max(0.04, (e.clientY - r.top) / r.height));
     dragMove.nx = x; dragMove.ny = y;
     dragMove.el.style.left = (x * 100) + '%'; dragMove.el.style.top = (y * 100) + '%'; dragMove.el.style.cursor = 'grabbing';
+    // Technologie-Linie live mitziehen (Roboter-Ende der Linie)
+    const tline = document.getElementById('tech-line-' + dragMove.oid);
+    if (tline) {
+      tline.setAttribute('x1', x * 100); tline.setAttribute('y1', y * 100);
+      const ro = (state.detail.objects || []).find((z) => z.id === dragMove.oid);
+      if (ro && !(ro.points && ro.points.length >= 1)) {
+        const bx = Math.min(x + 0.12, 0.94), by = Math.max(y - 0.12, 0.07);
+        tline.setAttribute('x2', bx * 100); tline.setAttribute('y2', by * 100);
+        const bd = document.querySelector('.tech-badge[data-tech="' + ro.id + '"]');
+        if (bd) { bd.style.left = (bx * 100) + '%'; bd.style.top = (by * 100) + '%'; }
+      }
+    }
   }
   async function endMove() {
     if (state.techDrag) {
@@ -860,7 +872,11 @@
     if (dm.el) dm.el.style.cursor = '';
     if (dm.moved && dm.nx != null) {
       const o = (state.detail.objects || []).find((x) => x.id === dm.oid);
-      if (o) { o.x = dm.nx; o.y = dm.ny; try { await Api.updateObject(o.id, { x: dm.nx, y: dm.ny }); } catch (e) { toast('Verschieben nicht gespeichert'); } }
+      if (o) {
+        o.x = dm.nx; o.y = dm.ny;
+        try { await Api.updateObject(o.id, { x: dm.nx, y: dm.ny }); } catch (e) { toast('Verschieben nicht gespeichert'); }
+        if (techInfo(o)) renderEditor();
+      }
     }
   }
 
