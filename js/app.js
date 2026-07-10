@@ -747,6 +747,7 @@
       row.metatags = row.metatags || [];
       if (idx[id] != null) {
         const old = arr[idx[id]];
+        if (!objChanged(old, row)) return; // nichts geändert -> überspringen (kein Flackern, kein Re-Render)
         // Nur-Geometrie-Update einer Form: gleiche sichtbare Eigenschaften -> in-place patchen
         const geomOnly = isShape(old) && isShape(row) && old.symbolType === row.symbolType && shapeVisualKey(old) === shapeVisualKey(row);
         arr[idx[id]] = row; dirty = true;
@@ -756,6 +757,15 @@
       }
     });
     return { dirty, needFull, patchIds };
+  }
+  // Hat sich ein Objekt in einer sichtbaren/relevanten Eigenschaft geändert?
+  function objChanged(a, b) {
+    if (a.name !== b.name || a.color !== b.color || a.symbolType !== b.symbolType || a.layerId !== b.layerId
+      || a.x !== b.x || a.y !== b.y || (a.rotation || 0) !== (b.rotation || 0)
+      || (a.plcConfigId || '') !== (b.plcConfigId || '') || !!a.visible !== !!b.visible) return true;
+    if (JSON.stringify(a.points || null) !== JSON.stringify(b.points || null)) return true;
+    if (JSON.stringify(a.metatags || []) !== JSON.stringify(b.metatags || [])) return true;
+    return false;
   }
   function personLabel(v) { return v.name || v.email || ''; }
   function personInitials(label) {
