@@ -25,7 +25,7 @@
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
     drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null,
-    collab: { since: null, viewers: [], enabled: true, inflight: false },
+    collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting' },
   };
 
   /* ---------------- Toast ---------------- */
@@ -653,7 +653,7 @@
   function startCollab() {
     stopCollab();
     if (!state.detail || !state.collab.enabled) return;
-    state.collab.since = null; state.collab.viewers = []; state.collab.inflight = false;
+    state.collab.since = null; state.collab.viewers = []; state.collab.inflight = false; state.collab.status = 'connecting';
     collabTimer = setInterval(pollCollab, 3000);
     pollCollab();
   }
@@ -688,13 +688,15 @@
     } catch (e) {
       state.collab.inflight = false;
       // Backend-Endpunkt noch nicht ausgerollt -> Kollaboration still deaktivieren, keine Fehlerflut
-      if (e && (e.status === 404 || e.status === 405)) { state.collab.enabled = false; stopCollab(); }
+      if (e && (e.status === 404 || e.status === 405)) { state.collab.enabled = false; state.collab.status = 'offline'; stopCollab(); renderPresenceOnly(); }
       return;
     }
     state.collab.inflight = false;
     if (!res) return;
+    const statusChanged = state.collab.status !== 'live';
+    state.collab.status = 'live';
     if (res.serverTime) state.collab.since = res.serverTime;
-    const viewersChanged = presenceChanged(res.viewers || []);
+    const viewersChanged = presenceChanged(res.viewers || []) || statusChanged;
     state.collab.viewers = res.viewers || [];
     const r = applyRemoteChanges(res.objects || [], res.deletedIds || []);
     if (r.dirty) {
@@ -760,9 +762,17 @@
   function firstName(label) { return String(label).split('@')[0].split(/[.\-_\s]+/).filter(Boolean)[0] || String(label); }
   function capFirst(s) { s = String(s); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function presenceHtml() {
+    const st = state.collab.status;
+    let status;
+    if (st === 'offline') status = '<span class="collab-status off" title="Kollaboration nicht erreichbar – Backend-Endpunkt /changes fehlt oder Migration noch nicht ausgeführt">● offline</span>';
+    else if (st === 'live') status = '<span class="collab-status on" title="Kollaboration aktiv – Änderungen anderer erscheinen live">● live</span>';
+    else status = '<span class="collab-status" title="verbinde …">● …</span>';
+
     const me = state.user && state.user.email;
     const others = (state.collab.viewers || []).filter((v) => v.email && v.email !== me);
-    if (!others.length) return '';
+    if (!others.length) {
+      return '<div class="collab-bar">' + status + '</div>';
+    }
     const dots = others.slice(0, 5).map((v) => {
       const label = personLabel(v);
       const tip = esc(label) + (v.editing ? ' · bearbeitet gerade' : (v.role ? (' · ' + roleLabel(v.role)) : ''));
@@ -773,7 +783,7 @@
     const cap = editors.length
       ? '<span class="collab-cap">' + editors.join(', ') + (editors.length === 1 ? ' bearbeitet gerade' : ' bearbeiten gerade') + '</span>'
       : '<span class="collab-cap muted">' + others.length + (others.length === 1 ? ' Person' : ' Personen') + ' hier</span>';
-    return '<div class="collab-bar" title="Wer diese Anlage gerade offen hat"><div class="collab-dots">' + dots + more + '</div>' + cap + '</div>';
+    return '<div class="collab-bar" title="Wer diese Anlage gerade offen hat">' + status + '<div class="collab-dots">' + dots + more + '</div>' + cap + '</div>';
   }
   function renderPresenceOnly() {
     const bar = document.getElementById('collabBar');

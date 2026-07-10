@@ -487,6 +487,9 @@
 .zone-vertex:active{cursor:grabbing}
 .canvas-doc.drawing{cursor:crosshair}
 .collab-bar{display:flex;align-items:center;gap:8px}
+.collab-status{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--muted,#939598)}
+.collab-status.on{color:#16a34a}
+.collab-status.off{color:#C0392B}
 .collab-dots{display:flex;align-items:center}
 .collab-dot,.collab-more{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:11px;font-weight:700;color:#fff;background:var(--brand-blue,#0065A5);border:2px solid #fff;margin-left:-6px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .collab-dots .collab-dot:first-child{margin-left:0}
