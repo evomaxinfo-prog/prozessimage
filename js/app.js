@@ -25,7 +25,7 @@
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
     drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null,
-    collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting' },
+    collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false },
   };
 
   /* ---------------- Toast ---------------- */
@@ -503,6 +503,7 @@
     else if (act === 'plc-del') { const i = +el.getAttribute('data-idx'); const p = state.detailDraft.plcs[i]; if (p && p.id) state.detailDraft._deleted.push(p.id); state.detailDraft.plcs.splice(i, 1); renderDetail(); }
     else if (act === 'journal-add') { addJournalEntry(); }
     else if (act === 'open-editor') { openEditor(); }
+    else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
     else if (act === 'editor-upload') { triggerUpload(); }
     else if (act === 'detail-upload') { triggerUpload(); }
@@ -767,26 +768,48 @@
   function presenceHtml() {
     const st = state.collab.status;
     let status;
-    if (st === 'offline') status = '<span class="collab-status off" title="Kollaboration nicht erreichbar – Backend-Endpunkt /changes fehlt oder Migration noch nicht ausgeführt">● offline</span>';
-    else if (st === 'live') status = '<span class="collab-status on" title="Kollaboration aktiv – Änderungen anderer erscheinen live">● live</span>';
-    else status = '<span class="collab-status" title="verbinde …">● …</span>';
+    if (st === 'offline') status = '<span class="collab-status off">● offline</span>';
+    else if (st === 'live') status = '<span class="collab-status on">● live</span>';
+    else status = '<span class="collab-status">● …</span>';
 
     const me = state.user && state.user.email;
-    const others = (state.collab.viewers || []).filter((v) => v.email && v.email !== me);
-    if (!others.length) {
-      return '<div class="collab-bar">' + status + '</div>';
+    const all = state.collab.viewers || [];
+    const others = all.filter((v) => v.email && v.email !== me);
+
+    let trigger = '<div class="collab-trigger" data-act="collab-details" title="Klicken: wer ist gerade hier?">' + status;
+    if (others.length) {
+      const dots = others.slice(0, 5).map((v) => {
+        const label = personLabel(v);
+        return '<span class="collab-dot' + (v.editing ? ' editing' : '') + '" title="' + esc(label) + '">' + esc(personInitials(label)) + '</span>';
+      }).join('');
+      const more = others.length > 5 ? '<span class="collab-more">+' + (others.length - 5) + '</span>' : '';
+      const editors = others.filter((v) => v.editing).map((v) => esc(capFirst(firstName(personLabel(v)))));
+      const cap = editors.length
+        ? '<span class="collab-cap">' + editors.join(', ') + (editors.length === 1 ? ' bearbeitet gerade' : ' bearbeiten gerade') + '</span>'
+        : '<span class="collab-cap muted">' + others.length + (others.length === 1 ? ' Person' : ' Personen') + ' hier</span>';
+      trigger += '<div class="collab-dots">' + dots + more + '</div>' + cap;
     }
-    const dots = others.slice(0, 5).map((v) => {
-      const label = personLabel(v);
-      const tip = esc(label) + (v.editing ? ' · bearbeitet gerade' : (v.role ? (' · ' + roleLabel(v.role)) : ''));
-      return '<span class="collab-dot' + (v.editing ? ' editing' : '') + '" title="' + tip + '">' + esc(personInitials(label)) + '</span>';
-    }).join('');
-    const more = others.length > 5 ? '<span class="collab-more">+' + (others.length - 5) + '</span>' : '';
-    const editors = others.filter((v) => v.editing).map((v) => esc(capFirst(firstName(personLabel(v)))));
-    const cap = editors.length
-      ? '<span class="collab-cap">' + editors.join(', ') + (editors.length === 1 ? ' bearbeitet gerade' : ' bearbeiten gerade') + '</span>'
-      : '<span class="collab-cap muted">' + others.length + (others.length === 1 ? ' Person' : ' Personen') + ' hier</span>';
-    return '<div class="collab-bar" title="Wer diese Anlage gerade offen hat">' + status + '<div class="collab-dots">' + dots + more + '</div>' + cap + '</div>';
+    trigger += '</div>';
+
+    let pop = '';
+    if (state.collab.detailsOpen) {
+      let rows;
+      if (all.length) {
+        rows = all.map((v) => {
+          const mine = v.email === me;
+          const tag = mine ? ' <span class="cp-you">(du)</span>' : '';
+          const ed = v.editing ? ' <span class="cp-edit">bearbeitet</span>' : '';
+          return '<div class="cp-row">' + esc(personLabel(v) || '(ohne E-Mail)') + tag + ed + '</div>';
+        }).join('');
+      } else {
+        rows = '<div class="cp-row muted">Server meldet niemanden.</div>';
+      }
+      let hint = '';
+      if (st === 'offline') hint = '<div class="cp-hint">Server nicht erreichbar – Backend-Deploy/Migration prüfen.</div>';
+      else if (all.length <= 1) hint = '<div class="cp-hint">Nur du bist erfasst. Die andere Person muss eingeloggt sein und dieselbe Anlage im MODELLIEREN-Fenster offen haben.</div>';
+      pop = '<div class="collab-pop"><div class="cp-head">Anwesend laut Server (' + all.length + ')</div>' + rows + hint + '</div>';
+    }
+    return '<div class="collab-bar">' + trigger + pop + '</div>';
   }
   function renderPresenceOnly() {
     const bar = document.getElementById('collabBar');

@@ -486,7 +486,16 @@
 .zone-vertex:hover{background:var(--brand-blue-soft)}
 .zone-vertex:active{cursor:grabbing}
 .canvas-doc.drawing{cursor:crosshair}
-.collab-bar{display:flex;align-items:center;gap:8px}
+.collab-bar{position:relative;display:flex;align-items:center;gap:8px}
+.collab-trigger{display:flex;align-items:center;gap:8px;cursor:pointer;padding:2px 4px;border-radius:6px}
+.collab-trigger:hover{background:rgba(0,0,0,.05)}
+.collab-pop{position:absolute;top:calc(100% + 6px);right:0;min-width:240px;background:#fff;border:1px solid #E1E7EC;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);padding:10px 12px;z-index:50;font-size:13px}
+.collab-pop .cp-head{font-weight:700;color:var(--muted,#6b7480);font-size:11px;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px}
+.collab-pop .cp-row{padding:3px 0;color:#26333d}
+.collab-pop .cp-row.muted{color:var(--muted,#939598)}
+.collab-pop .cp-you{color:var(--brand-blue,#0065A5);font-weight:600}
+.collab-pop .cp-edit{color:#16a34a;font-weight:600;font-size:11px}
+.collab-pop .cp-hint{margin-top:8px;padding-top:8px;border-top:1px solid #EEF2F5;color:var(--muted,#6b7480);font-size:12px;line-height:1.4}
 .collab-status{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--muted,#939598)}
 .collab-status.on{color:#16a34a}
 .collab-status.off{color:#C0392B}
