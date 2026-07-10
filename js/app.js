@@ -702,6 +702,7 @@
     if (res.serverTime) state.collab.since = res.serverTime;
     const viewersChanged = presenceChanged(res.viewers || []) || statusChanged;
     state.collab.viewers = res.viewers || [];
+    state.collab.lastSync = { n: (res.objects || []).length, del: (res.deletedIds || []).length, at: Date.now() };
     const r = applyRemoteChanges(res.objects || [], res.deletedIds || []);
     if (r.dirty) {
       if (r.needFull) {
@@ -830,7 +831,15 @@
       let hint = '';
       if (st === 'offline') hint = '<div class="cp-hint">Server nicht erreichbar – Backend-Deploy/Migration prüfen.</div>';
       else if (all.length <= 1) hint = '<div class="cp-hint">Nur du bist erfasst. Die andere Person muss eingeloggt sein und dieselbe Anlage im MODELLIEREN-Fenster offen haben.</div>';
-      pop = '<div class="collab-pop"><div class="cp-head">Anwesend laut Server (' + all.length + ')</div>' + rows + hint + '</div>';
+      // Diagnose: was liegt aktuell wirklich im Editor + letzter Server-Sync
+      const objs = state.detail.objects || [];
+      const nSb = objs.filter((o) => o.symbolType === 'sb_zone').length;
+      const nMf = objs.filter((o) => o.symbolType === 'mf_route').length;
+      const nSym = objs.filter((o) => !isShape(o)).length;
+      const ls = state.collab.lastSync;
+      const diag = '<div class="cp-hint">Im Editor: <b>' + nSb + '</b> Schutzbereiche · ' + nMf + ' Förderwege · ' + nSym + ' Symbole'
+        + (ls ? ('<br>Letzter Server-Sync: ' + ls.n + ' geändert, ' + ls.del + ' gelöscht') : '') + '</div>';
+      pop = '<div class="collab-pop"><div class="cp-head">Anwesend laut Server (' + all.length + ')</div>' + rows + hint + diag + '</div>';
     }
     return '<div class="collab-bar">' + trigger + pop + '</div>';
   }
