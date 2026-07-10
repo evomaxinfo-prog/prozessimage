@@ -596,14 +596,31 @@
   function pointNearRoute(o, x, y) {
     const p = o.points; if (!p || p.length < 2) return false;
     const ar = docAspect();
-    for (let i = 0; i < p.length - 1; i++) { if (distToSegAR(x, y, p[i].x, p[i].y, p[i + 1].x, p[i + 1].y, ar) < 0.02) return true; }
+    for (let i = 0; i < p.length - 1; i++) { if (distToSegAR(x, y, p[i].x, p[i].y, p[i + 1].x, p[i + 1].y, ar) < 0.028) return true; }
     return false;
   }
   // Gefüllter Pfeilkopf am Streckenende; isotrop trotz preserveAspectRatio="none"
-  function routeArrowPath(p, ar) {
-    const n = p.length; if (n < 2) return '';
-    const tip = p[n - 1], prev = p[n - 2];
-    let sdx = (tip.x - prev.x) * ar, sdy = (tip.y - prev.y);
+  // Weiche Kurve durch die Stützpunkte (Catmull-Rom → kubische Bézier). Liefert d-Pfad (viewBox 0..100)
+  // und die Endtangente (normalisierte Richtung) für die Pfeil-Ausrichtung.
+  function buildRouteCurve(pts) {
+    const n = pts.length;
+    if (n < 2) return { d: n ? 'M' + (pts[0].x * 100) + ' ' + (pts[0].y * 100) : '', tan: { x: 1, y: 0 } };
+    const P = pts.map((p) => ({ x: p.x * 100, y: p.y * 100 }));
+    let d = 'M' + P[0].x + ' ' + P[0].y;
+    let lastC2 = P[0];
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || P[i + 1];
+      const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+      const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+      d += ' C' + c1x + ' ' + c1y + ' ' + c2x + ' ' + c2y + ' ' + p2.x + ' ' + p2.y;
+      lastC2 = { x: c2x, y: c2y };
+    }
+    const end = P[n - 1];
+    return { d, tan: { x: (end.x - lastC2.x) / 100, y: (end.y - lastC2.y) / 100 } };
+  }
+  // Gefüllter Pfeilkopf am Endpunkt, ausgerichtet an einer (normalisierten) Tangente; isotrop trotz preserveAspectRatio="none".
+  function routeArrowFromTan(tip, tanVb, ar) {
+    let sdx = tanVb.x * ar, sdy = tanVb.y;
     const len = Math.hypot(sdx, sdy) || 1e-6; sdx /= len; sdy /= len;
     const back = { x: -sdx, y: -sdy }, L = 3.4, ang = Math.PI * 0.16;
     const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
@@ -690,21 +707,26 @@
     const ar = docAspect();
     const routes = (state.detail.objects || []).filter((o) => o.symbolType === 'mf_route' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
     const routeSvg = routes.map((r) => {
-      const pts = r.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' ');
+      const cv = buildRouteCurve(r.points);
       const sel = state.selectedZone === r.id;
       const col = esc(r.color || '#0FA47F');
       const dash = ROUTE_DASH[routeArt(r)] || '';
-      const line = '<polyline id="zone-poly-' + r.id + '" points="' + pts + '" fill="none" stroke="' + col + '" stroke-width="' + (sel ? 2.8 : 2) + '" '
+      const line = '<path id="zone-poly-' + r.id + '" d="' + cv.d + '" fill="none" stroke="' + col + '" stroke-width="' + (sel ? 2.8 : 2) + '" '
         + (dash ? ('stroke-dasharray="' + dash + '" ') : '') + 'stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" class="mf-line' + (sel ? ' sel' : '') + '" style="pointer-events:none"/>';
-      const arrow = '<path id="route-arrow-' + r.id + '" d="' + routeArrowPath(r.points, ar) + '" fill="' + col + '" style="pointer-events:none"/>';
+      const arrow = '<path id="route-arrow-' + r.id + '" d="' + routeArrowFromTan(r.points[r.points.length - 1], cv.tan, ar) + '" fill="' + col + '" style="pointer-events:none"/>';
       return line + arrow;
     }).join('');
     let draft = '';
     if (state.drawZone && state.zoneDraft.length) {
       const L = layerById(state.activeLayer); const col = esc(L ? L.color : '#0065A5');
-      const dpts = state.zoneDraft.map((p) => (p.x * 100) + ',' + (p.y * 100));
-      draft = '<polyline id="zone-draft" points="' + dpts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>'
-        + state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
+      const dots = state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
+      if (state.drawShape === 'route') {
+        const dpull = state.zoneCursor ? state.zoneDraft.concat([state.zoneCursor]) : state.zoneDraft;
+        draft = '<path id="zone-draft" d="' + buildRouteCurve(dpull).d + '" fill="none" stroke="' + col + '" stroke-width="1.8" stroke-dasharray="5 3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="pointer-events:none"/>' + dots;
+      } else {
+        const dpts = state.zoneDraft.map((p) => (p.x * 100) + ',' + (p.y * 100));
+        draft = '<polyline id="zone-draft" points="' + dpts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>' + dots;
+      }
     }
     return '<svg class="zone-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2">' + techLinesSvg(visible) + polys + routeSvg + draft + '</svg>';
   }
@@ -838,7 +860,7 @@
         + (routeActive ? 'ZEICHNEN AKTIV' : 'FÖRDERWEG') + '</button>';
       hint = routeActive
         ? 'Klicken setzt Wegpunkte · Klick auf den letzten Punkt oder <b>Enter</b> beendet · <b>Esc</b> bricht ab. Der Pfeil zeigt die Flussrichtung; Doppelklick öffnet die Förderart.'
-        : 'Förderweg zeichnen; Wegpunkte danach verschiebbar. Weg anklicken &amp; <b>Entf</b> löscht ihn.';
+        : 'Förderweg zeichnen; Wegpunkte danach verschiebbar. Weg anklicken: <b>Entf</b> löscht, <b>R</b> kehrt die Richtung um.';
     } else {
       btn = '<button class="btn zone-btn ' + (zoneActive ? 'active' : '') + '" data-act="toggle-zone" style="width:100%;justify-content:center">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> '
@@ -1124,6 +1146,7 @@
       + '<div class="za-body" style="display:flex;flex-direction:column;gap:12px;padding:16px">'
       + '<div class="m-field"><label>Förderart</label><select id="rfArt">' + opts + '</select></div>'
       + '<div class="m-field"><label>Bezeichnung / Teil</label><input id="rfBez" placeholder="z. B. Karosserie-Seitenteil" value="' + esc(bez) + '"></div>'
+      + '<button class="btn" data-za="reverse" style="justify-content:center">⇄ Flussrichtung umkehren</button>'
       + '</div>'
       + '<div class="za-foot"><button class="btn" data-za="close">Abbrechen</button>'
       + '<button class="btn" data-za="save" style="background:' + esc(col) + ';border-color:' + esc(col) + ';color:#fff">Speichern</button></div></div></div>';
@@ -1135,6 +1158,7 @@
       const za = ev.target.closest('[data-za]'); if (!za) return;
       const a = za.getAttribute('data-za');
       if (a === 'close') closeZoneModal();
+      else if (a === 'reverse') reverseRoute(routeId);
       else if (a === 'save') saveRoute(routeId);
     });
     setTimeout(() => { const s = document.getElementById('rfArt'); if (s) s.focus(); }, 60);
@@ -1149,6 +1173,14 @@
     try { const upd = await Api.setMetatags(z.id, metatags); z.metatags = (upd && upd.metatags) || metatags; toast('Förderweg gespeichert'); }
     catch (e) { toast('Speichern fehlgeschlagen'); }
     closeZoneModal(); renderEditor();
+  }
+  async function reverseRoute(routeId) {
+    const z = (state.detail.objects || []).find((o) => o.id === routeId);
+    if (!z || !z.points || z.points.length < 2) return;
+    z.points = z.points.slice().reverse();
+    try { await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }); }
+    catch (e) { toast('Richtung nicht gespeichert'); }
+    toast('Flussrichtung umgekehrt'); renderEditor();
   }
 
   function onContentPointerDown(e) {
@@ -1217,8 +1249,12 @@
 
   function zoneAt(x, y) {
     const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
-    const zones = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && visible[o.layerId] !== false);
-    for (let i = zones.length - 1; i >= 0; i--) { if (pointInZone(zones[i], x, y)) return zones[i]; }
+    const shapes = (state.detail.objects || []).filter((o) => isShape(o) && o.points && visible[o.layerId] !== false);
+    for (let i = shapes.length - 1; i >= 0; i--) {
+      const o = shapes[i];
+      if (o.symbolType === 'mf_route') { if (pointNearRoute(o, x, y)) return o; }
+      else if (pointInZone(o, x, y)) return o;
+    }
     return null;
   }
   function pointInZone(z, x, y) {
@@ -1272,19 +1308,31 @@
   }
 
   function updateZoneDom(z) {
-    const poly = document.getElementById('zone-poly-' + z.id);
-    if (poly) poly.setAttribute('points', z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' '));
-    if (z.symbolType === 'mf_route') { const a = document.getElementById('route-arrow-' + z.id); if (a) a.setAttribute('d', routeArrowPath(z.points, docAspect())); }
+    const el = document.getElementById('zone-poly-' + z.id);
+    if (el) {
+      if (z.symbolType === 'mf_route') {
+        const cv = buildRouteCurve(z.points); el.setAttribute('d', cv.d);
+        const a = document.getElementById('route-arrow-' + z.id);
+        if (a) a.setAttribute('d', routeArrowFromTan(z.points[z.points.length - 1], cv.tan, docAspect()));
+      } else {
+        el.setAttribute('points', z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' '));
+      }
+    }
     z.points.forEach((p, i) => {
       const h = document.querySelector('.zone-vertex[data-zone="' + z.id + '"][data-vidx="' + i + '"]');
       if (h) { h.style.left = (p.x * 100) + '%'; h.style.top = (p.y * 100) + '%'; }
     });
   }
   function updateDraftDom() {
-    const pl = document.getElementById('zone-draft'); if (!pl) return;
-    const dpts = state.zoneDraft.map((p) => (p.x * 100) + ',' + (p.y * 100));
-    if (state.zoneCursor) dpts.push((state.zoneCursor.x * 100) + ',' + (state.zoneCursor.y * 100));
-    pl.setAttribute('points', dpts.join(' '));
+    const el = document.getElementById('zone-draft'); if (!el) return;
+    if (state.drawShape === 'route') {
+      const dpull = state.zoneCursor ? state.zoneDraft.concat([state.zoneCursor]) : state.zoneDraft;
+      el.setAttribute('d', buildRouteCurve(dpull).d);
+    } else {
+      const dpts = state.zoneDraft.map((p) => (p.x * 100) + ',' + (p.y * 100));
+      if (state.zoneCursor) dpts.push((state.zoneCursor.x * 100) + ',' + (state.zoneCursor.y * 100));
+      el.setAttribute('points', dpts.join(' '));
+    }
   }
 
   function onEditorKey(e) {
@@ -1296,6 +1344,10 @@
       else if (e.key === 'Escape') { e.preventDefault(); state.drawZone = false; state.zoneDraft = []; state.zoneCursor = null; renderEditor(); }
       else if (e.key === 'Backspace' && !inField) { e.preventDefault(); state.zoneDraft.pop(); renderEditor(); }
       return;
+    }
+    if ((e.key === 'r' || e.key === 'R') && state.selectedZone && !inField) {
+      const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone);
+      if (z && z.symbolType === 'mf_route') { e.preventDefault(); reverseRoute(z.id); return; }
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedZone && !inField) {
       e.preventDefault(); deleteSelectedZone();
