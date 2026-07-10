@@ -1,0 +1,20 @@
+# ProModXgOEM Frontend – Sicherheits-Header
+# Falls IONOS/Plesk rein auf nginx läuft und .htaccess ignoriert, dieselben Header
+# unter "Apache & nginx Einstellungen" -> "Zusätzliche nginx-Direktiven" setzen.
+
+<IfModule mod_headers.c>
+  # Content-Security-Policy: nur eigene Skripte, Google-Fonts erlaubt, API-Origin für fetch/Bilder.
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://api.prozessimage.de; connect-src 'self' https://api.prozessimage.de; form-action 'self'; frame-ancestors 'none'"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  # HSTS nur aktivieren, wenn die Seite dauerhaft ausschließlich über HTTPS läuft:
+  Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+
+# Punktdateien (.git, .env, .htaccess …) nicht ausliefern
+<FilesMatch "(^\.|composer\.(json|lock)|\.md$)">
+  Require all denied
+</FilesMatch>

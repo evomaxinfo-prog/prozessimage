@@ -3,8 +3,8 @@
   'use strict';
 
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"'`]/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
   const clamp01 = (v) => Math.min(1, Math.max(0, v));
   const PLC_COLORS = ['#0065A5', '#C0392B', '#0E8A6E', '#D9822B', '#7A3FA8', '#2C82C9', '#16A085', '#E67E22'];
 
@@ -1015,7 +1015,7 @@
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
       + '</div>') : '') + '</div>').join('');
-    return '<div class="obj-cat"><div class="obj-cat-head" style="color:' + color + '">' + esc(name) + '<span class="cnt">' + list.length + '</span></div>' + rows + '</div>';
+    return '<div class="obj-cat"><div class="obj-cat-head" style="color:' + esc(color) + '">' + esc(name) + '<span class="cnt">' + list.length + '</span></div>' + rows + '</div>';
   }
 
   function applyZoomSat() { const doc = document.getElementById('canvasDoc'); if (doc) doc.style.transform = 'scale(' + (state.zoom || 1) + ')'; }
