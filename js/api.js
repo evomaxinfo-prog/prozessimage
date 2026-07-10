@@ -34,8 +34,12 @@
     async request(path, opts) {
       opts = opts || {};
       const hasBody = opts.body !== undefined && opts.body !== null;
-      const res = await fetch(API_BASE + path, {
-        method: opts.method || 'GET',
+      const method = opts.method || 'GET';
+      // Lese-Anfragen mit Einmal-Zeitstempel versehen -> kann nie aus einem (Browser-/Proxy-)Cache bedient werden
+      let url = API_BASE + path;
+      if (method === 'GET') url += (url.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now();
+      const res = await fetch(url, {
+        method: method,
         headers: Object.assign(
           { 'Accept': 'application/json' },
           hasBody ? { 'Content-Type': 'application/json' } : {},
@@ -62,8 +66,11 @@
     /** Rohantwort (für Downloads/Bilder), gibt die fetch-Response zurück. */
     async raw(path, opts) {
       opts = opts || {};
-      const res = await fetch(API_BASE + path, {
-        method: opts.method || 'GET',
+      const rMethod = opts.method || 'GET';
+      let rUrl = API_BASE + path;
+      if (rMethod === 'GET') rUrl += (rUrl.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now();
+      const res = await fetch(rUrl, {
+        method: rMethod,
         headers: Object.assign(
           { 'Accept': '*/*' },
           this.token ? { 'Authorization': 'Bearer ' + this.token } : {},
