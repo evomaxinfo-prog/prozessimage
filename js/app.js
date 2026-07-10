@@ -24,7 +24,7 @@
   const state = {
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
-    drawZone: false, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null,
+    drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null,
   };
 
   /* ---------------- Toast ---------------- */
@@ -481,6 +481,13 @@
       if (doc) {
         const r = doc.getBoundingClientRect();
         const x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+        if (state.drawShape === 'route') {
+          if (state.zoneDraft.length >= 2) {
+            const last = state.zoneDraft[state.zoneDraft.length - 1];
+            if (Math.hypot((last.x - x) * r.width, (last.y - y) * r.height) < 12) { finishRoute(); return; }
+          }
+          state.zoneDraft.push({ x, y }); renderEditor(); return;
+        }
         if (state.zoneDraft.length >= 3) {
           const f = state.zoneDraft[0];
           if (Math.hypot((f.x - x) * r.width, (f.y - y) * r.height) < 12) { finishZone(); return; }
@@ -507,7 +514,8 @@
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
     else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
-    else if (act === 'toggle-zone') { state.drawZone = !state.drawZone; state.zoneDraft = []; state.zoneCursor = null; if (state.drawZone) state.selectedZone = null; renderEditor(); }
+    else if (act === 'toggle-zone') { const on = !(state.drawZone && state.drawShape === 'zone'); state.drawZone = on; state.drawShape = on ? 'zone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
+    else if (act === 'toggle-route') { const on = !(state.drawZone && state.drawShape === 'route'); state.drawZone = on; state.drawShape = on ? 'route' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
   }
   function onContentInput(e) {
     if (e.target && e.target.id === 'satRange') { onSat(e.target.value); return; }
@@ -529,6 +537,10 @@
   /* ================= Modellierungs-Editor (Schritt 3) ================= */
 
   const SYM = {
+    src: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 12h6M11 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+    snk: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 12h-6M13 9l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+    buf: '<path d="M5 8h14v8H5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 8v8M13 8v8" stroke="currentColor" stroke-width="1.4"/>',
+    xfer: '<path d="M4 9h16M4 15h16" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 6l3 3-3 3M8 18l-3-3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
     cab: '<rect x="5" y="4" width="14" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="15" cy="12" r="1.2" fill="currentColor"/>',
     zone: '<rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2.5"/>',
     panel: '<rect x="4" y="7" width="16" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><path d="M13 10h4M13 14h4" stroke="currentColor" stroke-width="1.6"/>',
@@ -552,6 +564,7 @@
   };
 
   const LAYER_META = {
+    'L0.0': { soft: '#E2F4EE', action: 'FÖRDERWEG ZIEHEN', palette: [['Quelle', 'src'], ['Senke', 'snk'], ['Puffer', 'buf'], ['Umsetzer', 'xfer']] },
     'L1.0': { soft: '#E6F0F7', action: 'SB EINZEICHNEN', palette: [['Schaltschrank', 'cab'], ['Schutzbereich', 'zone'], ['Bedienpult', 'panel'], ['Klemmkasten', 'box']] },
     'L2.0': { soft: '#F0E9F7', action: 'ROBOTER SETZEN', palette: [['Roboter', 'robot'], ['Techno-Steuerung', 'ctrl'], ['Greifer', 'grip'], ['Zelle', 'cell']] },
     'L3.0': { soft: '#E4F3EE', action: 'IDENT PLATZIEREN', palette: [['Antrieb', 'motor'], ['2D-Kamera', 'cam'], ['RFID', 'rfid'], ['Ritzpräger', 'mark']] },
@@ -561,6 +574,45 @@
 
   function layerById(id) { return (state.detail.layers || []).find((l) => l.id === id) || null; }
   function objectsOfLayer(id) { return (state.detail.objects || []).filter((o) => o.layerId === id); }
+
+  /* ---- Punkt-basierte Formen: Schutzbereich (geschlossen) + Materialfluss-Förderweg (offen) ---- */
+  function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'mf_route'); }
+
+  const ROUTE_ARTS = ['Rollenbahn', 'Kettenförderer', 'Band-/Gurtförderer', 'Hängeförderer', 'FTS / AGV', 'Stapler / manuell', 'Manueller Transport'];
+  const ROUTE_DASH = { 'Rollenbahn': '', 'Kettenförderer': '2.4 1.6', 'Band-/Gurtförderer': '', 'Hängeförderer': '4 2', 'FTS / AGV': '0.1 2.6', 'Stapler / manuell': '5 2 1 2', 'Manueller Transport': '5 2 1 2' };
+  function routeArt(o) { const m = (o.metatags || []).find((x) => x.label === 'Förderart'); return m ? m.value : ''; }
+
+  function docAspect() {
+    if (state.layoutBlobUrl && state.layoutDim && state.layoutDim.w && state.layoutDim.h) return state.layoutDim.w / state.layoutDim.h;
+    return 760 / 520;
+  }
+  // Abstand Punkt→Strecke in seitenverhältnis-korrigiertem Raum (x mit ar skaliert → isotrop)
+  function distToSegAR(px, py, ax, ay, bx, by, ar) {
+    px *= ar; ax *= ar; bx *= ar;
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+    let t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0; t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+  }
+  function pointNearRoute(o, x, y) {
+    const p = o.points; if (!p || p.length < 2) return false;
+    const ar = docAspect();
+    for (let i = 0; i < p.length - 1; i++) { if (distToSegAR(x, y, p[i].x, p[i].y, p[i + 1].x, p[i + 1].y, ar) < 0.02) return true; }
+    return false;
+  }
+  // Gefüllter Pfeilkopf am Streckenende; isotrop trotz preserveAspectRatio="none"
+  function routeArrowPath(p, ar) {
+    const n = p.length; if (n < 2) return '';
+    const tip = p[n - 1], prev = p[n - 2];
+    let sdx = (tip.x - prev.x) * ar, sdy = (tip.y - prev.y);
+    const len = Math.hypot(sdx, sdy) || 1e-6; sdx /= len; sdy /= len;
+    const back = { x: -sdx, y: -sdy }, L = 3.4, ang = Math.PI * 0.16;
+    const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
+    const w1 = rot(back, ang), w2 = rot(back, -ang);
+    const tvx = tip.x * 100, tvy = tip.y * 100;
+    const p1x = tvx + w1.x * L / ar, p1y = tvy + w1.y * L;
+    const p2x = tvx + w2.x * L / ar, p2y = tvy + w2.y * L;
+    return 'M' + p1x + ' ' + p1y + ' L' + tvx + ' ' + tvy + ' L' + p2x + ' ' + p2y + ' Z';
+  }
 
   async function openEditor() {
     state.view = 'editor';
@@ -610,7 +662,7 @@
 
     const visible = {};
     (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
-    const placed = (state.detail.objects || []).filter((o) => o.symbolType !== 'sb_zone' && visible[o.layerId] !== false).map((o) => {
+    const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
       const chips = o.metatags.map((m) => m.value).filter(Boolean);
       return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(o.color) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
@@ -635,6 +687,18 @@
       const col = esc(zoneColor(z));
       return '<polygon id="zone-poly-' + z.id + '" points="' + pts + '" fill="' + col + '" fill-opacity="0.13" stroke="' + col + '" stroke-width="' + (sel ? 2.4 : 1.6) + '" ' + (sel ? 'stroke-dasharray="4 3" ' : '') + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
     }).join('');
+    const ar = docAspect();
+    const routes = (state.detail.objects || []).filter((o) => o.symbolType === 'mf_route' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
+    const routeSvg = routes.map((r) => {
+      const pts = r.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' ');
+      const sel = state.selectedZone === r.id;
+      const col = esc(r.color || '#0FA47F');
+      const dash = ROUTE_DASH[routeArt(r)] || '';
+      const line = '<polyline id="zone-poly-' + r.id + '" points="' + pts + '" fill="none" stroke="' + col + '" stroke-width="' + (sel ? 2.8 : 2) + '" '
+        + (dash ? ('stroke-dasharray="' + dash + '" ') : '') + 'stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" class="mf-line' + (sel ? ' sel' : '') + '" style="pointer-events:none"/>';
+      const arrow = '<path id="route-arrow-' + r.id + '" d="' + routeArrowPath(r.points, ar) + '" fill="' + col + '" style="pointer-events:none"/>';
+      return line + arrow;
+    }).join('');
     let draft = '';
     if (state.drawZone && state.zoneDraft.length) {
       const L = layerById(state.activeLayer); const col = esc(L ? L.color : '#0065A5');
@@ -642,12 +706,12 @@
       draft = '<polyline id="zone-draft" points="' + dpts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>'
         + state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
     }
-    return '<svg class="zone-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2">' + techLinesSvg(visible) + polys + draft + '</svg>';
+    return '<svg class="zone-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2">' + techLinesSvg(visible) + polys + routeSvg + draft + '</svg>';
   }
 
   function zoneHandleLayer() {
     if (state.drawZone || !state.selectedZone) return '';
-    const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && o.symbolType === 'sb_zone' && o.points);
+    const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && isShape(o) && o.points);
     if (!z) return '';
     return '<div class="zone-handle-layer">' + z.points.map((p, i) =>
       '<div class="zone-vertex" data-zone="' + z.id + '" data-vidx="' + i + '" style="left:' + (p.x * 100) + '%;top:' + (p.y * 100) + '%"></div>').join('') + '</div>';
@@ -756,17 +820,34 @@
       + '</div></div></div>'
       + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'
       + '<div class="layer-stack">' + layerStack + '</div>'
-      + (canEdit() ? ('<div class="lp-action">'
-      + '<button class="btn zone-btn ' + (state.drawZone ? 'active' : '') + '" data-act="toggle-zone" style="width:100%;justify-content:center">'
-      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> '
-      + (state.drawZone ? 'ZEICHNEN AKTIV' : 'SB SCHUTZBEREICH') + '</button>'
-      + (state.drawZone
-        ? '<div class="zone-hint">Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab</div>'
-        : '<div class="zone-hint">Polygon zeichnen; Stützpunkte danach verschiebbar. Bereich anklicken &amp; <b>Entf</b> löscht ihn.</div>') + '</div>') : '')
+      + (canEdit() ? actionPanelHtml(L) : '')
       + '<div class="objlist"><h4>Objektliste · ' + esc(L.code) + '</h4>' + objlist + '</div>'
       + '</aside></div>';
 
     applyZoomSat();
+  }
+
+  function actionPanelHtml(L) {
+    const isL0 = L && L.code === 'L0.0';
+    const zoneActive = state.drawShape === 'zone';
+    const routeActive = state.drawShape === 'route';
+    let btn, hint;
+    if (isL0) {
+      btn = '<button class="btn zone-btn ' + (routeActive ? 'active' : '') + '" data-act="toggle-route" style="width:100%;justify-content:center">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h13M13 8l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg> '
+        + (routeActive ? 'ZEICHNEN AKTIV' : 'FÖRDERWEG') + '</button>';
+      hint = routeActive
+        ? 'Klicken setzt Wegpunkte · Klick auf den letzten Punkt oder <b>Enter</b> beendet · <b>Esc</b> bricht ab. Der Pfeil zeigt die Flussrichtung; Doppelklick öffnet die Förderart.'
+        : 'Förderweg zeichnen; Wegpunkte danach verschiebbar. Weg anklicken &amp; <b>Entf</b> löscht ihn.';
+    } else {
+      btn = '<button class="btn zone-btn ' + (zoneActive ? 'active' : '') + '" data-act="toggle-zone" style="width:100%;justify-content:center">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> '
+        + (zoneActive ? 'ZEICHNEN AKTIV' : 'SB SCHUTZBEREICH') + '</button>';
+      hint = zoneActive
+        ? 'Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab'
+        : 'Polygon zeichnen; Stützpunkte danach verschiebbar. Bereich anklicken &amp; <b>Entf</b> löscht ihn.';
+    }
+    return '<div class="lp-action">' + btn + '<div class="zone-hint">' + hint + '</div></div>';
   }
 
   function objCatBlock(name, list, color) {
@@ -783,7 +864,10 @@
   function zoomStep(d) { state.zoom = Math.min(2.2, Math.max(0.5, (state.zoom || 1) + d)); applyZoomSat(); const z = document.querySelector('.zoom-ctl .z'); if (z) z.textContent = Math.round(state.zoom * 100) + '%'; }
   function onSat(v) { state.sat = +v; const sv = document.getElementById('satVal'); if (sv) sv.textContent = v + '%'; const bg = document.querySelector('.floor-bg'); if (bg) bg.style.opacity = (+v / 100); }
 
-  function selectLayer(id) { state.activeLayer = id; renderEditor(); }
+  function selectLayer(id) {
+    if (state.drawZone) { state.drawZone = false; state.drawShape = null; state.zoneDraft = []; state.zoneCursor = null; }
+    state.activeLayer = id; renderEditor();
+  }
   async function toggleLayerVis(id) {
     const lay = layerById(id); if (!lay) return;
     const nv = !(lay.visible !== false); lay.visible = nv;
@@ -861,7 +945,7 @@
         const now = Date.now();
         const dbl = state.lastZoneUp && state.lastZoneUp.id === z.id && (now - state.lastZoneUp.t) < 400;
         state.lastZoneUp = dbl ? null : { id: z.id, t: now };
-        if (dbl) { openZoneAssignModal(z.id); return; }
+        if (dbl) { if (z.symbolType === 'mf_route') openRouteModal(z.id); else openZoneAssignModal(z.id); return; }
         if (state.selectedZone !== z.id) { state.selectedZone = z.id; renderEditor(); }
         return;
       }
@@ -1025,6 +1109,48 @@
     } catch (e) { toast('Zuordnung fehlgeschlagen'); }
     closeZoneModal(); renderEditor();
   }
+
+  function openRouteModal(routeId) {
+    closeZoneModal();
+    const z = (state.detail.objects || []).find((o) => o.id === routeId); if (!z) return;
+    const art = routeArt(z);
+    const bez = ((z.metatags || []).find((m) => m.label === 'Bezeichnung') || {}).value || '';
+    const col = (layerById(z.layerId) || {}).color || '#0FA47F';
+    const opts = '<option value="">— bitte wählen —</option>'
+      + ROUTE_ARTS.map((a) => '<option value="' + esc(a) + '"' + (a === art ? ' selected' : '') + '>' + esc(a) + '</option>').join('');
+    const html = '<div class="za-backdrop" id="zaBackdrop"><div class="za-card">'
+      + '<div class="za-head"><div><div class="za-title">Förderweg</div><div class="za-sub">' + esc(z.name) + '</div></div>'
+      + '<button class="za-x" data-za="close" title="Schließen">×</button></div>'
+      + '<div class="za-body" style="display:flex;flex-direction:column;gap:12px;padding:16px">'
+      + '<div class="m-field"><label>Förderart</label><select id="rfArt">' + opts + '</select></div>'
+      + '<div class="m-field"><label>Bezeichnung / Teil</label><input id="rfBez" placeholder="z. B. Karosserie-Seitenteil" value="' + esc(bez) + '"></div>'
+      + '</div>'
+      + '<div class="za-foot"><button class="btn" data-za="close">Abbrechen</button>'
+      + '<button class="btn" data-za="save" style="background:' + esc(col) + ';border-color:' + esc(col) + ';color:#fff">Speichern</button></div></div></div>';
+    const wrap = document.createElement('div'); wrap.innerHTML = html;
+    document.body.appendChild(wrap.firstChild);
+    const bd = document.getElementById('zaBackdrop');
+    bd.addEventListener('click', (ev) => {
+      if (ev.target.id === 'zaBackdrop') { closeZoneModal(); return; }
+      const za = ev.target.closest('[data-za]'); if (!za) return;
+      const a = za.getAttribute('data-za');
+      if (a === 'close') closeZoneModal();
+      else if (a === 'save') saveRoute(routeId);
+    });
+    setTimeout(() => { const s = document.getElementById('rfArt'); if (s) s.focus(); }, 60);
+  }
+  async function saveRoute(routeId) {
+    const z = (state.detail.objects || []).find((o) => o.id === routeId); if (!z) { closeZoneModal(); return; }
+    const art = (document.getElementById('rfArt') || {}).value || '';
+    const bez = ((document.getElementById('rfBez') || {}).value || '').trim();
+    const metatags = [];
+    if (art) metatags.push({ position: 1, label: 'Förderart', value: art });
+    if (bez) metatags.push({ position: 2, label: 'Bezeichnung', value: bez });
+    try { const upd = await Api.setMetatags(z.id, metatags); z.metatags = (upd && upd.metatags) || metatags; toast('Förderweg gespeichert'); }
+    catch (e) { toast('Speichern fehlgeschlagen'); }
+    closeZoneModal(); renderEditor();
+  }
+
   function onContentPointerDown(e) {
     if (!canEdit()) return;
     // Technologie-Blase greifen
@@ -1121,18 +1247,34 @@
     renderEditor();
   }
 
+  async function finishRoute() {
+    if (state.drawShape !== 'route' || state.zoneDraft.length < 2) { toast('Mindestens 2 Wegpunkte nötig'); return; }
+    const pts = state.zoneDraft.slice();
+    const L = layerById(state.activeLayer);
+    const num = String((state.detail.objects || []).filter((o) => o.symbolType === 'mf_route').length + 1).padStart(2, '0');
+    state.drawZone = false; state.drawShape = null; state.zoneDraft = []; state.zoneCursor = null;
+    try {
+      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Förderweg_' + num, symbolType: 'mf_route', color: L.color, x: pts[0].x, y: pts[0].y, points: pts });
+      state.detail.objects.push(obj); state.selectedZone = obj.id;
+      toast('Förderweg erstellt');
+    } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
+    renderEditor();
+  }
+
   async function deleteSelectedZone() {
     const id = state.selectedZone; const z = (state.detail.objects || []).find((o) => o.id === id);
     if (!z) return;
+    const isRoute = z.symbolType === 'mf_route';
     state.selectedZone = null;
     try { await Api.deleteObject(id); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
     state.detail.objects = state.detail.objects.filter((o) => o.id !== id);
-    toast('Schutzbereich gelöscht'); renderEditor();
+    toast(isRoute ? 'Förderweg gelöscht' : 'Schutzbereich gelöscht'); renderEditor();
   }
 
   function updateZoneDom(z) {
     const poly = document.getElementById('zone-poly-' + z.id);
     if (poly) poly.setAttribute('points', z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' '));
+    if (z.symbolType === 'mf_route') { const a = document.getElementById('route-arrow-' + z.id); if (a) a.setAttribute('d', routeArrowPath(z.points, docAspect())); }
     z.points.forEach((p, i) => {
       const h = document.querySelector('.zone-vertex[data-zone="' + z.id + '"][data-vidx="' + i + '"]');
       if (h) { h.style.left = (p.x * 100) + '%'; h.style.top = (p.y * 100) + '%'; }
@@ -1150,7 +1292,7 @@
     const t = document.activeElement;
     const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
     if (state.drawZone) {
-      if (e.key === 'Enter') { e.preventDefault(); finishZone(); }
+      if (e.key === 'Enter') { e.preventDefault(); state.drawShape === 'route' ? finishRoute() : finishZone(); }
       else if (e.key === 'Escape') { e.preventDefault(); state.drawZone = false; state.zoneDraft = []; state.zoneCursor = null; renderEditor(); }
       else if (e.key === 'Backspace' && !inField) { e.preventDefault(); state.zoneDraft.pop(); renderEditor(); }
       return;
