@@ -1169,7 +1169,7 @@
       const z = (state.detail.objects || []).find((o) => o.id === zd.id);
       if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
         protectObj(z.id);
-        try { await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }); } catch (e2) { toast('Speichern fehlgeschlagen'); }
+        try { await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }); } catch (e2) { toast('Speichern fehlgeschlagen (' + (e2 && (e2.status || e2.message) || '?') + ')'); }
         renderEditor(); return;
       }
       // Klick ohne Bewegung: Auswahl bzw. Doppelklick (zeitbasiert, re-render-fest)
