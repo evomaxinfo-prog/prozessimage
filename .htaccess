@@ -18,3 +18,33 @@
 <FilesMatch "(^\.|composer\.(json|lock)|\.md$)">
   Require all denied
 </FilesMatch>
+
+# --- Ladezeit: Komprimierung (ca. 70 % weniger Übertragung bei JS/CSS) ---
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml
+  AddOutputFilterByType DEFLATE application/javascript application/json application/xml
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# --- Ladezeit: Browser-Caching. Die ?v=-Version in den URLs invalidiert bei Updates sauber. ---
+<IfModule mod_headers.c>
+  # HTML immer frisch prüfen (holt neue ?v=-Verweise)
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+  # Statische Assets lange cachen (durch ?v= bei Änderung sofort neu geladen)
+  <FilesMatch "\.(css|js|png|jpe?g|gif|webp|svg|woff2?|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
