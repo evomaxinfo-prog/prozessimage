@@ -103,6 +103,7 @@
     updateObject(id, patch) { return this.request('/objects/' + id, { method: 'PATCH', body: patch }); },
     deleteObject(id) { return this.request('/objects/' + id, { method: 'DELETE' }); },
     setMetatags(objectId, metatags) { return this.request('/objects/' + objectId + '/metatags', { method: 'PUT', body: { metatags } }); },
+    getChanges(stationId, since) { return this.request('/stations/' + stationId + '/changes' + (since ? ('?since=' + encodeURIComponent(since)) : '')); },
     async uploadLayout(stationId, file) {
       const fd = new FormData();
       fd.append('file', file);

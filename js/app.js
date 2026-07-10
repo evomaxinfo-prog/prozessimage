@@ -25,6 +25,7 @@
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
     drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null,
+    collab: { since: null, viewers: [], enabled: true, inflight: false },
   };
 
   /* ---------------- Toast ---------------- */
@@ -638,11 +639,103 @@
     if (state.zoom == null) state.zoom = 1;
     await ensureLayoutBlob();
     renderEditor();
+    startCollab();
   }
   function leaveEditor() {
     state.view = 'detail';
     $('content').style.padding = '';
+    stopCollab();
     renderDetail();
+  }
+
+  /* ================= Echtzeit-Kollaboration (Polling) ================= */
+  let collabTimer = null;
+  function startCollab() {
+    stopCollab();
+    if (!state.detail || !state.collab.enabled) return;
+    state.collab.since = null; state.collab.viewers = []; state.collab.inflight = false;
+    collabTimer = setInterval(pollCollab, 3000);
+    pollCollab();
+  }
+  function stopCollab() {
+    if (collabTimer) { clearInterval(collabTimer); collabTimer = null; }
+    state.collab.inflight = false;
+  }
+  // Objekt, das der lokale Nutzer gerade selbst bewegt/bearbeitet – wird beim Mergen nicht überschrieben.
+  function activeObjectId() {
+    if (dragMove) return String(dragMove.oid);
+    if (state.techDrag) return String(state.techDrag.id);
+    if (state.zoneDrag) return String(state.zoneDrag.id);
+    if (state.modalObjId) return String(state.modalObjId);
+    return null;
+  }
+  function collabIdle() {
+    return !dragMove && !state.techDrag && !state.zoneDrag && !state.drawZone
+      && !state.modalObjId && !document.getElementById('zaBackdrop');
+  }
+  function presenceChanged(v) {
+    const a = (state.collab.viewers || []).map((x) => x.email).sort().join(',');
+    const b = (v || []).map((x) => x.email).sort().join(',');
+    return a !== b;
+  }
+  async function pollCollab() {
+    if (!state.detail || state.view !== 'editor' || document.hidden) return;
+    if (state.collab.inflight) return;
+    state.collab.inflight = true;
+    let res;
+    try {
+      res = await Api.getChanges(state.detail.id, state.collab.since);
+    } catch (e) {
+      state.collab.inflight = false;
+      // Backend-Endpunkt noch nicht ausgerollt -> Kollaboration still deaktivieren, keine Fehlerflut
+      if (e && (e.status === 404 || e.status === 405)) { state.collab.enabled = false; stopCollab(); }
+      return;
+    }
+    state.collab.inflight = false;
+    if (!res) return;
+    if (res.serverTime) state.collab.since = res.serverTime;
+    const viewersChanged = presenceChanged(res.viewers || []);
+    state.collab.viewers = res.viewers || [];
+    const applied = applyRemoteChanges(res.objects || [], res.deletedIds || []);
+    if (applied && collabIdle()) renderEditor();
+    else if (viewersChanged) renderPresenceOnly();
+  }
+  function applyRemoteChanges(changed, deletedIds) {
+    if (!state.detail) return false;
+    const objs = state.detail.objects || (state.detail.objects = []);
+    const busy = activeObjectId();
+    let dirty = false;
+    if (deletedIds && deletedIds.length) {
+      const del = new Set(deletedIds.map(String));
+      const kept = objs.filter((o) => !del.has(String(o.id)) || String(o.id) === busy);
+      if (kept.length !== objs.length) {
+        state.detail.objects = kept; dirty = true;
+        if (state.selectedZone && del.has(String(state.selectedZone)) && String(state.selectedZone) !== busy) state.selectedZone = null;
+      }
+    }
+    const arr = state.detail.objects;
+    const idx = {}; arr.forEach((o, i) => { idx[String(o.id)] = i; });
+    (changed || []).forEach((row) => {
+      const id = String(row.id);
+      if (id === busy) return; // nicht überschreiben, was der Nutzer gerade zieht
+      row.metatags = row.metatags || [];
+      if (idx[id] != null) arr[idx[id]] = row;
+      else { arr.push(row); idx[id] = arr.length - 1; }
+      dirty = true;
+    });
+    return dirty;
+  }
+  function presenceHtml() {
+    const me = state.user && state.user.email;
+    const others = (state.collab.viewers || []).filter((v) => v.email && v.email !== me);
+    if (!others.length) return '';
+    const dots = others.slice(0, 5).map((v) => '<span class="collab-dot" title="' + esc(v.email) + (v.role ? (' · ' + roleLabel(v.role)) : '') + '">' + esc(initials(v.email)) + '</span>').join('');
+    const more = others.length > 5 ? '<span class="collab-more">+' + (others.length - 5) + '</span>' : '';
+    return '<div class="collab-bar" title="Weitere Personen in dieser Anlage">' + dots + more + '</div>';
+  }
+  function renderPresenceOnly() {
+    const bar = document.getElementById('collabBar');
+    if (bar) bar.innerHTML = presenceHtml();
   }
 
   async function ensureLayoutBlob() {
@@ -829,7 +922,8 @@
       + '<div class="editor-topbar"><div class="ttl">' + esc((state.detail.anlagenname || '').split(' · ')[0])
       + '<span class="lyr-badge" style="background:' + L.color + '">' + esc(L.code) + ' ' + esc(L.name) + '</span></div>'
       + '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'
-      + (canEdit() ? '<button class="up-btn" data-act="editor-upload"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? 'LAYOUT ERSETZEN' : 'LAYOUT HOCHLADEN') + '</button>' : '')
+      + '<div id="collabBar">' + presenceHtml() + '</div>'
+      + (canEdit() ? '<button class="up-btn" data-act="editor-upload">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? 'LAYOUT ERSETZEN' : 'LAYOUT HOCHLADEN') + '</button>' : '')
       + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>'
@@ -1549,9 +1643,11 @@
 
     // Header
     $('btnLogout').addEventListener('click', async () => {
+      stopCollab();
       try { await Api.logout(); } catch (e) { /* egal */ }
       Api.token = null; showLogin();
     });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && state.view === 'editor' && collabTimer) pollCollab(); });
 
     // Baum
     $('btnAddWerk').addEventListener('click', addWerk);
