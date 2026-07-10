@@ -696,20 +696,40 @@
     if (res.serverTime) state.collab.since = res.serverTime;
     const viewersChanged = presenceChanged(res.viewers || []);
     state.collab.viewers = res.viewers || [];
-    const applied = applyRemoteChanges(res.objects || [], res.deletedIds || []);
-    if (applied && collabIdle()) renderEditor();
-    else if (viewersChanged) renderPresenceOnly();
+    const r = applyRemoteChanges(res.objects || [], res.deletedIds || []);
+    if (r.dirty) {
+      if (r.needFull) {
+        // Struktur-Änderung (hinzugefügt/gelöscht/Nicht-Form) -> voller Editor-Render, sobald der Nutzer nichts selbst macht
+        if (collabIdle()) renderEditor(); else renderPresenceOnly();
+      } else {
+        // Reine Geometrie-Änderung an Polygonen/Förderwegen -> nur das jeweilige SVG-Element patchen (kein Flackern, unterbricht nichts)
+        r.patchIds.forEach((id) => { const o = (state.detail.objects || []).find((x) => String(x.id) === id); if (o) { updateZoneDom(o); flashShape(id); } });
+        renderPresenceOnly();
+      }
+    } else if (viewersChanged) {
+      renderPresenceOnly();
+    }
+  }
+  // Sichtbare Eigenschaften einer Form jenseits der Geometrie (Farbe, SPS-Zuordnung, Förderart -> Linienstil)
+  function shapeVisualKey(o) {
+    const art = (o.metatags || []).find((m) => m.label === 'Förderart');
+    return [o.color, o.plcConfigId || '', art ? art.value : '', o.layerId].join('|');
+  }
+  function flashShape(id) {
+    const el = document.getElementById('zone-poly-' + id); if (!el) return;
+    el.classList.remove('mf-flash'); void el.getBBox; el.classList.add('mf-flash');
+    setTimeout(() => { const e = document.getElementById('zone-poly-' + id); if (e) e.classList.remove('mf-flash'); }, 900);
   }
   function applyRemoteChanges(changed, deletedIds) {
-    if (!state.detail) return false;
+    if (!state.detail) return { dirty: false, needFull: false, patchIds: [] };
     const objs = state.detail.objects || (state.detail.objects = []);
     const busy = activeObjectId();
-    let dirty = false;
+    let dirty = false, needFull = false; const patchIds = [];
     if (deletedIds && deletedIds.length) {
       const del = new Set(deletedIds.map(String));
       const kept = objs.filter((o) => !del.has(String(o.id)) || String(o.id) === busy);
       if (kept.length !== objs.length) {
-        state.detail.objects = kept; dirty = true;
+        state.detail.objects = kept; dirty = true; needFull = true;
         if (state.selectedZone && del.has(String(state.selectedZone)) && String(state.selectedZone) !== busy) state.selectedZone = null;
       }
     }
@@ -719,19 +739,41 @@
       const id = String(row.id);
       if (id === busy) return; // nicht überschreiben, was der Nutzer gerade zieht
       row.metatags = row.metatags || [];
-      if (idx[id] != null) arr[idx[id]] = row;
-      else { arr.push(row); idx[id] = arr.length - 1; }
-      dirty = true;
+      if (idx[id] != null) {
+        const old = arr[idx[id]];
+        // Nur-Geometrie-Update einer Form: gleiche sichtbare Eigenschaften -> in-place patchen
+        const geomOnly = isShape(old) && isShape(row) && old.symbolType === row.symbolType && shapeVisualKey(old) === shapeVisualKey(row);
+        arr[idx[id]] = row; dirty = true;
+        if (geomOnly) patchIds.push(id); else needFull = true;
+      } else {
+        arr.push(row); idx[id] = arr.length - 1; dirty = true; needFull = true;
+      }
     });
-    return dirty;
+    return { dirty, needFull, patchIds };
   }
+  function personLabel(v) { return v.name || v.email || ''; }
+  function personInitials(label) {
+    const base = String(label).split('@')[0];
+    const parts = base.split(/[.\-_\s]+/).filter(Boolean).slice(0, 2);
+    return parts.map((s) => s[0].toUpperCase()).join('') || 'U';
+  }
+  function firstName(label) { return String(label).split('@')[0].split(/[.\-_\s]+/).filter(Boolean)[0] || String(label); }
+  function capFirst(s) { s = String(s); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function presenceHtml() {
     const me = state.user && state.user.email;
     const others = (state.collab.viewers || []).filter((v) => v.email && v.email !== me);
     if (!others.length) return '';
-    const dots = others.slice(0, 5).map((v) => '<span class="collab-dot" title="' + esc(v.email) + (v.role ? (' · ' + roleLabel(v.role)) : '') + '">' + esc(initials(v.email)) + '</span>').join('');
+    const dots = others.slice(0, 5).map((v) => {
+      const label = personLabel(v);
+      const tip = esc(label) + (v.editing ? ' · bearbeitet gerade' : (v.role ? (' · ' + roleLabel(v.role)) : ''));
+      return '<span class="collab-dot' + (v.editing ? ' editing' : '') + '" title="' + tip + '">' + esc(personInitials(label)) + '</span>';
+    }).join('');
     const more = others.length > 5 ? '<span class="collab-more">+' + (others.length - 5) + '</span>' : '';
-    return '<div class="collab-bar" title="Weitere Personen in dieser Anlage">' + dots + more + '</div>';
+    const editors = others.filter((v) => v.editing).map((v) => esc(capFirst(firstName(personLabel(v)))));
+    const cap = editors.length
+      ? '<span class="collab-cap">' + editors.join(', ') + (editors.length === 1 ? ' bearbeitet gerade' : ' bearbeiten gerade') + '</span>'
+      : '<span class="collab-cap muted">' + others.length + (others.length === 1 ? ' Person' : ' Personen') + ' hier</span>';
+    return '<div class="collab-bar" title="Wer diese Anlage gerade offen hat"><div class="collab-dots">' + dots + more + '</div>' + cap + '</div>';
   }
   function renderPresenceOnly() {
     const bar = document.getElementById('collabBar');
