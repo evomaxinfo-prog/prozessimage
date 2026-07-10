@@ -25,7 +25,7 @@
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
     drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null,
-    collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false },
+    collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false },
   };
 
   /* ---------------- Toast ---------------- */
@@ -705,13 +705,26 @@
     const r = applyRemoteChanges(res.objects || [], res.deletedIds || []);
     if (r.dirty) {
       if (r.needFull) {
-        // Struktur-Änderung (hinzugefügt/gelöscht/Nicht-Form) -> voller Editor-Render, sobald der Nutzer nichts selbst macht
-        if (collabIdle()) renderEditor(); else renderPresenceOnly();
+        if (collabIdle()) { renderEditor(); state.collab.pendingRender = false; }
+        else { state.collab.pendingRender = true; renderPresenceOnly(); }
       } else {
-        // Reine Geometrie-Änderung an Polygonen/Förderwegen -> nur das jeweilige SVG-Element patchen (kein Flackern, unterbricht nichts)
-        r.patchIds.forEach((id) => { const o = (state.detail.objects || []).find((x) => String(x.id) === id); if (o) { updateZoneDom(o); flashShape(id); } });
+        // Reine Geometrie-Änderung an Polygonen/Förderwegen -> nur das jeweilige SVG-Element patchen
+        let missing = false;
+        r.patchIds.forEach((id) => {
+          const o = (state.detail.objects || []).find((x) => String(x.id) === id);
+          if (!o) return;
+          if (document.getElementById('zone-poly-' + id)) { updateZoneDom(o); flashShape(id); }
+          else missing = true; // Element noch nicht gezeichnet -> voller Render nötig
+        });
+        if (missing) {
+          if (collabIdle()) { renderEditor(); state.collab.pendingRender = false; }
+          else state.collab.pendingRender = true;
+        }
         renderPresenceOnly();
       }
+    } else if (state.collab.pendingRender && collabIdle()) {
+      // Aufgeschobener Neuaufbau nachholen, sobald der Nutzer nichts mehr selbst macht
+      renderEditor(); state.collab.pendingRender = false;
     } else if (viewersChanged) {
       renderPresenceOnly();
     }
