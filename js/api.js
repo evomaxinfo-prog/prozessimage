@@ -106,6 +106,7 @@
       return this.request('/stations/' + stationId + '/layers/' + layerId, { method: 'PATCH', body: { visible } });
     },
     createObject(stationId, obj) { return this.request('/stations/' + stationId + '/objects', { method: 'POST', body: obj }); },
+    getObjects(stationId) { return this.request('/stations/' + stationId + '/objects'); },
     updateObject(id, patch) { return this.request('/objects/' + id, { method: 'PATCH', body: patch }); },
     deleteObject(id) { return this.request('/objects/' + id, { method: 'DELETE' }); },
     setMetatags(objectId, metatags) { return this.request('/objects/' + objectId + '/metatags', { method: 'PUT', body: { metatags } }); },

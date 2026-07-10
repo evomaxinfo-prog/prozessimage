@@ -683,27 +683,27 @@
     if (!state.detail || state.view !== 'editor') return;
     if (state.collab.inflight) return;
     state.collab.inflight = true;
-    let res;
-    try {
-      res = await Api.getChanges(state.detail.id, state.collab.since);
-    } catch (e) {
-      state.collab.inflight = false;
-      const st = e && e.status;
-      // Route fehlt dauerhaft -> abschalten
+    // Objekte über den zuverlässigen /objects-Endpunkt (keine Zeitstempel-Logik) + Präsenz über /changes.
+    const sid = state.detail.id;
+    let objsList, chg;
+    const [objR, chR] = await Promise.allSettled([Api.getObjects(sid), Api.getChanges(sid, null)]);
+    state.collab.inflight = false;
+    if (objR.status === 'rejected') {
+      const st = objR.reason && objR.reason.status;
       if (st === 404 || st === 405) { state.collab.enabled = false; state.collab.status = 'offline'; stopCollab(); renderPresenceOnly(); return; }
-      // 5xx / Netzwerk / CORS (z. B. Migration noch nicht gelaufen): sichtbar offline, aber weiter versuchen -> erholt sich automatisch
       if (state.collab.status !== 'offline') { state.collab.status = 'offline'; renderPresenceOnly(); }
       return;
     }
-    state.collab.inflight = false;
-    if (!res) return;
+    objsList = Array.isArray(objR.value) ? objR.value : [];
+    chg = (chR.status === 'fulfilled') ? (chR.value || {}) : {};
+
     const statusChanged = state.collab.status !== 'live';
     state.collab.status = 'live';
-    if (res.serverTime) state.collab.since = res.serverTime;
-    const viewersChanged = presenceChanged(res.viewers || []) || statusChanged;
-    state.collab.viewers = res.viewers || [];
-    state.collab.lastSync = { n: (res.objects || []).length, del: (res.deletedIds || []).length, at: Date.now() };
-    const r = applyRemoteChanges(res.objects || [], res.deletedIds || []);
+    const viewersChanged = presenceChanged(chg.viewers || []) || statusChanged;
+    state.collab.viewers = chg.viewers || [];
+    state.collab.lastSync = { n: objsList.length, del: 0, at: Date.now() };
+
+    const r = reconcileObjects(objsList);
     if (r.dirty) {
       if (r.needFull) {
         if (collabIdle()) { renderEditor(); state.collab.pendingRender = false; }
@@ -730,6 +730,38 @@
       renderPresenceOnly();
     }
   }
+  // Gleicht die komplette Objektliste vom Server gegen den lokalen Stand ab (Hinzufügen/Ändern/Entfernen).
+  function reconcileObjects(list) {
+    if (!state.detail) return { dirty: false, needFull: false, patchIds: [] };
+    const busy = activeObjectId();
+    const incoming = {}; (list || []).forEach((o) => { o.metatags = o.metatags || []; incoming[String(o.id)] = o; });
+    const arr = state.detail.objects || (state.detail.objects = []);
+    let dirty = false, needFull = false; const patchIds = [];
+    // Entfernte Objekte (lokal vorhanden, aber nicht mehr in der Serverliste)
+    const kept = arr.filter((o) => {
+      if (incoming[String(o.id)] || String(o.id) === busy) return true;
+      dirty = true; needFull = true;
+      if (state.selectedZone === o.id) state.selectedZone = null;
+      return false;
+    });
+    if (kept.length !== arr.length) state.detail.objects = kept;
+    const cur = state.detail.objects;
+    const idx = {}; cur.forEach((o, i) => { idx[String(o.id)] = i; });
+    Object.keys(incoming).forEach((id) => {
+      if (id === busy) return; // nicht überschreiben, was der Nutzer gerade zieht
+      const row = incoming[id];
+      if (idx[id] != null) {
+        const old = cur[idx[id]];
+        if (!objChanged(old, row)) return;
+        const geomOnly = isShape(old) && isShape(row) && old.symbolType === row.symbolType && shapeVisualKey(old) === shapeVisualKey(row);
+        cur[idx[id]] = row; dirty = true;
+        if (geomOnly) patchIds.push(id); else needFull = true;
+      } else {
+        cur.push(row); idx[id] = cur.length - 1; dirty = true; needFull = true;
+      }
+    });
+    return { dirty, needFull, patchIds };
+  }
   // Sichtbare Eigenschaften einer Form jenseits der Geometrie (Farbe, SPS-Zuordnung, Förderart -> Linienstil)
   function shapeVisualKey(o) {
     const art = (o.metatags || []).find((m) => m.label === 'Förderart');
@@ -739,38 +771,6 @@
     const el = document.getElementById('zone-poly-' + id); if (!el) return;
     el.classList.remove('mf-flash'); void el.getBBox; el.classList.add('mf-flash');
     setTimeout(() => { const e = document.getElementById('zone-poly-' + id); if (e) e.classList.remove('mf-flash'); }, 900);
-  }
-  function applyRemoteChanges(changed, deletedIds) {
-    if (!state.detail) return { dirty: false, needFull: false, patchIds: [] };
-    const objs = state.detail.objects || (state.detail.objects = []);
-    const busy = activeObjectId();
-    let dirty = false, needFull = false; const patchIds = [];
-    if (deletedIds && deletedIds.length) {
-      const del = new Set(deletedIds.map(String));
-      const kept = objs.filter((o) => !del.has(String(o.id)) || String(o.id) === busy);
-      if (kept.length !== objs.length) {
-        state.detail.objects = kept; dirty = true; needFull = true;
-        if (state.selectedZone && del.has(String(state.selectedZone)) && String(state.selectedZone) !== busy) state.selectedZone = null;
-      }
-    }
-    const arr = state.detail.objects;
-    const idx = {}; arr.forEach((o, i) => { idx[String(o.id)] = i; });
-    (changed || []).forEach((row) => {
-      const id = String(row.id);
-      if (id === busy) return; // nicht überschreiben, was der Nutzer gerade zieht
-      row.metatags = row.metatags || [];
-      if (idx[id] != null) {
-        const old = arr[idx[id]];
-        if (!objChanged(old, row)) return; // nichts geändert -> überspringen (kein Flackern, kein Re-Render)
-        // Nur-Geometrie-Update einer Form: gleiche sichtbare Eigenschaften -> in-place patchen
-        const geomOnly = isShape(old) && isShape(row) && old.symbolType === row.symbolType && shapeVisualKey(old) === shapeVisualKey(row);
-        arr[idx[id]] = row; dirty = true;
-        if (geomOnly) patchIds.push(id); else needFull = true;
-      } else {
-        arr.push(row); idx[id] = arr.length - 1; dirty = true; needFull = true;
-      }
-    });
-    return { dirty, needFull, patchIds };
   }
   // Hat sich ein Objekt in einer sichtbaren/relevanten Eigenschaft geändert?
   function objChanged(a, b) {
