@@ -687,8 +687,11 @@
       res = await Api.getChanges(state.detail.id, state.collab.since);
     } catch (e) {
       state.collab.inflight = false;
-      // Backend-Endpunkt noch nicht ausgerollt -> Kollaboration still deaktivieren, keine Fehlerflut
-      if (e && (e.status === 404 || e.status === 405)) { state.collab.enabled = false; state.collab.status = 'offline'; stopCollab(); renderPresenceOnly(); }
+      const st = e && e.status;
+      // Route fehlt dauerhaft -> abschalten
+      if (st === 404 || st === 405) { state.collab.enabled = false; state.collab.status = 'offline'; stopCollab(); renderPresenceOnly(); return; }
+      // 5xx / Netzwerk / CORS (z. B. Migration noch nicht gelaufen): sichtbar offline, aber weiter versuchen -> erholt sich automatisch
+      if (state.collab.status !== 'offline') { state.collab.status = 'offline'; renderPresenceOnly(); }
       return;
     }
     state.collab.inflight = false;
