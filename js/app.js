@@ -25,7 +25,7 @@
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
     drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null,
-    collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false },
+    collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false, protect: {} },
   };
 
   /* ---------------- Toast ---------------- */
@@ -734,12 +734,15 @@
   function reconcileObjects(list) {
     if (!state.detail) return { dirty: false, needFull: false, patchIds: [] };
     const busy = activeObjectId();
+    const now = Date.now();
+    const protectedId = (id) => state.collab.protect[String(id)] && state.collab.protect[String(id)] > now;
     const incoming = {}; (list || []).forEach((o) => { o.metatags = o.metatags || []; incoming[String(o.id)] = o; });
     const arr = state.detail.objects || (state.detail.objects = []);
     let dirty = false, needFull = false; const patchIds = [];
-    // Entfernte Objekte (lokal vorhanden, aber nicht mehr in der Serverliste)
+    // Entfernte Objekte (lokal vorhanden, aber nicht mehr in der Serverliste). Frisch bearbeitete/erstellte
+    // Objekte sind kurz geschützt, damit ein Poll die noch nicht bestätigte lokale Änderung nicht zurücksetzt.
     const kept = arr.filter((o) => {
-      if (incoming[String(o.id)] || String(o.id) === busy) return true;
+      if (incoming[String(o.id)] || String(o.id) === busy || protectedId(o.id)) return true;
       dirty = true; needFull = true;
       if (state.selectedZone === o.id) state.selectedZone = null;
       return false;
@@ -751,6 +754,7 @@
       if (id === busy) return; // nicht überschreiben, was der Nutzer gerade zieht
       const row = incoming[id];
       if (idx[id] != null) {
+        if (protectedId(id)) return; // frisch lokal bearbeitet -> Serverstand (evtl. veraltet) nicht übernehmen
         const old = cur[idx[id]];
         if (!objChanged(old, row)) return;
         const geomOnly = isShape(old) && isShape(row) && old.symbolType === row.symbolType && shapeVisualKey(old) === shapeVisualKey(row);
@@ -762,7 +766,8 @@
     });
     return { dirty, needFull, patchIds };
   }
-  // Sichtbare Eigenschaften einer Form jenseits der Geometrie (Farbe, SPS-Zuordnung, Förderart -> Linienstil)
+  // Markiert ein Objekt kurz als "lokal frisch geändert", damit ein Poll die noch nicht bestätigte Änderung nicht überschreibt/entfernt.
+  function protectObj(id) { if (id) state.collab.protect[String(id)] = Date.now() + 6000; }
   function shapeVisualKey(o) {
     const art = (o.metatags || []).find((m) => m.label === 'Förderart');
     return [o.color, o.plcConfigId || '', art ? art.value : '', o.layerId].join('|');
@@ -1111,7 +1116,7 @@
     const num = String((state.detail.objects || []).filter((o) => o.symbolType === sym).length + 1).padStart(2, '0');
     try {
       const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: base + '_' + num, symbolType: sym, color: color || L.color, x, y });
-      state.detail.objects.push(obj);
+      state.detail.objects.push(obj); protectObj(obj.id);
       toast(name + ' platziert'); renderEditor();
     } catch (e) { toast('Platzieren fehlgeschlagen: ' + e.message); }
   }
@@ -1156,13 +1161,14 @@
     if (state.techDrag) {
       const td = state.techDrag; state.techDrag = null;
       const o = (state.detail.objects || []).find((z) => z.id === td.id);
-      if (td.moved && o) { try { await Api.updateObject(o.id, { points: o.points }); } catch (e2) { toast('Position nicht gespeichert'); } }
+      if (td.moved && o) { protectObj(o.id); try { await Api.updateObject(o.id, { points: o.points }); } catch (e2) { toast('Position nicht gespeichert'); } }
       renderEditor(); return;
     }
     if (state.zoneDrag) {
       const zd = state.zoneDrag; state.zoneDrag = null;
       const z = (state.detail.objects || []).find((o) => o.id === zd.id);
       if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
+        protectObj(z.id);
         try { await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }); } catch (e2) { toast('Speichern fehlgeschlagen'); }
         renderEditor(); return;
       }
@@ -1184,7 +1190,7 @@
       const o = (state.detail.objects || []).find((x) => x.id === dm.oid);
       if (o) {
         o.x = dm.nx; o.y = dm.ny;
-        try { await Api.updateObject(o.id, { x: dm.nx, y: dm.ny }); } catch (e) { toast('Verschieben nicht gespeichert'); }
+        protectObj(o.id); try { await Api.updateObject(o.id, { x: dm.nx, y: dm.ny }); } catch (e) { toast('Verschieben nicht gespeichert'); }
         if (techInfo(o)) renderEditor();
       }
     }
@@ -1229,7 +1235,7 @@
     const metatags = [];
     if (t1) metatags.push(l1 ? { position: 1, label: l1, value: t1 } : { position: 1, value: t1 });
     if (t2) metatags.push(l2 ? { position: 2, label: l2, value: t2 } : { position: 2, value: t2 });
-    try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast('Metatags nicht gespeichert'); }
+    protectObj(o.id); try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast('Metatags nicht gespeichert'); }
     closeTagModal(); toast('Metatags gespeichert'); renderEditor();
   }
   async function deletePlaced() {
@@ -1329,6 +1335,7 @@
     const L = layerById(z.layerId);
     const color = plcId ? (plcColor || z.color) : (L ? L.color : z.color);
     try {
+      protectObj(zoneId);
       await Api.updateObject(zoneId, { plcConfigId: plcId, color });
       z.plcConfigId = plcId || null; z.color = color;
       toast(plcId ? 'SPS zugeordnet' : 'Zuordnung entfernt');
@@ -1374,6 +1381,7 @@
     const metatags = [];
     if (art) metatags.push({ position: 1, label: 'Förderart', value: art });
     if (bez) metatags.push({ position: 2, label: 'Bezeichnung', value: bez });
+    protectObj(z.id);
     try { const upd = await Api.setMetatags(z.id, metatags); z.metatags = (upd && upd.metatags) || metatags; toast('Förderweg gespeichert'); }
     catch (e) { toast('Speichern fehlgeschlagen'); }
     closeZoneModal(); renderEditor();
@@ -1382,6 +1390,7 @@
     const z = (state.detail.objects || []).find((o) => o.id === routeId);
     if (!z || !z.points || z.points.length < 2) return;
     z.points = z.points.slice().reverse();
+    protectObj(z.id);
     try { await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }); }
     catch (e) { toast('Richtung nicht gespeichert'); }
     toast('Flussrichtung umgekehrt'); renderEditor();
@@ -1481,7 +1490,7 @@
     state.drawZone = false; state.zoneDraft = []; state.zoneCursor = null;
     try {
       const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Schutzbereich_' + num, symbolType: 'sb_zone', color: L.color, x: pts[0].x, y: pts[0].y, points: pts });
-      state.detail.objects.push(obj); state.selectedZone = obj.id;
+      state.detail.objects.push(obj); state.selectedZone = obj.id; protectObj(obj.id);
       toast('Schutzbereich erstellt');
     } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
     renderEditor();
@@ -1495,7 +1504,7 @@
     state.drawZone = false; state.drawShape = null; state.zoneDraft = []; state.zoneCursor = null;
     try {
       const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Förderweg_' + num, symbolType: 'mf_route', color: L.color, x: pts[0].x, y: pts[0].y, points: pts });
-      state.detail.objects.push(obj); state.selectedZone = obj.id;
+      state.detail.objects.push(obj); state.selectedZone = obj.id; protectObj(obj.id);
       toast('Förderweg erstellt');
     } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
     renderEditor();
