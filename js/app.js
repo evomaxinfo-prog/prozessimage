@@ -1178,11 +1178,17 @@
       const z = (state.detail.objects || []).find((o) => o.id === zd.id);
       if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
         protectObj(z.id);
+        var sentPts = z.points.map(function (p) { return { x: p.x, y: p.y }; });
         try {
-          const upd = await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
-          if (upd && upd.points !== undefined && !pointsMatch(upd.points, z.points)) {
-            toast('Server hat die Punkte NICHT gespeichert – Backend (ObjectController) veraltet');
-          }
+          await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
+          // Kontroll-Lesen FRISCH vom Server -> beweist unabhängig von der Speicher-Antwort, ob wirklich gespeichert wurde
+          try {
+            var srvList = await Api.getObjects(state.detail.id);
+            var srvObj = (srvList || []).find(function (o) { return String(o.id) === String(z.id); });
+            if (srvObj && !pointsMatch(srvObj.points, sentPts)) {
+              toast('⚠ Server speichert die Verschiebung NICHT – Kontroll-Lesen ergab die alte Position (Backend/DB)');
+            }
+          } catch (e3) { /* Kontroll-Lesen ist optional */ }
         } catch (e2) { toast('Speichern fehlgeschlagen (' + (e2 && (e2.status || e2.message) || '?') + ')'); }
         renderEditor(); return;
       }
