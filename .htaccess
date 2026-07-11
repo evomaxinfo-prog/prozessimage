@@ -3,16 +3,23 @@
 # unter "Apache & nginx Einstellungen" -> "Zusätzliche nginx-Direktiven" setzen.
 
 <IfModule mod_headers.c>
-  # Content-Security-Policy: nur eigene Skripte, Google-Fonts erlaubt, API-Origin für fetch/Bilder.
-  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://api.prozessimage.de; connect-src 'self' https://api.prozessimage.de; form-action 'self'; frame-ancestors 'none'"
+  # Content-Security-Policy: ausschliesslich eigene Quellen + API-Origin. Keine Drittanbieter (Schriften selbst gehostet).
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://api.prozessimage.de; connect-src 'self' https://api.prozessimage.de; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
-  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=(), browsing-topics=()"
   Header always set Cross-Origin-Opener-Policy "same-origin"
-  # HSTS nur aktivieren, wenn die Seite dauerhaft ausschließlich über HTTPS läuft:
-  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set Cross-Origin-Resource-Policy "same-origin"
+  Header always set X-Permitted-Cross-Domain-Policies "none"
+  # HSTS mit includeSubDomains + preload (nur wenn ALLE Subdomains dauerhaft per HTTPS laufen)
+  Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+  # Server-/Framework-Kennung nicht preisgeben
+  Header unset X-Powered-By
+  Header always unset X-Powered-By
 </IfModule>
+# Serverkennung reduzieren (falls erlaubt)
+ServerSignature Off
 
 # Punktdateien (.git, .env, .htaccess …) nicht ausliefern
 <FilesMatch "(^\.|composer\.(json|lock)|\.md$)">
