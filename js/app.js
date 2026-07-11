@@ -572,13 +572,19 @@
     'L3.0': { soft: '#E4F3EE', action: 'IDENT PLATZIEREN', palette: [['Antrieb', 'motor'], ['2D-Kamera', 'cam'], ['RFID', 'rfid'], ['Ritzpräger', 'mark']] },
     'L4.0': { soft: '#FBF0E3', action: 'NOTHALT GENERIEREN', palette: [['Not-Halt', 'estop'], ['SmartPad', 'pad'], ['Reißleine', 'pull'], ['Quittier', 'ack']] },
     'L5.0': { soft: '#FBEAE8', action: 'SCHUTZZAUN ZIEHEN', palette: [['Sicherheitstür', 'door'], ['Lichtgitter', 'light'], ['Sicherheitsschalter', 'switch'], ['Beladestelle', 'load']] },
+    'L6.0': { soft: '#E0F2F7', action: 'FUNKTIONSGRUPPE', palette: [['Funktionsgruppe', 'zone'], ['Baugruppe', 'cell'], ['Modul', 'box'], ['Station', 'panel']] },
   };
 
   function layerById(id) { return (state.detail.layers || []).find((l) => l.id === id) || null; }
   function objectsOfLayer(id) { return (state.detail.objects || []).filter((o) => o.layerId === id); }
 
   /* ---- Punkt-basierte Formen: Schutzbereich (geschlossen) + Materialfluss-Förderweg (offen) ---- */
-  function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'mf_route'); }
+  function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'mf_route'); }
+  // Polygon-Art abhängig von der Ebene: L6.0 = Funktionsgruppe (fg_zone), sonst Schutzbereich (sb_zone)
+  function zoneKind(layer) {
+    if (layer && layer.code === 'L6.0') return { type: 'fg_zone', prefix: 'Funktionsgruppe', noun: 'Funktionsgruppe', label: 'FG FUNKTIONSGRUPPE' };
+    return { type: 'sb_zone', prefix: 'Schutzbereich', noun: 'Schutzbereich', label: 'SB SCHUTZBEREICH' };
+  }
 
   const ROUTE_ARTS = ['Rollenbahn', 'Kettenförderer', 'Band-/Gurtförderer', 'Hängeförderer', 'FTS / AGV', 'Stapler / manuell', 'Manueller Transport'];
   const ROUTE_DASH = { 'Rollenbahn': '', 'Kettenförderer': '2.4 1.6', 'Band-/Gurtförderer': '', 'Hängeförderer': '4 2', 'FTS / AGV': '0.1 2.6', 'Stapler / manuell': '5 2 1 2', 'Manueller Transport': '5 2 1 2' };
@@ -848,10 +854,11 @@
       // Diagnose: was liegt aktuell wirklich im Editor + letzter Server-Sync
       const objs = state.detail.objects || [];
       const nSb = objs.filter((o) => o.symbolType === 'sb_zone').length;
+      const nFg = objs.filter((o) => o.symbolType === 'fg_zone').length;
       const nMf = objs.filter((o) => o.symbolType === 'mf_route').length;
       const nSym = objs.filter((o) => !isShape(o)).length;
       const ls = state.collab.lastSync;
-      const diag = '<div class="cp-hint">Im Editor: <b>' + nSb + '</b> Schutzbereiche · ' + nMf + ' Förderwege · ' + nSym + ' Symbole'
+      const diag = '<div class="cp-hint">Im Editor: <b>' + nSb + '</b> Schutzbereiche · ' + nFg + ' Funktionsgruppen · ' + nMf + ' Förderwege · ' + nSym + ' Symbole'
         + (ls ? ('<br>Letzter Server-Sync: ' + ls.n + ' geändert, ' + ls.del + ' gelöscht') : '') + '</div>';
       pop = '<div class="collab-pop"><div class="cp-head">Anwesend laut Server (' + all.length + ')</div>' + rows + hint + diag + '</div>';
     }
@@ -914,7 +921,7 @@
   }
 
   function zoneOverlaySvg(visible) {
-    const zones = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
+    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'fg_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
     const polys = zones.map((z) => {
       const pts = z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' ');
       const sel = state.selectedZone === z.id;
@@ -1080,12 +1087,13 @@
         ? 'Klicken setzt Wegpunkte · Klick auf den letzten Punkt oder <b>Enter</b> beendet · <b>Esc</b> bricht ab. Der Pfeil zeigt die Flussrichtung; Doppelklick öffnet die Förderart.'
         : 'Förderweg zeichnen; Wegpunkte danach verschiebbar. Weg anklicken: <b>Entf</b> löscht, <b>R</b> kehrt die Richtung um.';
     } else {
+      const kind = zoneKind(layerById(state.activeLayer));
       btn = '<button class="btn zone-btn ' + (zoneActive ? 'active' : '') + '" data-act="toggle-zone" style="width:100%;justify-content:center">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> '
-        + (zoneActive ? 'ZEICHNEN AKTIV' : 'SB SCHUTZBEREICH') + '</button>';
+        + (zoneActive ? 'ZEICHNEN AKTIV' : kind.label) + '</button>';
       hint = zoneActive
         ? 'Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab'
-        : 'Polygon zeichnen; Stützpunkte danach verschiebbar. Bereich anklicken &amp; <b>Entf</b> löscht ihn.';
+        : 'Polygon zeichnen; Stützpunkte danach verschiebbar. ' + kind.noun + ' anklicken &amp; <b>Entf</b> löscht ihn.';
     }
     return '<div class="lp-action">' + btn + '<div class="zone-hint">' + hint + '</div></div>';
   }
@@ -1197,7 +1205,7 @@
         const now = Date.now();
         const dbl = state.lastZoneUp && state.lastZoneUp.id === z.id && (now - state.lastZoneUp.t) < 400;
         state.lastZoneUp = dbl ? null : { id: z.id, t: now };
-        if (dbl) { if (z.symbolType === 'mf_route') openRouteModal(z.id); else openZoneAssignModal(z.id); return; }
+        if (dbl) { if (z.symbolType === 'mf_route') openRouteModal(z.id); else if (z.symbolType === 'sb_zone') openZoneAssignModal(z.id); return; }
         if (state.selectedZone !== z.id) { state.selectedZone = z.id; renderEditor(); }
         return;
       }
@@ -1506,12 +1514,13 @@
     if (!state.drawZone || state.zoneDraft.length < 3) { toast('Mindestens 3 Stützpunkte nötig'); return; }
     const pts = state.zoneDraft.slice();
     const L = layerById(state.activeLayer);
-    const num = String((state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone').length + 1).padStart(2, '0');
+    const kind = zoneKind(L);
+    const num = String((state.detail.objects || []).filter((o) => o.symbolType === kind.type).length + 1).padStart(2, '0');
     state.drawZone = false; state.zoneDraft = []; state.zoneCursor = null;
     try {
-      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Schutzbereich_' + num, symbolType: 'sb_zone', color: L.color, x: pts[0].x, y: pts[0].y, points: pts });
+      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: kind.prefix + '_' + num, symbolType: kind.type, color: L.color, x: pts[0].x, y: pts[0].y, points: pts });
       state.detail.objects.push(obj); state.selectedZone = obj.id; protectObj(obj.id);
-      toast('Schutzbereich erstellt');
+      toast(kind.noun + ' erstellt');
     } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
     renderEditor();
   }
