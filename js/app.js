@@ -905,7 +905,7 @@
     (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
     const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
       const chips = o.metatags.map((m) => m.value).filter(Boolean);
-      return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(o.color) + '"'
+      return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym"><svg width="26" height="26" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg></span>'
         + (chips.length ? '<div class="ptags">' + chips.map((t) => '<span class="ptag">' + esc(t) + '</span>').join('') + '</div>' : '')
@@ -1226,6 +1226,23 @@
 
   const ROBOT_RISK = ['CK (Hohes Risiko)', 'K (Hohes Risiko, nachbar SB)', 'C (Geringes Risiko)', 'BS (Bedienerschutz)', 'T (sichere Werkzeugumschaltung)', 'Kein Risiko'];
   const ROBOT_TECH = ['Punkt Schweißen - Stahl', 'MIG-Schweißen', 'Bolzen-Schweißen', 'Bolzen-Schweißen (Rotationskopf)', 'Bolzen (stationär)', 'Kleben', 'Laser', 'Halbholstanznieten', 'Fließlochschrauben', 'Inline messen'];
+  // Farbe des Roboter-Icons je nach gewählter Safe-Funktion (rot = hohes Risiko … grün = kein Risiko)
+  const ROBOT_RISK_COLOR = {
+    'CK (Hohes Risiko)': '#DC2626',
+    'K (Hohes Risiko, nachbar SB)': '#EA580C',
+    'C (Geringes Risiko)': '#CA8A04',
+    'BS (Bedienerschutz)': '#2563EB',
+    'T (sichere Werkzeugumschaltung)': '#0D9488',
+    'Kein Risiko': '#16A34A',
+  };
+  // Anzeigefarbe eines platzierten Symbols: Roboter richtet sich nach der Safe-Funktion, sonst Ebenenfarbe.
+  function objIconColor(o) {
+    if (o.symbolType === 'robot') {
+      const sf = (o.metatags || []).find((m) => m.position === 1 || m.label === 'Safe Funktion');
+      if (sf && ROBOT_RISK_COLOR[sf.value]) return ROBOT_RISK_COLOR[sf.value];
+    }
+    return o.color;
+  }
 
   function tagFieldSelect(id, label, opts, val) {
     const list = (val && !opts.includes(val)) ? [val].concat(opts) : opts;
