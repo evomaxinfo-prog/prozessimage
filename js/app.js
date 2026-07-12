@@ -24,7 +24,7 @@
   const state = {
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
-    drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null,
+    drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null, flowType: 0,
     collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false, protect: {} },
   };
 
@@ -518,6 +518,7 @@
     else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
     else if (act === 'toggle-zone') { const on = !(state.drawZone && state.drawShape === 'zone'); state.drawZone = on; state.drawShape = on ? 'zone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'toggle-route') { const on = !(state.drawZone && state.drawShape === 'route'); state.drawZone = on; state.drawShape = on ? 'route' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
+    else if (act === 'flow-type') { state.flowType = parseInt(el.getAttribute('data-flow'), 10) || 0; renderEditor(); }
   }
   function onContentInput(e) {
     if (e.target && e.target.id === 'satRange') { onSat(e.target.value); return; }
@@ -587,6 +588,17 @@
   }
 
   const ROUTE_ARTS = ['Rollenbahn', 'Kettenförderer', 'Band-/Gurtförderer', 'Hängeförderer', 'FTS / AGV', 'Stapler / manuell', 'Manueller Transport'];
+  // Materialfluss-Typen mit fester Farbe (farbige Pfeile zur Auswahl unter Materialfluss)
+  const FLOW_TYPES = [
+    { name: 'i.O. Teile', color: '#16A34A' },
+    { name: 'n.i.O. Teile', color: '#DC2626' },
+    { name: 'Nacharbeit', color: '#D97706' },
+    { name: 'Leergut', color: '#64748B' },
+    { name: 'Rohteile', color: '#2563EB' },
+    { name: 'Fertigteile', color: '#0D9488' },
+  ];
+  function flowColor(name) { const f = FLOW_TYPES.find((t) => t.name === name); return f ? f.color : null; }
+  function routeMaterial(o) { const m = (o.metatags || []).find((x) => x.label === 'Materialart'); return m ? m.value : ''; }
   const ROUTE_DASH = { 'Rollenbahn': '', 'Kettenförderer': '2.4 1.6', 'Band-/Gurtförderer': '', 'Hängeförderer': '4 2', 'FTS / AGV': '0.1 2.6', 'Stapler / manuell': '5 2 1 2', 'Manueller Transport': '5 2 1 2' };
   function routeArt(o) { const m = (o.metatags || []).find((x) => x.label === 'Förderart'); return m ? m.value : ''; }
 
@@ -1078,14 +1090,18 @@
     const isL0 = L && L.name === 'Materialfluss';
     const zoneActive = state.drawShape === 'zone';
     const routeActive = state.drawShape === 'route';
-    let btn, hint;
+    let btn, hint, extra = '';
     if (isL0) {
       btn = '<button class="btn zone-btn ' + (routeActive ? 'active' : '') + '" data-act="toggle-route" style="width:100%;justify-content:center">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h13M13 8l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg> '
         + (routeActive ? 'ZEICHNEN AKTIV' : 'FÖRDERWEG') + '</button>';
+      // Farbige Materialfluss-Typen zur Auswahl -> bestimmt die Pfeilfarbe des nächsten Förderwegs
+      extra = '<div class="flow-pick">' + FLOW_TYPES.map((ft, i) =>
+        '<button class="flow-chip ' + (state.flowType === i ? 'active' : '') + '" data-act="flow-type" data-flow="' + i + '" style="--fc:' + ft.color + '" title="Als ' + esc(ft.name) + ' zeichnen">'
+        + '<span class="fc-dot"></span>' + esc(ft.name) + '</button>').join('') + '</div>';
       hint = routeActive
-        ? 'Klicken setzt Wegpunkte · Klick auf den letzten Punkt oder <b>Enter</b> beendet · <b>Esc</b> bricht ab. Der Pfeil zeigt die Flussrichtung; Doppelklick öffnet die Förderart.'
-        : 'Förderweg zeichnen; Wegpunkte danach verschiebbar. Weg anklicken: <b>Entf</b> löscht, <b>R</b> kehrt die Richtung um.';
+        ? 'Klicken setzt Wegpunkte · Klick auf den letzten Punkt oder <b>Enter</b> beendet · <b>Esc</b> bricht ab. Farbe = gewählter Materialfluss-Typ; Doppelklick öffnet Typ &amp; Förderart.'
+        : 'Erst Typ oben wählen (Farbe), dann zeichnen. Wegpunkte danach verschiebbar. Weg anklicken: <b>Entf</b> löscht, <b>R</b> kehrt die Richtung um.';
     } else {
       const kind = zoneKind(layerById(state.activeLayer));
       btn = '<button class="btn zone-btn ' + (zoneActive ? 'active' : '') + '" data-act="toggle-zone" style="width:100%;justify-content:center">'
@@ -1095,7 +1111,7 @@
         ? 'Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab'
         : 'Polygon zeichnen; Stützpunkte danach verschiebbar. ' + kind.noun + ' anklicken &amp; <b>Entf</b> löscht ihn.';
     }
-    return '<div class="lp-action">' + btn + '<div class="zone-hint">' + hint + '</div></div>';
+    return '<div class="lp-action">' + btn + extra + '<div class="zone-hint">' + hint + '</div></div>';
   }
 
   function objCatBlock(name, list, color) {
@@ -1392,15 +1408,19 @@
     closeZoneModal();
     const z = (state.detail.objects || []).find((o) => o.id === routeId); if (!z) return;
     const art = routeArt(z);
+    const mat = routeMaterial(z);
     const bez = ((z.metatags || []).find((m) => m.label === 'Bezeichnung') || {}).value || '';
     const col = (layerById(z.layerId) || {}).color || '#0FA47F';
     const opts = '<option value="">— bitte wählen —</option>'
       + ROUTE_ARTS.map((a) => '<option value="' + esc(a) + '"' + (a === art ? ' selected' : '') + '>' + esc(a) + '</option>').join('');
+    const matOpts = '<option value="">— ohne —</option>'
+      + FLOW_TYPES.map((f) => '<option value="' + esc(f.name) + '"' + (f.name === mat ? ' selected' : '') + '>' + esc(f.name) + '</option>').join('');
     const html = '<div class="za-backdrop" id="zaBackdrop"><div class="za-card">'
       + '<div class="za-head"><div><div class="za-title">Förderweg</div><div class="za-sub">' + esc(z.name) + '</div></div>'
       + '<button class="za-x" data-za="close" title="Schließen">×</button></div>'
       + '<div class="za-body" style="display:flex;flex-direction:column;gap:12px;padding:16px">'
-      + '<div class="m-field"><label>Förderart</label><select id="rfArt">' + opts + '</select></div>'
+      + '<div class="m-field"><label>Materialfluss-Typ (Farbe)</label><select id="rfMat">' + matOpts + '</select></div>'
+      + '<div class="m-field"><label>Förderart (Linienstil)</label><select id="rfArt">' + opts + '</select></div>'
       + '<div class="m-field"><label>Bezeichnung / Teil</label><input id="rfBez" placeholder="z. B. Karosserie-Seitenteil" value="' + esc(bez) + '"></div>'
       + '<button class="btn" data-za="reverse" style="justify-content:center">⇄ Flussrichtung umkehren</button>'
       + '</div>'
@@ -1422,12 +1442,20 @@
   async function saveRoute(routeId) {
     const z = (state.detail.objects || []).find((o) => o.id === routeId); if (!z) { closeZoneModal(); return; }
     const art = (document.getElementById('rfArt') || {}).value || '';
+    const mat = (document.getElementById('rfMat') || {}).value || '';
     const bez = ((document.getElementById('rfBez') || {}).value || '').trim();
     const metatags = [];
     if (art) metatags.push({ position: 1, label: 'Förderart', value: art });
     if (bez) metatags.push({ position: 2, label: 'Bezeichnung', value: bez });
+    if (mat) metatags.push({ position: 3, label: 'Materialart', value: mat });
     protectObj(z.id);
-    try { const upd = await Api.setMetatags(z.id, metatags); z.metatags = (upd && upd.metatags) || metatags; toast('Förderweg gespeichert'); }
+    try {
+      const upd = await Api.setMetatags(z.id, metatags); z.metatags = (upd && upd.metatags) || metatags;
+      // Farbe aus dem Materialfluss-Typ übernehmen
+      const nc = flowColor(mat);
+      if (nc && nc !== z.color) { await Api.updateObject(z.id, { color: nc }); z.color = nc; }
+      toast('Förderweg gespeichert');
+    }
     catch (e) { toast('Speichern fehlgeschlagen'); }
     closeZoneModal(); renderEditor();
   }
@@ -1546,12 +1574,16 @@
     if (state.drawShape !== 'route' || state.zoneDraft.length < 2) { toast('Mindestens 2 Wegpunkte nötig'); return; }
     const pts = state.zoneDraft.slice();
     const L = layerById(state.activeLayer);
+    const ft = FLOW_TYPES[state.flowType] || FLOW_TYPES[0];
     const num = String((state.detail.objects || []).filter((o) => o.symbolType === 'mf_route').length + 1).padStart(2, '0');
     state.drawZone = false; state.drawShape = null; state.zoneDraft = []; state.zoneCursor = null;
     try {
-      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Förderweg_' + num, symbolType: 'mf_route', color: L.color, x: pts[0].x, y: pts[0].y, points: pts });
+      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Förderweg_' + num, symbolType: 'mf_route', color: ft.color, x: pts[0].x, y: pts[0].y, points: pts });
+      obj.metatags = obj.metatags || [];
       state.detail.objects.push(obj); state.selectedZone = obj.id; protectObj(obj.id);
-      toast('Förderweg erstellt');
+      // Materialfluss-Typ als Metatag hinterlegen (Farbe folgt daraus)
+      try { const upd = await Api.setMetatags(obj.id, [{ position: 3, label: 'Materialart', value: ft.name }]); obj.metatags = (upd && upd.metatags) || obj.metatags; } catch (e2) { /* Farbe ist schon gesetzt */ }
+      toast('Förderweg „' + ft.name + '" erstellt');
     } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
     renderEditor();
   }
