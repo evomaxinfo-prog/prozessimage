@@ -566,13 +566,13 @@
   };
 
   const LAYER_META = {
-    'L0.0': { soft: '#E2F4EE', action: 'FÖRDERWEG ZIEHEN', palette: [['Quelle', 'src'], ['Senke', 'snk'], ['Puffer', 'buf'], ['Umsetzer', 'xfer']] },
-    'L1.0': { soft: '#E6F0F7', action: 'SB EINZEICHNEN', palette: [['Schaltschrank', 'cab'], ['Schutzbereich', 'zone'], ['Bedienpult', 'panel'], ['Klemmkasten', 'box']] },
-    'L2.0': { soft: '#F0E9F7', action: 'ROBOTER SETZEN', palette: [['Roboter', 'robot'], ['Techno-Steuerung', 'ctrl'], ['Greifer', 'grip'], ['Zelle', 'cell']] },
-    'L3.0': { soft: '#E4F3EE', action: 'IDENT PLATZIEREN', palette: [['Antrieb', 'motor'], ['2D-Kamera', 'cam'], ['RFID', 'rfid'], ['Ritzpräger', 'mark']] },
-    'L4.0': { soft: '#FBF0E3', action: 'NOTHALT GENERIEREN', palette: [['Not-Halt', 'estop'], ['SmartPad', 'pad'], ['Reißleine', 'pull'], ['Quittier', 'ack']] },
-    'L5.0': { soft: '#FBEAE8', action: 'SCHUTZZAUN ZIEHEN', palette: [['Sicherheitstür', 'door'], ['Lichtgitter', 'light'], ['Sicherheitsschalter', 'switch'], ['Beladestelle', 'load']] },
-    'L6.0': { soft: '#E0F2F7', action: 'FUNKTIONSGRUPPE', palette: [['Funktionsgruppe', 'zone'], ['Baugruppe', 'cell'], ['Modul', 'box'], ['Station', 'panel']] },
+    'Materialfluss': { soft: '#E2F4EE', action: 'FÖRDERWEG ZIEHEN', palette: [['Quelle', 'src'], ['Senke', 'snk'], ['Puffer', 'buf'], ['Umsetzer', 'xfer']] },
+    'Funktionsgruppen': { soft: '#E0F2F7', action: 'FUNKTIONSGRUPPE', palette: [['Funktionsgruppe', 'zone'], ['Baugruppe', 'cell'], ['Modul', 'box'], ['Station', 'panel']] },
+    'Steuerungstechnik': { soft: '#E6F0F7', action: 'SB EINZEICHNEN', palette: [['Schaltschrank', 'cab'], ['Schutzbereich', 'zone'], ['Bedienpult', 'panel'], ['Klemmkasten', 'box']] },
+    'Saferobot / Technologie': { soft: '#F0E9F7', action: 'ROBOTER SETZEN', palette: [['Roboter', 'robot'], ['Techno-Steuerung', 'ctrl'], ['Greifer', 'grip'], ['Zelle', 'cell']] },
+    'Antriebstechnik / Ident': { soft: '#E4F3EE', action: 'IDENT PLATZIEREN', palette: [['Antrieb', 'motor'], ['2D-Kamera', 'cam'], ['RFID', 'rfid'], ['Ritzpräger', 'mark']] },
+    'Not-Halt': { soft: '#FBF0E3', action: 'NOTHALT GENERIEREN', palette: [['Not-Halt', 'estop'], ['SmartPad', 'pad'], ['Reißleine', 'pull'], ['Quittier', 'ack']] },
+    'Sicherheitslayout': { soft: '#FBEAE8', action: 'SCHUTZZAUN ZIEHEN', palette: [['Sicherheitstür', 'door'], ['Lichtgitter', 'light'], ['Sicherheitsschalter', 'switch'], ['Beladestelle', 'load']] },
   };
 
   function layerById(id) { return (state.detail.layers || []).find((l) => l.id === id) || null; }
@@ -580,9 +580,9 @@
 
   /* ---- Punkt-basierte Formen: Schutzbereich (geschlossen) + Materialfluss-Förderweg (offen) ---- */
   function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'mf_route'); }
-  // Polygon-Art abhängig von der Ebene: L6.0 = Funktionsgruppe (fg_zone), sonst Schutzbereich (sb_zone)
+  // Polygon-Art abhängig von der Ebene: "Funktionsgruppen" -> fg_zone, sonst Schutzbereich (sb_zone). Nach Namen, damit Umnummerieren nichts bricht.
   function zoneKind(layer) {
-    if (layer && layer.code === 'L6.0') return { type: 'fg_zone', prefix: 'Funktionsgruppe', noun: 'Funktionsgruppe', label: 'FG FUNKTIONSGRUPPE' };
+    if (layer && layer.name === 'Funktionsgruppen') return { type: 'fg_zone', prefix: 'Funktionsgruppe', noun: 'Funktionsgruppe', label: 'FG FUNKTIONSGRUPPE' };
     return { type: 'sb_zone', prefix: 'Schutzbereich', noun: 'Schutzbereich', label: 'SB SCHUTZBEREICH' };
   }
 
@@ -1017,7 +1017,7 @@
     const c = $('content'); c.style.padding = '0';
     const L = layerById(state.activeLayer) || (state.detail.layers || [])[0];
     if (!L) { c.innerHTML = '<div class="pad">Keine Ebenen vorhanden.</div>'; return; }
-    const meta = LAYER_META[L.code] || { soft: '#eef3f7', action: 'OBJEKT SETZEN', palette: [] };
+    const meta = LAYER_META[L.name] || { soft: '#eef3f7', action: 'OBJEKT SETZEN', palette: [] };
 
     const counts = {};
     (state.detail.objects || []).forEach((o) => { counts[o.layerId] = (counts[o.layerId] || 0) + 1; });
@@ -1031,7 +1031,7 @@
       const eye = vis
         ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>'
         : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7c2 0 3.7.6 5.2 1.5M22 12s-3.5 7-10 7c-2 0-3.7-.6-5.2-1.5"/><path d="M4 4l16 16"/></svg>';
-      const lmeta = LAYER_META[l.code] || { soft: '#eef3f7' };
+      const lmeta = LAYER_META[l.name] || { soft: '#eef3f7' };
       return '<div class="layer ' + (act ? 'active' : '') + ' ' + (vis ? '' : 'hidden') + '" style="--lc:' + l.color + ';--lc-soft:' + lmeta.soft + '" data-act="layer-select" data-layer="' + l.id + '">'
         + '<div class="lbar"></div><div class="lmeta"><div class="lid">' + esc(l.code) + '</div><div class="lname">' + esc(l.name) + '</div><div class="lcount">' + (counts[l.id] || 0) + ' Objekte</div></div>'
         + '<button class="eye ' + (vis ? '' : 'off') + '" data-act="layer-eye" data-layer="' + l.id + '" title="Sichtbarkeit">' + eye + '</button></div>';
@@ -1075,7 +1075,7 @@
   }
 
   function actionPanelHtml(L) {
-    const isL0 = L && L.code === 'L0.0';
+    const isL0 = L && L.name === 'Materialfluss';
     const zoneActive = state.drawShape === 'zone';
     const routeActive = state.drawShape === 'route';
     let btn, hint;
