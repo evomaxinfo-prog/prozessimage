@@ -24,7 +24,7 @@
   const state = {
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
-    drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null, flowType: 0,
+    drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null, flowType: 0, flowLegend: true,
     collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false, protect: {} },
   };
 
@@ -520,6 +520,7 @@
     else if (act === 'toggle-zone') { const on = !(state.drawZone && state.drawShape === 'zone'); state.drawZone = on; state.drawShape = on ? 'zone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'toggle-route') { const on = !(state.drawZone && state.drawShape === 'route'); state.drawZone = on; state.drawShape = on ? 'route' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'flow-type') { state.flowType = parseInt(el.getAttribute('data-flow'), 10) || 0; renderEditor(); }
+    else if (act === 'flow-legend') { state.flowLegend = !state.flowLegend; renderEditor(); }
   }
   function onContentInput(e) {
     if (e.target && e.target.id === 'satRange') { onSat(e.target.value); return; }
@@ -594,15 +595,29 @@
   const ROUTE_ARTS = ['Rollenbahn', 'Kettenförderer', 'Band-/Gurtförderer', 'Hängeförderer', 'FTS / AGV', 'Stapler / manuell', 'Manueller Transport'];
   // Materialfluss-Typen mit fester Farbe (farbige Pfeile zur Auswahl unter Materialfluss)
   const FLOW_TYPES = [
-    { name: 'i.O. Teile', color: '#16A34A' },
-    { name: 'n.i.O. Teile', color: '#DC2626' },
-    { name: 'Nacharbeit', color: '#D97706' },
-    { name: 'Leergut', color: '#64748B' },
-    { name: 'Rohteile', color: '#2563EB' },
-    { name: 'Fertigteile', color: '#0D9488' },
+    { name: 'i.O. Teile', color: '#16A34A', desc: 'In Ordnung – freigegebene / gute Teile' },
+    { name: 'n.i.O. Teile', color: '#DC2626', desc: 'Nicht in Ordnung – Ausschuss / Fehlteile' },
+    { name: 'Nacharbeit', color: '#D97706', desc: 'Teile zur Nacharbeit / Reparatur' },
+    { name: 'Leergut', color: '#64748B', desc: 'Leere Ladungsträger / Behälter zurück' },
+    { name: 'Rohteile', color: '#2563EB', desc: 'Rohteile / Zulieferung in den Prozess' },
+    { name: 'Fertigteile', color: '#0D9488', desc: 'Fertige Teile aus dem Prozess heraus' },
   ];
   function flowColor(name) { const f = FLOW_TYPES.find((t) => t.name === name); return f ? f.color : null; }
   function routeMaterial(o) { const m = (o.metatags || []).find((x) => x.label === 'Materialart'); return m ? m.value : ''; }
+  // Legende der im Plan verwendeten Materialfluss-Typen (Farbcodierung), ein-/ausblendbar.
+  function flowLegendHtml() {
+    const used = {};
+    (state.detail.objects || []).forEach((o) => {
+      if (o.symbolType !== 'mf_route') return;
+      const mat = routeMaterial(o);
+      if (mat && flowColor(mat)) used[mat] = flowColor(mat);
+    });
+    const names = FLOW_TYPES.map((t) => t.name).filter((n) => used[n]);
+    if (!names.length) return '';
+    if (!state.flowLegend) return '<button class="flow-legend-btn" data-act="flow-legend" title="Materialfluss-Legende einblenden"><span class="fl-dots"></span>Legende</button>';
+    const rows = names.map((n) => '<div class="fl-row"><span class="fl-dot" style="background:' + used[n] + '"></span>' + esc(n) + '</div>').join('');
+    return '<div class="flow-legend"><div class="fl-head">Materialfluss<button data-act="flow-legend" title="Legende ausblenden">×</button></div>' + rows + '</div>';
+  }
   const ROUTE_DASH = { 'Rollenbahn': '', 'Kettenförderer': '2.4 1.6', 'Band-/Gurtförderer': '', 'Hängeförderer': '4 2', 'FTS / AGV': '0.1 2.6', 'Stapler / manuell': '5 2 1 2', 'Manueller Transport': '5 2 1 2' };
   function routeArt(o) { const m = (o.metatags || []).find((x) => x.label === 'Förderart'); return m ? m.value : ''; }
 
@@ -1077,7 +1092,7 @@
       + (canEdit() ? '<button class="up-btn" data-act="editor-upload">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? 'LAYOUT ERSETZEN' : 'LAYOUT HOCHLADEN') + '</button>' : '')
       + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
       + '</div></div>'
-      + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>'
+      + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><h4>Palette · ' + esc(L.code) + '</h4><div class="pal-grid">' + pal + '</div></div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
@@ -1105,7 +1120,7 @@
         + (routeActive ? 'ZEICHNEN AKTIV' : 'FÖRDERWEG') + '</button>';
       // Farbige Materialfluss-Typen zur Auswahl -> bestimmt die Pfeilfarbe des nächsten Förderwegs
       extra = '<div class="flow-pick">' + FLOW_TYPES.map((ft, i) =>
-        '<button class="flow-chip ' + (state.flowType === i ? 'active' : '') + '" data-act="flow-type" data-flow="' + i + '" style="--fc:' + ft.color + '" title="Als ' + esc(ft.name) + ' zeichnen">'
+        '<button class="flow-chip ' + (state.flowType === i ? 'active' : '') + '" data-act="flow-type" data-flow="' + i + '" style="--fc:' + ft.color + '" title="' + esc(ft.name + ' – ' + ft.desc) + '">'
         + '<span class="fc-dot"></span>' + esc(ft.name) + '</button>').join('') + '</div>';
       hint = routeActive
         ? 'Klicken setzt Wegpunkte · Klick auf den letzten Punkt oder <b>Enter</b> beendet · <b>Esc</b> bricht ab. Farbe = gewählter Materialfluss-Typ; Doppelklick öffnet Typ &amp; Förderart.'
