@@ -143,6 +143,7 @@
     // ---- Benutzer- & Gruppenverwaltung (admin) ----
     getWerke() { return this.request('/werke'); },
     getGroups() { return this.request('/groups'); },
+    getLayers() { return this.request('/layers'); },
     createGroup(data) { return this.request('/groups', { method: 'POST', body: data }); },
     updateGroup(id, data) { return this.request('/groups/' + id, { method: 'PATCH', body: data }); },
     deleteGroup(id) { return this.request('/groups/' + id, { method: 'DELETE' }); },

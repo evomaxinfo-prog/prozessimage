@@ -122,6 +122,7 @@
     state.isAdmin = !!ctx.isAdmin;
     state.group = ctx.group || null;
     state.visibleWerke = ctx.visibleWerke || null;
+    state.visibleLayers = ctx.visibleLayers || null; // Array erlaubter Ebenen-Codes; null = alle sichtbar
     $('userName').textContent = ctx.user.email;
     $('userAvatar').textContent = initials(ctx.user.email);
     if (ctx.tenants && ctx.tenants[0]) $('tenantName').textContent = ctx.tenants[0].name;
@@ -577,6 +578,9 @@
   };
 
   function layerById(id) { return (state.detail.layers || []).find((l) => l.id === id) || null; }
+  // Rollen-/Gruppen-Sichtbarkeit: null = alle Ebenen erlaubt, sonst nur die Codes in der Liste
+  function layerAllowed(code) { return !state.visibleLayers || state.visibleLayers.indexOf(code) >= 0; }
+  function allowedLayers() { return (state.detail.layers || []).filter((l) => layerAllowed(l.code)); }
   function objectsOfLayer(id) { return (state.detail.objects || []).filter((o) => o.layerId === id); }
 
   /* ---- Punkt-basierte Formen: Schutzbereich (geschlossen) + Materialfluss-Förderweg (offen) ---- */
@@ -653,7 +657,9 @@
 
   async function openEditor() {
     state.view = 'editor';
-    if (!state.activeLayer && state.detail.layers && state.detail.layers[0]) state.activeLayer = state.detail.layers[0].id;
+    if (!state.activeLayer || !layerAllowed((layerById(state.activeLayer) || {}).code)) {
+      const al = allowedLayers(); if (al[0]) state.activeLayer = al[0].id;
+    }
     if (state.sat == null) state.sat = 100;
     if (state.zoom == null) state.zoom = 1;
     await ensureLayoutBlob();
@@ -914,7 +920,7 @@
     const badge = state.layoutBlobUrl ? '<div class="layout-badge">eigenes Layout</div>' : '<div class="layout-badge muted">Schema-Layout</div>';
 
     const visible = {};
-    (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
+    (state.detail.layers || []).forEach((l) => { visible[l.id] = (l.visible !== false) && layerAllowed(l.code); });
     const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
       const chips = o.metatags.map((m) => m.value).filter(Boolean);
       return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
@@ -1002,7 +1008,7 @@
     }).join('');
   }
   function techBadgeLayer() {
-    const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
+    const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = (l.visible !== false) && layerAllowed(l.code); });
     const editable = canEdit();
     const badges = (state.detail.objects || []).map((o) => {
       if (visible[o.layerId] === false) return '';
@@ -1027,8 +1033,10 @@
 
   function renderEditor() {
     const c = $('content'); c.style.padding = '0';
-    const L = layerById(state.activeLayer) || (state.detail.layers || [])[0];
-    if (!L) { c.innerHTML = '<div class="pad">Keine Ebenen vorhanden.</div>'; return; }
+    let L = layerById(state.activeLayer);
+    if (!L || !layerAllowed(L.code)) L = allowedLayers()[0] || (state.detail.layers || [])[0];
+    if (L && state.activeLayer !== L.id) state.activeLayer = L.id;
+    if (!L) { c.innerHTML = '<div class="pad">Keine Ebenen sichtbar.</div>'; return; }
     const meta = LAYER_META[L.name] || { soft: '#eef3f7', action: 'OBJEKT SETZEN', palette: [] };
 
     const counts = {};
@@ -1038,7 +1046,7 @@
       '<div class="pal-item" style="color:' + L.color + '" draggable="true" data-sym="' + sym + '" data-name="' + esc(name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
       + '<div class="sym"><svg width="22" height="22" viewBox="0 0 24 24">' + (SYM[sym] || SYM.box) + '</svg></div><span>' + esc(name) + '</span></div>').join('');
 
-    const layerStack = (state.detail.layers || []).slice().reverse().map((l) => {
+    const layerStack = (state.detail.layers || []).slice().reverse().filter((l) => layerAllowed(l.code)).map((l) => {
       const act = l.id === L.id, vis = l.visible !== false;
       const eye = vis
         ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>'
@@ -1534,7 +1542,7 @@
   }
 
   function zoneAt(x, y) {
-    const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = l.visible; });
+    const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = (l.visible !== false) && layerAllowed(l.code); });
     const shapes = (state.detail.objects || []).filter((o) => isShape(o) && o.points && visible[o.layerId] !== false);
     for (let i = shapes.length - 1; i >= 0; i--) {
       const o = shapes[i];
@@ -1649,14 +1657,22 @@
   const ROLE_LABEL = { admin: 'Administrator', editor: 'Editor', viewer: 'Betrachter' };
   function roleLabel(r) { return ROLE_LABEL[r] || r; }
 
+  const DEFAULT_LAYERS = [
+    { code: 'L0.0', name: 'Funktionsgruppen' }, { code: 'L1.0', name: 'Materialfluss' },
+    { code: 'L2.0', name: 'Steuerungstechnik' }, { code: 'L3.0', name: 'Saferobot / Technologie' },
+    { code: 'L4.0', name: 'Antriebstechnik / Ident' }, { code: 'L5.0', name: 'Not-Halt' }, { code: 'L6.0', name: 'Sicherheitslayout' },
+  ];
   async function openAdmin() {
     if (!state.isAdmin) return;
-    state.admin = { tab: 'users', groups: [], users: [], werke: [], userForm: null, groupForm: null, pwForm: null, loading: true };
+    state.admin = { tab: 'users', groups: [], users: [], werke: [], layers: [], userForm: null, groupForm: null, pwForm: null, loading: true };
     renderAdmin();
     try {
       const [groups, users, werke] = await Promise.all([Api.getGroups(), Api.getUsers(), Api.getWerke()]);
       state.admin.groups = groups; state.admin.users = users; state.admin.werke = werke;
     } catch (e) { toast('Verwaltung konnte nicht geladen werden'); }
+    // Ebenen für die Sichtbarkeits-Konfiguration (Backend-Endpunkt, sonst Fallback auf Standard-Ebenen)
+    try { const ls = await Api.getLayers(); state.admin.layers = (ls && ls.length) ? ls : DEFAULT_LAYERS; }
+    catch (e) { state.admin.layers = (state.detail && state.detail.layers && state.detail.layers.length) ? state.detail.layers.map((l) => ({ code: l.code, name: l.name })) : DEFAULT_LAYERS; }
     state.admin.loading = false;
     renderAdmin();
   }
@@ -1730,11 +1746,15 @@
     const f = a.groupForm, isNew = !f.id;
     const roleOpts = ['viewer', 'editor', 'admin'].map((r) => '<option value="' + r + '"' + (f.role === r ? ' selected' : '') + '>' + roleLabel(r) + '</option>').join('');
     const werkChecks = a.werke.length ? a.werke.map((w) => '<label class="adm-werk"><input type="checkbox" class="admWerk" value="' + w.id + '"' + (f.werkIds.has(w.id) ? ' checked' : '') + (f.allWerke ? ' disabled' : '') + '> ' + esc(w.name) + '</label>').join('') : '<div class="adm-empty">Keine Werke vorhanden.</div>';
+    const layers = a.layers || [];
+    const layerChecks = layers.length ? layers.map((l) => '<label class="adm-werk"><input type="checkbox" class="admLayer" value="' + esc(l.code) + '"' + (f.layerCodes.has(l.code) ? ' checked' : '') + (f.allLayers ? ' disabled' : '') + '> <span class="adm-lcode">' + esc(l.code) + '</span> ' + esc(l.name) + '</label>').join('') : '<div class="adm-empty">Keine Ebenen vorhanden.</div>';
     return '<div class="adm-form"><h3>' + (isNew ? 'Neue Gruppe' : 'Gruppe bearbeiten') + '</h3>'
       + '<label>Name</label><input id="admGName" value="' + esc(f.name || '') + '">'
       + '<label>Rolle</label><select id="admGRole">' + roleOpts + '</select>'
       + '<label class="adm-check"><input type="checkbox" id="admGAll" data-adm="group-allwerke"' + (f.allWerke ? ' checked' : '') + '> Alle Werke sichtbar</label>'
       + '<label>Sichtbare Werke</label><div class="adm-werke">' + werkChecks + '</div>'
+      + '<label class="adm-check"><input type="checkbox" id="admGAllLayers" data-adm="group-alllayers"' + (f.allLayers ? ' checked' : '') + '> Alle Ebenen sichtbar</label>'
+      + '<label>Sichtbare Ebenen</label><div class="adm-werke">' + layerChecks + '</div>'
       + '<div class="adm-msg" id="admMsg"></div>'
       + '<div class="adm-form-actions"><button class="btn" data-adm="form-cancel">Abbrechen</button><button class="btn primary" data-adm="group-save">Speichern</button></div></div>';
   }
@@ -1753,8 +1773,8 @@
     else if (act === 'user-pw') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.pwForm = { id: u.id, name: u.name }; renderAdmin(); } }
     else if (act === 'pw-save') { savePw(); }
     else if (act === 'user-del') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u && window.confirm('Benutzer „' + u.name + '" wirklich löschen?')) delUser(u.id); }
-    else if (act === 'group-new') { a.groupForm = { name: '', role: 'viewer', allWerke: false, werkIds: new Set() }; renderAdmin(); }
-    else if (act === 'group-edit') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g) { a.groupForm = { id: g.id, name: g.name, role: g.role, allWerke: g.allWerke, werkIds: new Set(g.werke.map((w) => w.id)) }; renderAdmin(); } }
+    else if (act === 'group-new') { a.groupForm = { name: '', role: 'viewer', allWerke: false, werkIds: new Set(), allLayers: true, layerCodes: new Set() }; renderAdmin(); }
+    else if (act === 'group-edit') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g) { a.groupForm = { id: g.id, name: g.name, role: g.role, allWerke: g.allWerke, werkIds: new Set(g.werke.map((w) => w.id)), allLayers: g.allLayers !== false && !(g.layerCodes && g.layerCodes.length), layerCodes: new Set(g.layerCodes || []) }; renderAdmin(); } }
     else if (act === 'group-save') { saveGroup(); }
     else if (act === 'group-del') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g && window.confirm('Gruppe „' + g.name + '" wirklich löschen?')) delGroup(g.id); }
   }
@@ -1762,9 +1782,14 @@
   function onAdminChange(e) {
     const a = state.admin; if (!a) return;
     if (e.target.id === 'admGAll' && a.groupForm) { a.groupForm.allWerke = e.target.checked; renderAdmin(); return; }
+    if (e.target.id === 'admGAllLayers' && a.groupForm) { a.groupForm.allLayers = e.target.checked; renderAdmin(); return; }
     if (e.target.classList && e.target.classList.contains('admWerk') && a.groupForm) {
       const id = e.target.value;
       if (e.target.checked) a.groupForm.werkIds.add(id); else a.groupForm.werkIds.delete(id);
+    }
+    if (e.target.classList && e.target.classList.contains('admLayer') && a.groupForm) {
+      const code = e.target.value;
+      if (e.target.checked) a.groupForm.layerCodes.add(code); else a.groupForm.layerCodes.delete(code);
     }
   }
 
@@ -1809,11 +1834,13 @@
     const name = document.getElementById('admGName').value.trim();
     const role = document.getElementById('admGRole').value;
     const allWerke = document.getElementById('admGAll').checked;
+    const allLayers = document.getElementById('admGAllLayers').checked;
     if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
     const werkIds = allWerke ? [] : Array.from(f.werkIds);
+    const layerCodes = allLayers ? [] : Array.from(f.layerCodes);
     try {
-      if (!f.id) await Api.createGroup({ name, role, allWerke, werkIds });
-      else await Api.updateGroup(f.id, { name, role, allWerke, werkIds });
+      if (!f.id) await Api.createGroup({ name, role, allWerke, werkIds, allLayers, layerCodes });
+      else await Api.updateGroup(f.id, { name, role, allWerke, werkIds, allLayers, layerCodes });
       a.groupForm = null; a.groups = await Api.getGroups();
       renderAdmin(); toast('Gespeichert');
     } catch (err) { msg.textContent = (err.data && err.data.message) || ('Fehler: ' + err.message); }
