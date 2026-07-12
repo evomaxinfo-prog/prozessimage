@@ -578,8 +578,8 @@
   };
 
   function layerById(id) { return (state.detail.layers || []).find((l) => l.id === id) || null; }
-  // Rollen-/Gruppen-Sichtbarkeit: null = alle Ebenen erlaubt, sonst nur die Codes in der Liste
-  function layerAllowed(code) { return !state.visibleLayers || state.visibleLayers.indexOf(code) >= 0; }
+  // Rollen-/Gruppen-Sichtbarkeit: Admins sehen immer alles; sonst null = alle, oder nur die Codes in der Liste
+  function layerAllowed(code) { return state.role === 'admin' || !state.visibleLayers || state.visibleLayers.indexOf(code) >= 0; }
   function allowedLayers() { return (state.detail.layers || []).filter((l) => layerAllowed(l.code)); }
   function objectsOfLayer(id) { return (state.detail.objects || []).filter((o) => o.layerId === id); }
 
