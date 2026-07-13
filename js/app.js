@@ -1473,14 +1473,28 @@ const STATE_ICONS = {
         return '<div class="m-field pt-state"><label>' + ic + '<span class="pt-nm">' + esc(name) + '</span><span class="pt-kind ' + (kind === 'Pflicht' ? 'req' : 'opt') + '">' + kind + '</span></label>'
           + '<input data-state="' + esc(key) + '" placeholder="Wann tritt das ein? …" value="' + esc(desc(key)) + '"></div>';
       };
-      const groupHtml = ptStateGroups(pt).map((g) => {
+      const groups = ptStateGroups(pt);
+      const sectionFor = (g, withHeader) => {
         const items = g.muss.map((n) => fieldFor('Pflicht', n)).concat(g.opt.map((n) => fieldFor('Optional', n)));
-        return items.length ? '<div class="pt-sec">' + esc(g.group) + '</div>' + items.join('') : '';
-      }).join('');
+        if (!items.length) return '';
+        return (withHeader ? '<div class="pt-sec">' + esc(g.group) + '</div>' : '') + items.join('');
+      };
+      const panelZ = sectionFor(groups[0], false) || '<div class="pt-empty">Keine Betriebszustände für diesen Prozesstyp.</div>';
+      const panelM = (sectionFor(groups[1], true) + sectionFor(groups[2], true)) || '<div class="pt-empty">Keine Meldungen/Betriebsdaten für diesen Prozesstyp.</div>';
       $('mBody').innerHTML = '<div class="pt-meta"><div class="pt-meta-row"><span>Prozesstyp</span><b>' + esc(pt.ptyp) + '</b></div>'
         + '<div class="pt-meta-row"><span>Hardware · Art</span><b>' + esc(pt.hwart || '—') + '</b></div></div>'
-        + '<div class="pt-hint">Beschreibe je Betriebszustand, Meldung und Information, wann sie eintritt.</div>'
-        + (groupHtml || '<div class="pt-hint">Für diesen Prozesstyp sind keine Zustände/Meldungen hinterlegt.</div>');
+        + '<div class="pt-tabs"><button class="pt-tab active" data-pttab="z">Betriebszustände</button>'
+        + '<button class="pt-tab" data-pttab="m">Meldungen &amp; Betriebsdaten</button></div>'
+        + '<div class="pt-hint">Beschreibe, wann der Zustand bzw. die Meldung eintritt.</div>'
+        + '<div data-ptpanel="z">' + panelZ + '</div>'
+        + '<div data-ptpanel="m" style="display:none">' + panelM + '</div>';
+      $('mBody').querySelectorAll('[data-pttab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const t = btn.getAttribute('data-pttab');
+          $('mBody').querySelectorAll('[data-pttab]').forEach((b) => b.classList.toggle('active', b === btn));
+          $('mBody').querySelectorAll('[data-ptpanel]').forEach((p) => { p.style.display = p.getAttribute('data-ptpanel') === t ? '' : 'none'; });
+        });
+      });
     } else if (o.symbolType === 'robot') {
       $('mBody').innerHTML = tagFieldSelect('mTag1', 'Safe Funktion', ROBOT_RISK, v1) + tagFieldSelect('mTag2', 'Technologie', ROBOT_TECH, v2);
     } else {
