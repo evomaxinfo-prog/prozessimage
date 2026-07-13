@@ -653,6 +653,13 @@ const STATE_ICONS = {
   const PROCESS_META = { soft: '#EAF1F6', action: 'PROZESSTYP SETZEN', palette: PROCESS_TYPES.map((p) => [p.name, p.sym]) };
   function processTypeByName(name) { const base = String(name || '').replace(/_\d+$/, ''); return PROCESS_TYPES.find((p) => p.name === base) || null; }
   function processTypeBySym(sym) { return PROCESS_TYPES.find((p) => p.sym === sym) || null; }
+  // Farb-Cluster der Prozess-Icons: dunkel (Passiv/XML) vs. teal (Aktiv/SDE)
+  const PT_DARK = { ptk_11: 1, ptk_12: 1, ptk_13: 1, ptk_14: 1, ptk_15: 1, ptk_16: 1, ptk_18: 1, ptk_19: 1, ptk_70: 1, ptk_99: 1 };
+  function ptColorGroup(sym) { return PT_DARK[sym] ? 'p' : 'a'; }
+  const PT_COLOR_GROUPS = [
+    { key: 'a', label: 'Aktiv / SDE', swatch: '#17708C' },
+    { key: 'p', label: 'Passiv / XML', swatch: '#505050' },
+  ];
   function ptStateGroups(pt) {
     const parse = (s) => (s ? String(s).split(', ') : []).filter(Boolean);
     return [
@@ -1220,7 +1227,7 @@ const STATE_ICONS = {
     const counts = {};
     (state.detail.objects || []).forEach((o) => { counts[o.layerId] = (counts[o.layerId] || 0) + 1; });
 
-    const pal = (meta.palette || []).map(([name, sym]) => {
+    const palItem = ([name, sym]) => {
       const mm = String(name).match(/^(\d+)\s+(.+)$/);
       const no = mm ? mm[1] : '';
       const label = mm ? mm[2] : name;
@@ -1228,7 +1235,18 @@ const STATE_ICONS = {
         + '<div class="sym"><svg width="24" height="24" viewBox="0 0 24 24">' + (SYM[sym] || SYM.box) + '</svg></div>'
         + '<div class="pal-cap">' + (no ? '<span class="pal-no">' + no + '</span>' : '') + '<span class="pal-nm">' + esc(label) + '</span></div>'
         + '</div>';
-    }).join('');
+    };
+    let pal;
+    if (meta === PROCESS_META) {
+      pal = PT_COLOR_GROUPS.map((gr) => {
+        const items = (meta.palette || []).filter(([name, sym]) => ptColorGroup(sym) === gr.key);
+        if (!items.length) return '';
+        return '<div class="pal-group"><span class="pal-sw" style="background:' + gr.swatch + '"></span>' + gr.label + '<span class="pal-gc">' + items.length + '</span></div>'
+          + items.map(palItem).join('');
+      }).join('');
+    } else {
+      pal = (meta.palette || []).map(palItem).join('');
+    }
 
     const layerStack = (state.detail.layers || []).slice().reverse().filter((l) => layerAllowed(l.code)).map((l) => {
       const act = l.id === L.id, vis = l.visible !== false;
