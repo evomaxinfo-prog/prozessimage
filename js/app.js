@@ -1146,9 +1146,15 @@ const PROCESS_TYPES = [
     const counts = {};
     (state.detail.objects || []).forEach((o) => { counts[o.layerId] = (counts[o.layerId] || 0) + 1; });
 
-    const pal = (meta.palette || []).map(([name, sym]) =>
-      '<div class="pal-item" style="color:' + L.color + '" draggable="true" data-sym="' + sym + '" data-name="' + esc(name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
-      + '<div class="sym"><svg width="22" height="22" viewBox="0 0 24 24">' + (SYM[sym] || SYM.box) + '</svg></div><span>' + esc(name) + '</span></div>').join('');
+    const pal = (meta.palette || []).map(([name, sym]) => {
+      const mm = String(name).match(/^(\d+)\s+(.+)$/);
+      const no = mm ? mm[1] : '';
+      const label = mm ? mm[2] : name;
+      return '<div class="pal-item" style="color:' + L.color + ';--lc:' + L.color + ';--lc-soft:' + meta.soft + '" draggable="true" data-sym="' + sym + '" data-name="' + esc(name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
+        + '<div class="sym"><svg width="24" height="24" viewBox="0 0 24 24">' + (SYM[sym] || SYM.box) + '</svg></div>'
+        + '<div class="pal-cap">' + (no ? '<span class="pal-no">' + no + '</span>' : '') + '<span class="pal-nm">' + esc(label) + '</span></div>'
+        + '</div>';
+    }).join('');
 
     const layerStack = (state.detail.layers || []).slice().reverse().filter((l) => layerAllowed(l.code)).map((l) => {
       const act = l.id === L.id, vis = l.visible !== false;
@@ -1182,7 +1188,7 @@ const PROCESS_TYPES = [
       + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
-      + (canEdit() ? '<div class="palette"><h4>Palette · ' + esc(L.code) + '</h4><div class="pal-grid">' + pal + '</div></div>' : '')
+      + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + L.color + '"></span><span class="pal-ttl">' + esc(L.name) + '</span><span class="pal-code">' + esc(L.code) + '</span></div><div class="pal-grid">' + pal + '</div></div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
