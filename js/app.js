@@ -514,7 +514,6 @@
     else if (act === 'layer-select') { selectLayer(el.getAttribute('data-layer')); }
     else if (act === 'layer-eye') { e.stopPropagation(); if (!canEdit()) { toast('Nur Lesezugriff'); return; } toggleLayerVis(el.getAttribute('data-layer')); }
     else if (act === 'export-pdf') { exportFile('pdf'); }
-    else if (act === 'export-catalog') { exportProcessCatalog(); }
     else if (act === 'export-csv') { exportFile('csv'); }
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
@@ -658,133 +657,6 @@ const STATE_ICONS = {
     'Belegdruck': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAjCAYAAAD8BaggAAAFmUlEQVR42tWYW2gcVRjH/zPnTLOz022WGFM3rZbeLBWaNFlJUcpuhfbB1BIvnUUqiWQNvghtoO2LyC4bS19SoRQfROuGWghlV6siBiU+uKVgDcTQIGIvVCVtQmNMso2zM8ncfNidvWWzOxsV8TzOnDnzO9/5n+/GYBWD9obqtbN9M7U9p7YsmfrbLMsGAMAwjJjq0o9pZ/tmIIoE8bhe7dpM1TRijCAe0GlvqJ77k3zLMuyO/NeGadyAoR+Ro33j1txqlmergomlf8AHQ02lYACAZdgdYMkgHww1IR7QEYuRf8dCogUTaQGLi6Vg/glL2QPK6IEPhprAksFKMKWh7GmqMpDfT5FIaHYtUxoKnXI0PGattXoN+cMUiYRGe0P1q4HJaQoX+WCoCYmEBn+YrspC1tXOPyZJkkm1QILAZ4/J0FWvHO0bt9a2DZSDyR3ToqqSti0bmWebt2Odw2EL5urN3zA0fqvgiAzdaJOj4bGVoJhyt4kl7Ij1WJJk8knvK8yBXVtx7fYEnGu4FUFSSyo8bhc21bvhOdq/TDOLgupZyXnS5bcp7WfyYQpc0fc/oqf/AoTGBq3cEXb5WplT4v6S72okbooLRtpKCZ0tuE3xeMYy3Gj+ApIkEyQXmGXPbIxFVSWSJJPi+SxhR7JCF3POk2Y9cCCgFVtmUVXJ5ofrmN1N28FzFI97HkIypaDrkB+yqq14IXiOwrt5A9xOB17wPsEAwL25Bxi5c5fUcJyeg+JGHd2RdmUgMJxh0BlLM47uyAFC2aFimMtHX8amejfmUwoAIJlSUOt0VHvZ4HY68Nr5zxD/btzMv3kAoGtGuzIQHoYoEgYAimGsIxGfamI+7Hke3tB7mJxf0OoEB52VFK3Sz0vN+/pEJ/15agY9719eBpQPxfLBSEsxTP6YTymYnF/QJEkmdmAAYGJ6zmx+dD09fXg/tTZ3PylBWlRX/IZQdogPRlpYMDhR6QeNbhcttatyY1tDHbp9LWh0uygAuPg1EGq4SoHsBAWD5kqLK6qa1ZW2ZMtI+OjKD+bgtXFkRGzPwzNopjBxHQzKxigHx0GS5kiXr5Xxbt5g20oZT23frCauU5g4AyBgZ35H605YntrjdmFqfqHkPI/bBQDo9rXAc7S/GqAzVI6GxxzdkfZywp6cX9Assw9cGcOxc4MQGhs0Sx/Fc6XJafr0nl249EZunwvyUllRG7rWIUcjYxSiSJSB8DAfDHewhH5e7ODcTgca3S46CWgufg3diHVArcs8fXg/7fa1LFv42u0J2v7ORXNbQx2T/+36WoHenXtQDmYo64csL5nvjxZVlXjcLmboeCdqnQ4kUwo21bvTFrrwhSkIvF5sIUVVMSspmiTJpMvXyrz76nNZh7qSY8zC+MMUiYiWXjAQ0CHGiDIQGOaDIS9LuNEajtMnpufIi+cuMbsfewQ8R/H6M09mr+5L3p305MG9BTpyruEw+usUffPjbzQrLB0f/ApW6Lg+cV8TBL7IGUaGM9FCK4z28YAOv5/K0b5xPhhpYwk7Igi8/svvs+TWvWkgucB0tO5Mz80E2v4vry4zv6xqkCSZ3J6exXxKwaejP5mWq8iHMXStIw0jFhQAhSlsIqFBFIkcDY8tCqoHAGo4ThcEXketywSAPVs3ouuQH+UCa5evlQn6WuF2OrLfFx6T0WZppjgfqpgxWtHf0sXJg3sBoGKATaYU3Jz6A10fXC7KGNNprKWZVeXUVn70n+XUhVVHZNUlUMEGTWZH8vxbd1ayzCrqsuqKxJI59N+uywqE3jcOQz9imMaNaopEQ1e92YS+Aoz9ZkM8rkOMZaDQaQcqV7Fatb291oz97kemkyFHw2OVLJWr6dP1VzUtmf95f8iylCgS7WzfjLpW32cYRiwLYxgxda2+L9ftCFTdQfsLW7AwZgDYEYgAAAAASUVORK5CYII=',
   };
 
-
-  // Prozesstyp-Katalog (Masterliste) der platzierten Typen -> Druckansicht -> "Als PDF speichern"
-const CAT_COLS = [
-    { n: 'Automatik', code: 'A', bg: '#00FF00', fg: '#000', g: 'bz' },
-    { n: 'Leertakten', code: 'L', bg: '#99FF99', fg: '#000', g: 'bz' },
-    { n: 'Teilautomatikbetrieb', code: 'T', bg: '#99FF99', fg: '#000', g: 'bz' },
-    { n: 'ohne Bearbeitung', code: 'O', bg: '#A6A6A6', fg: '#000', g: 'bz' },
-    { n: 'kein T am Einlauf', code: 'M', bg: '#C08000', fg: '#fff', g: 'bz' },
-    { n: 'Ladungsträgermangel', code: 'm', bg: '#C08000', fg: '#fff', g: 'bz' },
-    { n: 'Auslauf belegt', code: 'B', bg: '#FFFF00', fg: '#000', g: 'bz' },
-    { n: 'Ladungsträgerstau', code: 'b', bg: '#FFFF00', fg: '#000', g: 'bz' },
-    { n: 'Zuführteilemangel', code: 'Z', bg: '#FFC000', fg: '#000', g: 'bz' },
-    { n: 'Störung', code: 'S', bg: '#FF0000', fg: '#fff', g: 'bz' },
-    { n: 'Hand', code: 'H', bg: '#0307BD', fg: '#fff', g: 'bz' },
-    { n: 'Beladen  (nicht mehr im Prozess)', code: 'F', bg: '#0307BD', fg: '#fff', g: 'bz' },
-    { n: 'Q-Stop', code: 'Q', bg: '#A722AA', fg: '#fff', g: 'bz' },
-    { n: 'Ausgeschaltet', code: '_', bg: '#FFFFFF', fg: '#000', g: 'bz' },
-    { n: 'Qualitäts Alarm', code: 'QAL', bg: '#93CDDD', fg: '#000', g: 'mps' },
-    { n: 'Zuführteile Vorwarngrenze', code: 'VWG (Z)', bg: '#93CDDD', fg: '#000', g: 'mps' },
-    { n: 'Werkzeugstandzahl', code: 'WKZ', bg: '#93CDDD', fg: '#000', g: 'mps' },
-    { n: 'Teilefertigmeldung mit Taktzeit', code: 'TFM', bg: '#DBEEF4', fg: '#000', g: 'mps' },
-    { n: 'Teileident Report mit/iohne Werkstückträger ID', code: 'TIR', bg: '#DBEEF4', fg: '#000', g: 'mps' },
-    { n: 'Teileident Set Report', code: 'TISR', bg: '#DBEEF4', fg: '#000', g: 'mps' },
-    { n: 'Zusammenbau Report pro Anbau-Teil ID', code: 'ZBR', bg: '#DBEEF4', fg: '#000', g: 'mps' },
-    { n: 'XML-Datencontainer', code: 'XDC', bg: '#DBEEF4', fg: '#000', g: 'mps' },
-    { n: 'Aktionierung (Sperrliste)', code: 'AK', bg: '#DBEEF4', fg: '#000', g: 'mps' },
-    { n: 'Remote Abschaltung', code: 'RA', bg: '#DBEEF4', fg: '#000', g: 'mps' },
-    { n: 'Rückmeldung an ERP System (SAP)', code: 'FST', bg: '#4BACC6', fg: '#000', g: 'info' },
-    { n: 'TeileID Lesung durch DMC Kamera', code: 'DMC', bg: '#4BACC6', fg: '#000', g: 'info' },
-    { n: 'Bearbeitungseinheiten', code: 'BE', bg: '#4BACC6', fg: '#000', g: 'info' },
-    { n: 'Belegdruck', code: 'BLD', bg: '#265663', fg: '#fff', g: 'info' },
-  ];
-  const PTL_VALS = {"1":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,2,1,2,2,2,2,2,2,2,2,2,2],"2":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,2,1,2,2,2,2,2,2,2,2,2,2],"3":[1,2,1,2,2,2,2,2,2,1,1,3,2,1,2,2,2,1,2,2,2,2,2,2,2,2,2,2],"4":[3,2,1,2,2,2,2,2,2,1,1,3,2,1,2,2,3,1,2,2,2,2,2,2,2,2,2,2],"5":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,3,2,2,2,3,3,2,2,2,2,2,2],"6":[2,2,2,1,2,2,2,2,2,1,1,3,2,1,2,2,3,2,2,2,3,2,2,2,2,2,2,2],"7":[1,3,3,1,3,3,1,3,3,1,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],"8":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,3,2,2,2,2,2,2,3,2,2,2,2],"9":[2,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,2,2,2,2,2,2,2,3,2,2,2,2],"11":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,3,3,3,1,2,3,3,3,3,3,3,2,2,3],"12":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,3,3,3,1,2,3,3,3,3,3,3,2,2,3],"13":[1,2,1,2,2,2,2,2,2,1,1,3,2,1,3,3,3,1,2,3,3,3,3,3,3,2,2,3],"14":[3,2,1,2,2,2,2,2,2,1,1,3,2,1,3,3,3,1,2,3,3,3,3,3,3,2,2,3],"15":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,3,3,3,2,2,3,3,3,3,3,3,2,2,3],"16":[2,2,2,1,2,2,2,2,2,1,1,3,2,1,3,3,3,2,2,3,3,3,3,3,3,2,2,3],"18":[1,2,2,2,2,2,2,2,2,1,1,2,2,1,3,3,3,2,2,3,3,3,3,3,3,2,2,3],"19":[2,2,2,2,2,2,2,2,2,1,1,2,2,1,3,3,3,2,2,3,3,3,3,3,3,2,2,3],"70":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"80":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"81":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"90":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"91":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"92":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"93":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"94":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"95":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"96":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"99":[3,3,3,1,3,3,3,3,3,1,1,3,3,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3]};
-const PTL_META = {
-    '1': { hw: 'TIA/BF', art: 'Aktiv', typ: 'G', fkt: 'A-Z', schritt: 'A-Z', besch: 'Wertschöpfende Prozesse (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…)  Starr Verkettet oder getaktet (Rundtakttische, Fließfertigung…) (M) nur bei ersten Prozess, (B) nur bei letzten, bei den dazwischenliegenden Prozessen wird (O) für (M) & (B) gemeldet.' },
-    '2': { hw: 'TIA/BF', art: 'Aktiv', typ: 'A', fkt: 'A-Z', schritt: 'A-Z', besch: 'Wertschöpfende Prozesse  (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…) Entkoppelt.' },
-    '3': { hw: 'TIA/BF', art: 'Aktiv', typ: 'S', fkt: 'A-Z', schritt: 'A-Z', besch: 'Wertschöpfende Prozesse mit Anteilen aus Automatikprozessen und Manuellen Mitarbeiterabhängigen Prozessen. (Montage & Schrauben, Messen, SPC, Nacharbeit…)' },
-    '4': { hw: 'TIA/BF', art: 'Aktiv', typ: 'M', fkt: 'A-Z', schritt: 'A-Z', besch: 'Prozesse die von Mitarbeitern durchgeführt werden  (Montage nur durch Mitarbeiter,  SPC, Nacharbeit…)' },
-    '5': { hw: 'TIA/BF', art: 'Aktiv', typ: 'H/L/R', fkt: 'A-Z', schritt: 'A-Z', besch: 'Bewegen/Handeln der Werkstücke (durch Roboter, Lader; Portallader, Shuttle, Handhabungsgerät…)' },
-    '6': { hw: 'TIA/BF', art: 'Aktiv', typ: 'T/I/O', fkt: 'A-Z', schritt: 'A-Z', besch: 'Teiletransport, Verkettungen, Transporteinrichtungen, Ein-/Ausschleusen im Prozess, getaktet nicht getaktet' },
-    '7': { hw: 'MSB/PLC', art: 'Aktiv', typ: 'F', fkt: 'T', schritt: 'A-Z', besch: 'Fahrerlose Transportsysteme (FTS) Fahrerloses Transportfahrzeug (FTF, englisch Automated Guided Vehicle, AGV)' },
-    '8': { hw: 'TIA/BF', art: 'Aktiv', typ: 'D', fkt: 'A-Z', schritt: 'A-Z', besch: 'Prozesse auf denen oder durch die Wstk. Mit zum Teil veränderbarer Geschwindigkeit transportiert werden. Fließfertigung / Fließmontage' },
-    '9': { hw: 'TIA/BF', art: 'Aktiv', typ: 'U', fkt: 'A-Z', schritt: 'A-Z', besch: 'AUSNAHME: Nur anzuwenden wenn keine der anderen Prozesstypen passend ist. Als Platzhalter für spätere Zuordnung/Definition.' },
-    '11': { hw: 'TIA/BF', art: 'Passiv', typ: 'g', fkt: 'a-z', schritt: 'a-z', besch: 'Wertschöpfende Prozesse (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…)  Starr Verkettet oder getaktet (Rundtakttische, Fließfertigung…) (M) nur bei ersten Prozess, (B) nur bei letzten, bei den dazwischenliegenden Prozessen wird (O) für (M) & (B) gemeldet.' },
-    '12': { hw: 'TIA/BF', art: 'Passiv', typ: 'a', fkt: 'a-z', schritt: 'a-z', besch: 'Wertschöpfende Prozesse  (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…) Entkoppelt.' },
-    '13': { hw: 'TIA/BF', art: 'Passiv', typ: 's', fkt: 'a-z', schritt: 'a-z', besch: 'Wertschöpfende Prozesse mit Anteilen aus Automatikprozessen und Manuellen Mitarbeiterabhängigen Prozessen. (Montage & Schrauben, Messen, SPC, Nacharbeit…)' },
-    '14': { hw: 'TIA/BF', art: 'Passiv', typ: 'm', fkt: 'a-z', schritt: 'a-z', besch: 'Prozesse die von Mitarbeitern durchgeführt werden  (Montage nur durch Mitarbeiter,  SPC, Nacharbeit…)' },
-    '15': { hw: 'TIA/BF', art: 'Passiv', typ: 'h/l/r', fkt: 'a-z', schritt: 'a-z', besch: '“Beladen“ -> von einem Nicht Wertschöpfenden Prozess zu einem Wertschöpfenden.' },
-    '16': { hw: 'TIA/BF', art: 'Passiv', typ: 't/e/a', fkt: 'a-z', schritt: 'a-z', besch: 'Teiletransport, Verkettungen, Transporteinrichtungen  (z.B Medienzuführung,  Heizgerät)' },
-    '18': { hw: 'TIA/BF', art: 'Passiv', typ: 'd', fkt: 'a-z', schritt: 'a-z', besch: 'Prozesse auf denen oder durch die Wstk. Mit zum Teil veränderbarer Geschwindigkeit transportiert werden. Fließfertigung / Fließmontage' },
-    '19': { hw: 'TIA/BF', art: 'Passiv', typ: 'u', fkt: 'a-z', schritt: 'a-z', besch: 'AUSNAHME: Nur anzuwenden wenn keine der anderen Prozesstypen passend ist. Als Platzhalter für spätere Zuordnung/Definition.' },
-    '70': { hw: 'TIA/BF', art: 'Passiv', typ: 'A-Z', fkt: 'A-Z', schritt: '1-9', besch: 'HBF/Gesamtmaschine (Verbund aus mehreren Einzelprozessen)' },
-    '80': { hw: 'TIA', art: 'Aktiv', typ: 'A-Z', fkt: 'A-Z', schritt: '', besch: 'HBF/Gesamtmaschine (Verbund aus mehreren Einzelprozessen)' },
-    '81': { hw: 'TIA', art: 'Aktiv', typ: 'A-Z', fkt: 'A-Z', schritt: '1-9', besch: 'Logische Zusammenfassung IR und Lader Prozesse' },
-    '90': { hw: '', art: 'SDE', typ: 'A-Z', fkt: 'A-Z', schritt: '', besch: 'Verbund aus mehreren Einzelprozessen (KPI Bereich)' },
-    '91': { hw: '', art: 'SDE', typ: 'A-Z', fkt: 'A-Z', schritt: '1-9', besch: 'Logische Zusammenfassung IR und Lader Prozesse' },
-    '92': { hw: '', art: 'SDE', typ: 'P', fkt: '$', schritt: '1-9', besch: 'Zusammenfassung mehrer Paralellmaschinen zu einem Meldepunkt' },
-    '93': { hw: '', art: 'SDE', typ: 'Z', fkt: 'P', schritt: '1-9', besch: 'Zusätzlicher Meldepunkt für Kennzahlen KPI (OEE, Stkz, Trend ….)' },
-    '94': { hw: '', art: 'SDE', typ: '###', fkt: '###', schritt: '', besch: 'Puffer/Bestand zwischen definierten Prozessen für Echtzeit Monitor Modellierung' },
-    '95': { hw: '', art: 'SDE', typ: '###', fkt: '###', schritt: '', besch: 'Virtueller Puffer für Bestand ohne Modellierung' },
-    '96': { hw: '', art: 'SDE', typ: '###', fkt: '###', schritt: '', besch: 'Puffer/Bestand zwischen definierten Prozessen für Echtzeit Monitor Modellierung' },
-    '99': { hw: '', art: 'XML', typ: 'R', fkt: '1-9', schritt: 'A-Z', besch: 'XML mit Nummerierung bei mehreren Robotern' },
-  };
-  function catMark(no, ci, o) {
-    const col = CAT_COLS[ci];
-    const v = ((PTL_VALS[String(no)] || [])[ci]) || 0;
-    if (v === 1) {
-      const md = (o && o.metatags || []).find((x) => x.label === 'Pflicht \u2013 ' + col.n);
-      const filled = md && md.value && String(md.value).trim();
-      return filled ? '<span class="cm cm-p"></span>' : '<span class="cm cm-r"></span>';
-    }
-    if (v === 2) return '<span class="cm cm-o"></span>';
-    if (v === 3) return '<span class="cm-x">\u2715</span>';
-    return '';
-  }
-  function buildCatalogHtml(rows) {
-    const gl = { bz: 'Betriebszust\u00e4nde', mps: 'MPS-Meldungen', info: 'Informationen' };
-    const span = { bz: 0, mps: 0, info: 0 }; CAT_COLS.forEach((c) => { span[c.g]++; });
-    let gh = '<tr class="cat-grp"><th colspan="9"></th>';
-    ['bz', 'mps', 'info'].forEach((g) => { gh += '<th colspan="' + span[g] + '" class="gh-' + g + '">' + gl[g] + '</th>'; });
-    gh += '</tr>';
-    let ch = '<tr class="cat-cols"><th class="bh" rowspan="2">No</th><th class="bh" rowspan="2">ICO</th><th class="bh bh-l" rowspan="2">Hardware</th><th class="bh" rowspan="2">Art</th><th class="bh" rowspan="2">Typ</th><th class="bh" rowspan="2">Funktion</th><th class="bh" rowspan="2">Schritt</th><th class="bh bh-l" rowspan="2">Prozesstyp</th><th class="bh bh-l" rowspan="2">Beschreibung</th>';
-    CAT_COLS.forEach((c) => { ch += '<th class="vh" style="background:' + c.bg + ';color:' + c.fg + '"><span>' + esc(c.n) + '</span></th>'; });
-    ch += '</tr>';
-    let cc = '<tr class="cat-codes">';
-    CAT_COLS.forEach((c) => {
-      const ic = STATE_ICONS[c.n] ? '<img class="cc-ic" src="' + STATE_ICONS[c.n] + '" alt="">' : '';
-      cc += '<th class="cc" style="background:' + c.bg + ';color:' + c.fg + '">' + ic + '<span class="cc-code">' + esc(c.code || '') + '</span></th>';
-    });
-    cc += '</tr>';
-    let body = '';
-    rows.forEach((r) => {
-      const pt = r.pt; const o = r.o;
-      const no = pt.sym.replace('ptk_', '');
-      const md = PTL_META[no] || {};
-      const oname = (o && o.name && o.name !== pt.name && o.name !== pt.ptyp) ? '<span class="c-oname"> \u00b7 ' + esc(o.name) + '</span>' : '';
-      body += '<tr><td class="c-no">' + esc(no) + '</td>'
-        + '<td class="c-ico"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[pt.sym] || SYM.box) + '</svg></td>'
-        + '<td class="c-hw">' + esc(md.hw || '') + '</td>'
-        + '<td class="c-art">' + esc(md.art || '') + '</td>'
-        + '<td class="c-typ">' + esc(md.typ || '') + '</td>'
-        + '<td class="c-fkt">' + esc(md.fkt || '') + '</td>'
-        + '<td class="c-schr">' + esc(md.schritt || '') + '</td>'
-        + '<td class="c-pt">' + esc(pt.ptyp || pt.name) + oname + '</td>'
-        + '<td class="c-besch">' + esc(md.besch || '') + '</td>';
-      CAT_COLS.forEach((c, ci) => { body += '<td class="c-m c-' + c.g + '">' + catMark(no, ci, o) + '</td>'; });
-      body += '</tr>';
-    });
-    const title = esc((state.detail && state.detail.anlagenname) || 'Anlage');
-    return '<div class="cat-head"><b>PTL Export</b> \u00b7 ' + title + ' \u00b7 ' + rows.length + ' platzierte' + (rows.length !== 1 ? '' : 'r') + ' Prozesstyp' + (rows.length !== 1 ? 'en' : '') + '</div>'
-      + '<table class="cat-tbl"><thead>' + gh + ch + cc + '</thead><tbody>' + body + '</tbody></table>'
-      + '<div class="cat-legend"><span class="cm cm-p"></span> Pflicht (Beschreibung vorhanden) &nbsp;&nbsp; <span class="cm cm-r"></span> Pflicht ohne Beschreibung &nbsp;&nbsp; <span class="cm cm-o"></span> Optional &nbsp;&nbsp; <span class="cm-x">\u2715</span> nicht relevant</div>';
-  }
-  function exportProcessCatalog() {
-    const objs = (state.detail && state.detail.objects || []).filter((o) => /^ptk_/.test(o.symbolType));
-    const rows = [];
-    objs.forEach((o) => { const pt = processTypeBySym(o.symbolType); if (pt) rows.push({ o: o, pt: pt }); });
-    rows.sort((a, b) => ((+a.pt.sym.replace('ptk_', '')) - (+b.pt.sym.replace('ptk_', ''))) || String(a.o.name || '').localeCompare(String(b.o.name || '')));
-    if (!rows.length) { toast('Keine Prozesstypen auf dem Layout platziert.'); return; }
-    let el = document.getElementById('catPrint');
-    if (!el) { el = document.createElement('div'); el.id = 'catPrint'; document.body.appendChild(el); }
-    el.innerHTML = buildCatalogHtml(rows);
-    document.body.classList.add('cat-printing');
-    const done = () => { document.body.classList.remove('cat-printing'); window.removeEventListener('afterprint', done); };
-    window.addEventListener('afterprint', done);
-    setTimeout(() => { window.print(); }, 150);
-  }
 
   const PROCESS_META = { soft: '#EAF1F6', action: 'PROZESSTYP SETZEN', palette: PROCESS_TYPES.map((p) => [p.name, p.sym]) };
   function processTypeByName(name) { const base = String(name || '').replace(/_\d+$/, ''); return PROCESS_TYPES.find((p) => p.name === base) || null; }
@@ -1481,7 +1353,6 @@ const PTL_META = {
       + '<div class="exp-ctl">'
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
       + '<button class="btn" data-act="export-csv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>'
-      + '<button class="btn" data-act="export-catalog" title="PTL Export: platzierte Prozesstypen als PDF drucken"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M8 13h8M8 16h5"/></svg> PTL Export</button>'
       + '<button class="btn" data-act="editor-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ZURÜCK</button>'
       + '</div></div></div>'
       + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'

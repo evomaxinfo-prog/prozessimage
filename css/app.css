@@ -1,11 +1,11 @@
 /* Selbst gehostete Schriften (kein Google-Fonts-CDN) – Enterprise-Security: keine Drittanbieter-Verbindung */
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.24.67') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.24.67') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.24.67') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.24.67') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.24.67') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.24.67') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.24.67') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.24.67') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.24.67') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.24.67') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.24.67') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.24.67') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.24.67') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.24.67') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.24.68') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.24.68') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.24.68') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.24.68') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.24.68') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.24.68') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.24.68') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.24.68') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.24.68') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.24.68') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.24.68') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.24.68') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.24.68') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.24.68') format('woff')}
 :root{
     --brand-blue:#0065A5;
     --brand-blue-dark:#004E80;
@@ -834,42 +834,3 @@ header{padding:0 22px}
   .eye{width:32px;height:32px}
 }
 
-/* ===== PTL Export (Masterliste-Format) Druck ===== */
-#catPrint{display:none}
-.cat-head{font:700 13px/1.4 'IBM Plex Sans',system-ui,sans-serif;color:#fff;background:#17506E;padding:8px 12px;border-radius:4px 4px 0 0;margin:0}
-.cat-head b{font-weight:800;letter-spacing:.3px}
-.cat-tbl{border-collapse:collapse;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;table-layout:fixed}
-.cat-tbl th,.cat-tbl td{border:.5px solid #C3D0DA}
-.cat-grp th{background:#17506E;color:#fff;font-size:9px;font-weight:700;padding:3px;text-transform:uppercase;letter-spacing:.4px}
-.cat-grp .gh-mps{background:#4472C4}
-.cat-grp .gh-info{background:#2E4E86}
-.cat-cols .bh{background:#17506E;color:#fff;font-size:7.5px;font-weight:700;vertical-align:bottom;padding:4px 2px;text-align:center}
-.cat-cols .bh-l{text-align:left}
-.cat-tbl .vh{padding:4px 0 3px;vertical-align:bottom}
-.cat-tbl .vh span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:6.4px;font-weight:600;line-height:1.05;white-space:nowrap;display:inline-block}
-.cat-codes .cc{padding:2px 0 3px;text-align:center;vertical-align:middle}
-.cat-codes .cc-ic{width:11px;height:11px;display:block;margin:0 auto 1px;object-fit:contain}
-.cat-codes .cc-code{font-size:6.5px;font-weight:700;line-height:1;display:block}
-.cat-tbl td{font-size:7.5px;padding:1px 3px;color:#1B2A33;vertical-align:top;overflow:hidden;word-break:break-word}
-.cat-tbl .c-no{text-align:center;font-weight:700;color:#0065A5;font-family:'IBM Plex Mono',monospace;width:22px;vertical-align:middle}
-.cat-tbl .c-ico{text-align:center;padding:1px;width:26px;vertical-align:middle}
-.cat-tbl .c-hw{width:44px}.cat-tbl .c-art{width:34px}.cat-tbl .c-typ{width:26px;text-align:center}
-.cat-tbl .c-fkt{width:40px;text-align:center}.cat-tbl .c-schr{width:36px;text-align:center}
-.cat-tbl .c-pt{font-weight:600;width:120px}
-.cat-tbl .c-besch{width:180px;color:#40515C;font-size:6.6px;line-height:1.12}
-.cat-tbl .c-m{width:16px;text-align:center;padding:0;vertical-align:middle}
-.cat-tbl .c-mps{background:#F1F5FC}
-.cat-tbl .c-info{background:#EAF1FA}
-.cm{display:inline-block;width:8px;height:8px;border-radius:50%;vertical-align:middle}
-.cm-p{background:#333}
-.cm-r{background:#E1001A}
-.cm-o{border:1.3px solid #555}
-.cm-x{color:#C21807;font-weight:700;font-size:9px;line-height:1}
-.cat-tbl .c-oname{color:#7A8A96;font-weight:400}
-.cat-legend{margin-top:9px;font-size:9px;color:#556}
-.cat-legend .cm{margin-right:2px}
-@media print{
-  body.cat-printing > *:not(#catPrint){display:none !important}
-  body.cat-printing #catPrint{display:block;position:static;width:100%}
-  @page{size:A3 landscape;margin:6mm}
-}
