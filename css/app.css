@@ -1,11 +1,11 @@
 /* Selbst gehostete Schriften (kein Google-Fonts-CDN) – Enterprise-Security: keine Drittanbieter-Verbindung */
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.24.63') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.24.63') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.24.63') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.24.63') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.24.63') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.24.63') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.24.63') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.24.63') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.24.63') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.24.63') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.24.63') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.24.63') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.24.63') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.24.63') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.24.64') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.24.64') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.24.64') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.24.64') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.24.64') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.24.64') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.24.64') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.24.64') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.24.64') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.24.64') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.24.64') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.24.64') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.24.64') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.24.64') format('woff')}
 :root{
     --brand-blue:#0065A5;
     --brand-blue-dark:#004E80;
@@ -832,4 +832,37 @@ header{padding:0 22px}
   .flow-pick{grid-template-columns:1fr}      /* Materialfluss-Typen einspaltig */
   .zoom-ctl button{width:32px;height:30px}   /* größere Touch-Ziele */
   .eye{width:32px;height:32px}
+}
+
+/* ===== Prozesstyp-Katalog Druck-Export ===== */
+#catPrint{display:none}
+.cat-head{font:600 13px/1.4 'IBM Plex Sans',system-ui,sans-serif;color:#0065A5;margin:0 0 8px}
+.cat-tbl{border-collapse:collapse;width:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;table-layout:fixed}
+.cat-tbl th,.cat-tbl td{border:.5px solid #C3D0DA}
+.cat-grp th{background:#17506E;color:#fff;font-size:9px;font-weight:700;padding:3px;text-transform:uppercase;letter-spacing:.4px}
+.cat-grp .gh-mps{background:#4472C4}
+.cat-grp .gh-info{background:#2E4E86}
+.cat-cols .bh{background:#17506E;color:#fff;font-size:8px;font-weight:700;vertical-align:bottom;padding:4px 3px;text-align:center}
+.cat-cols .bh-l{text-align:left}
+.cat-tbl .vh{height:96px;width:15px;padding:0;vertical-align:bottom}
+.cat-tbl .vh span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:7px;font-weight:600;line-height:1;white-space:nowrap;display:inline-block;padding:4px 1px}
+.cat-tbl td{font-size:8px;padding:2px 3px;color:#1B2A33}
+.cat-tbl .c-no{text-align:center;font-weight:700;color:#0065A5;font-family:'IBM Plex Mono',monospace;width:26px}
+.cat-tbl .c-ico{text-align:center;padding:1px;width:26px}
+.cat-tbl .c-hw{width:78px}
+.cat-tbl .c-pt{font-weight:600;width:150px}
+.cat-tbl .c-m{text-align:center;padding:0}
+.cat-tbl .c-mps{background:#F1F5FC}
+.cat-tbl .c-info{background:#EAF1FA}
+.cm{display:inline-block;width:8px;height:8px;border-radius:50%;vertical-align:middle}
+.cm-p{background:#333}
+.cm-o{border:1.3px solid #555}
+.cm-x{color:#C21807;font-weight:700;font-size:9px;line-height:1}
+.cat-legend{margin-top:9px;font-size:9px;color:#556}
+.cat-legend .cm{margin-right:2px}
+@media print{
+  body.cat-printing{visibility:hidden}
+  body.cat-printing #catPrint,body.cat-printing #catPrint *{visibility:visible}
+  body.cat-printing #catPrint{display:block;position:absolute;left:0;top:0;width:100%}
+  @page{size:A3 landscape;margin:8mm}
 }

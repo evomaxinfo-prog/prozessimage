@@ -514,6 +514,7 @@
     else if (act === 'layer-select') { selectLayer(el.getAttribute('data-layer')); }
     else if (act === 'layer-eye') { e.stopPropagation(); if (!canEdit()) { toast('Nur Lesezugriff'); return; } toggleLayerVis(el.getAttribute('data-layer')); }
     else if (act === 'export-pdf') { exportFile('pdf'); }
+    else if (act === 'export-catalog') { exportProcessCatalog(); }
     else if (act === 'export-csv') { exportFile('csv'); }
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
@@ -656,6 +657,86 @@ const STATE_ICONS = {
     'Bearbeitungseinheiten': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAAFBklEQVR42r2Yb0wbZRzHv89z1zvbGkJYhAXFMUjZxtYXyBYzdWERw0un2GvmkiaAcdEo7u1MQ91KSIwvR4hxL2CGkWjbkOkLXQyQvXHJshBNcB2hgy1icGMbElx79M/d4wvao+1d/1zHvKQves/l6afP7/v7/n6/I6jgEvoHqhPDg+tC/0A1J/NfEkJPAwBj6kXFmjqbGB5chyRxCAYVs3sT0zRSgEPQrQieoWZOUCYJJc7sZaayOVWFKz7mi2SeNbM9rQRG7PU7jGAAgFDipBQhwTPUjKBbQSDAPRugNIy1z+egFCEjmGwoTlAmRY+vBW63Aql8qPJCltaDtc/nAOGLwuSHDyzlkkf9kXI1xZULI/b6HYTSsmEAgBBSB9DjlrZj06mJrx9BkjiEw6zykKVhBM9Qc6kwFQsfCB8Se/0OBIMKJImrDEgKaDCFBGwGilKERI+vZQuqsKZIKQGb0Uw5mlITKSk+7l9AIMDBrbcE8n/BZEMpCa47Me5dNPIpqtfMs4OJJ5OaJVj7fA4E3TpNEaNsMiPgWFQmAGCzW5nZkzKyBJKfTfkCjkVlcuqNNlz68F3dppHVNcwt38eFX27gxtIyA4CJj1yku721IEhkdQ1Hzn3D9GVmi4EK/QPVCAYV0eNrKZRNb7+yz3BzR20Nuttbce3zXrza1EBEiwXFYADgz8friCeTBbJP4vjE8OB6OkxBIxib3cqcDbu10HpDU/g1sozXHQ0Ycr2lPdd1qBn/bsa15/7eeIKPx37UAS2vbUC0WHItQeCDYq/fFR/zRXh7z1CdShVDzcSiMnE21sNRW6PdG5m5yWJRmVyfv4vuw61ob6wHAETjCThfqtOem/pjET9dmwWq7LmlQeBZNpAGBRay9wx18SqfOk8ILSjg7B+JrK7h+L49pNpmRefBJg0msrqGkZmbbPSDE9oJtda/gOEz72+ftGDB9K0lXPltvqB5qiR1ngcjR4uV2KOOhhzNXDlzKmd9+vYS3hv+ngGAs2G3dr+9sV4DzlzzKw8Ri8qkUEYSQk/zpdL7cNamkdU1bMQ2UWV7Tgtj54EmfPLmEXJ17k5OaCdnw7q9rs7dKWkHPGPqxUwLqgtX3r88ORLA4sN/GAC807afZKwgW9yZUzt54TvY7FaWySgAEC0W2OzWIt6kXqY0xX/BVDZnJOiGmqpcz7m3glhUJrGoTOb+epCz1r53G3zm1pLmzEoiRTKfkiXFlvqMj17yPhB7/S4Kpsu0gy/W5viHs7FeE7n3REfO2p5d1dp3uyjgtf17UW0TNYj1WBy/L98vXHRVuBLDg+tEKxkeXwsVeM2LYlGZ/Hy2B50HmorGfPbeCgZ/uKYTe/41ORvWwli4hAQ4mnHI+Lh/QVXhyoTPZreyl7P+db79T99egjc0hc6vvi2rhs3eXSl4Mtv1zK0ULa67ntcL8PETOUdnZouqYW+kK65Fmvl4Mol8Z92RRi2vqJZs0Haida1kEtH31OnhLjHuXVQTKcnIEp62hZVH/REEAoZjkXGTnx7u4uP+hZ2CypzMlmaM++nSg2KFXaQZzZibyzKWMOaLgKVclZyUlk1lwJQ326eh5FG/aSjtZPJS++lGaQAIhxmkAJea+PQRd+jYDKG0Y2tMLq2ZzbFzETPvisy9H0oPd6UsoZyBcGfeD6WzLzHuXcwuM5Vk084AZXwqLXTFluxgqno5p59RuK7s2mR2+/8AQyoVuRfbeNcAAAAASUVORK5CYII=',
     'Belegdruck': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAjCAYAAAD8BaggAAAFmUlEQVR42tWYW2gcVRjH/zPnTLOz022WGFM3rZbeLBWaNFlJUcpuhfbB1BIvnUUqiWQNvghtoO2LyC4bS19SoRQfROuGWghlV6siBiU+uKVgDcTQIGIvVCVtQmNMso2zM8ncfNidvWWzOxsV8TzOnDnzO9/5n+/GYBWD9obqtbN9M7U9p7YsmfrbLMsGAMAwjJjq0o9pZ/tmIIoE8bhe7dpM1TRijCAe0GlvqJ77k3zLMuyO/NeGadyAoR+Ro33j1txqlmergomlf8AHQ02lYACAZdgdYMkgHww1IR7QEYuRf8dCogUTaQGLi6Vg/glL2QPK6IEPhprAksFKMKWh7GmqMpDfT5FIaHYtUxoKnXI0PGattXoN+cMUiYRGe0P1q4HJaQoX+WCoCYmEBn+YrspC1tXOPyZJkkm1QILAZ4/J0FWvHO0bt9a2DZSDyR3ToqqSti0bmWebt2Odw2EL5urN3zA0fqvgiAzdaJOj4bGVoJhyt4kl7Ij1WJJk8knvK8yBXVtx7fYEnGu4FUFSSyo8bhc21bvhOdq/TDOLgupZyXnS5bcp7WfyYQpc0fc/oqf/AoTGBq3cEXb5WplT4v6S72okbooLRtpKCZ0tuE3xeMYy3Gj+ApIkEyQXmGXPbIxFVSWSJJPi+SxhR7JCF3POk2Y9cCCgFVtmUVXJ5ofrmN1N28FzFI97HkIypaDrkB+yqq14IXiOwrt5A9xOB17wPsEAwL25Bxi5c5fUcJyeg+JGHd2RdmUgMJxh0BlLM47uyAFC2aFimMtHX8amejfmUwoAIJlSUOt0VHvZ4HY68Nr5zxD/btzMv3kAoGtGuzIQHoYoEgYAimGsIxGfamI+7Hke3tB7mJxf0OoEB52VFK3Sz0vN+/pEJ/15agY9719eBpQPxfLBSEsxTP6YTymYnF/QJEkmdmAAYGJ6zmx+dD09fXg/tTZ3PylBWlRX/IZQdogPRlpYMDhR6QeNbhcttatyY1tDHbp9LWh0uygAuPg1EGq4SoHsBAWD5kqLK6qa1ZW2ZMtI+OjKD+bgtXFkRGzPwzNopjBxHQzKxigHx0GS5kiXr5Xxbt5g20oZT23frCauU5g4AyBgZ35H605YntrjdmFqfqHkPI/bBQDo9rXAc7S/GqAzVI6GxxzdkfZywp6cX9Assw9cGcOxc4MQGhs0Sx/Fc6XJafr0nl249EZunwvyUllRG7rWIUcjYxSiSJSB8DAfDHewhH5e7ODcTgca3S46CWgufg3diHVArcs8fXg/7fa1LFv42u0J2v7ORXNbQx2T/+36WoHenXtQDmYo64csL5nvjxZVlXjcLmboeCdqnQ4kUwo21bvTFrrwhSkIvF5sIUVVMSspmiTJpMvXyrz76nNZh7qSY8zC+MMUiYiWXjAQ0CHGiDIQGOaDIS9LuNEajtMnpufIi+cuMbsfewQ8R/H6M09mr+5L3p305MG9BTpyruEw+usUffPjbzQrLB0f/ApW6Lg+cV8TBL7IGUaGM9FCK4z28YAOv5/K0b5xPhhpYwk7Igi8/svvs+TWvWkgucB0tO5Mz80E2v4vry4zv6xqkCSZ3J6exXxKwaejP5mWq8iHMXStIw0jFhQAhSlsIqFBFIkcDY8tCqoHAGo4ThcEXketywSAPVs3ouuQH+UCa5evlQn6WuF2OrLfFx6T0WZppjgfqpgxWtHf0sXJg3sBoGKATaYU3Jz6A10fXC7KGNNprKWZVeXUVn70n+XUhVVHZNUlUMEGTWZH8vxbd1ayzCrqsuqKxJI59N+uywqE3jcOQz9imMaNaopEQ1e92YS+Aoz9ZkM8rkOMZaDQaQcqV7Fatb291oz97kemkyFHw2OVLJWr6dP1VzUtmf95f8iylCgS7WzfjLpW32cYRiwLYxgxda2+L9ftCFTdQfsLW7AwZgDYEYgAAAAASUVORK5CYII=',
   };
+
+
+  // Prozesstyp-Katalog (Masterliste) der platzierten Typen -> Druckansicht -> "Als PDF speichern"
+const CAT_COLS = [
+    { n: 'Automatik', g: 'bz', bg: '#00E000', fg: '#000' },
+    { n: 'Leertakten', g: 'bz', bg: '#9FE89F', fg: '#000' },
+    { n: 'Teilautomatikbetrieb', g: 'bz', bg: '#9FE89F', fg: '#000' },
+    { n: 'ohne Bearbeitung', g: 'bz', bg: '#AEB4B8', fg: '#000' },
+    { n: 'kein T am Einlauf', g: 'bz', bg: '#B8791A', fg: '#fff' },
+    { n: 'Ladungsträgermangel', g: 'bz', bg: '#B8791A', fg: '#fff' },
+    { n: 'Auslauf belegt', g: 'bz', bg: '#F2E400', fg: '#000' },
+    { n: 'Ladungsträgerstau', g: 'bz', bg: '#F2E400', fg: '#000' },
+    { n: 'Zuführteilemangel', g: 'bz', bg: '#F5B301', fg: '#000' },
+    { n: 'Störung', g: 'bz', bg: '#E42320', fg: '#fff' },
+    { n: 'Hand', g: 'bz', bg: '#1B3FD6', fg: '#fff' },
+    { n: 'Beladen  (nicht mehr im Prozess)', g: 'bz', bg: '#1B3FD6', fg: '#fff' },
+    { n: 'Q-Stop', g: 'bz', bg: '#9A2AA0', fg: '#fff' },
+    { n: 'Ausgeschaltet', g: 'bz', bg: '#FFFFFF', fg: '#000' },
+    { n: 'Qualitäts Alarm', g: 'mps', bg: '#9FB9E3', fg: '#000' },
+    { n: 'Zuführteile Vorwarngrenze', g: 'mps', bg: '#9FB9E3', fg: '#000' },
+    { n: 'Werkzeugstandzahl', g: 'mps', bg: '#9FB9E3', fg: '#000' },
+    { n: 'Teilefertigmeldung mit Taktzeit', g: 'mps', bg: '#DCE6F3', fg: '#000' },
+    { n: 'Teileident Report mit/iohne Werkstückträger ID', g: 'mps', bg: '#DCE6F3', fg: '#000' },
+    { n: 'Teileident Set Report', g: 'mps', bg: '#DCE6F3', fg: '#000' },
+    { n: 'Zusammenbau Report pro Anbau-Teil ID', g: 'mps', bg: '#DCE6F3', fg: '#000' },
+    { n: 'XML-Datencontainer', g: 'mps', bg: '#DCE6F3', fg: '#000' },
+    { n: 'Aktionierung (Sperrliste)', g: 'mps', bg: '#DCE6F3', fg: '#000' },
+    { n: 'Remote Abschaltung', g: 'mps', bg: '#DCE6F3', fg: '#000' },
+    { n: 'Rückmeldung an ERP System (SAP)', g: 'info', bg: '#4472C4', fg: '#fff' },
+    { n: 'TeileID Lesung durch DMC Kamera', g: 'info', bg: '#4472C4', fg: '#fff' },
+    { n: 'Bearbeitungseinheiten', g: 'info', bg: '#4472C4', fg: '#fff' },
+    { n: 'Belegdruck', g: 'info', bg: '#2E4E86', fg: '#fff' },
+  ];
+  function catMark(pt, col) {
+    const inList = (v) => (v ? String(v).split(', ') : []).indexOf(col.n) >= 0;
+    const muss = col.g === 'bz' ? pt.muss : col.g === 'mps' ? pt.mpsMuss : pt.infoMuss;
+    const opt = col.g === 'bz' ? pt.opt : col.g === 'mps' ? pt.mpsOpt : pt.infoOpt;
+    if (inList(muss)) return '<span class="cm cm-p"></span>';
+    if (inList(opt)) return '<span class="cm cm-o"></span>';
+    return '<span class="cm-x">\u2715</span>';
+  }
+  function buildCatalogHtml(types) {
+    const gl = { bz: 'Betriebszust\u00e4nde', mps: 'MPS-Meldungen', info: 'Informationen' };
+    const span = { bz: 0, mps: 0, info: 0 }; CAT_COLS.forEach((c) => { span[c.g]++; });
+    let gh = '<tr class="cat-grp"><th colspan="4"></th>';
+    ['bz', 'mps', 'info'].forEach((g) => { gh += '<th colspan="' + span[g] + '" class="gh-' + g + '">' + gl[g] + '</th>'; });
+    gh += '</tr>';
+    let ch = '<tr class="cat-cols"><th class="bh">No</th><th class="bh">Icon</th><th class="bh bh-l">Hardware \u00b7 Art</th><th class="bh bh-l">Prozesstyp</th>';
+    CAT_COLS.forEach((c) => { ch += '<th class="vh" style="background:' + c.bg + ';color:' + c.fg + '"><span>' + esc(c.n) + '</span></th>'; });
+    ch += '</tr>';
+    let body = '';
+    types.forEach((pt) => {
+      const no = pt.sym.replace('ptk_', '');
+      body += '<tr><td class="c-no">' + esc(no) + '</td>'
+        + '<td class="c-ico"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[pt.sym] || SYM.box) + '</svg></td>'
+        + '<td class="c-hw">' + esc(pt.hwart || '') + '</td>'
+        + '<td class="c-pt">' + esc(pt.ptyp || pt.name) + '</td>';
+      CAT_COLS.forEach((c) => { body += '<td class="c-m c-' + c.g + '">' + catMark(pt, c) + '</td>'; });
+      body += '</tr>';
+    });
+    const title = esc((state.detail && state.detail.anlagenname) || 'Anlage');
+    return '<div class="cat-head"><b>Prozesstyp-Katalog</b> \u00b7 ' + title + ' \u00b7 ' + types.length + ' Prozesstyp' + (types.length !== 1 ? 'en' : '') + ' auf dem Layout</div>'
+      + '<table class="cat-tbl"><thead>' + gh + ch + '</thead><tbody>' + body + '</tbody></table>'
+      + '<div class="cat-legend"><span class="cm cm-p"></span> Pflicht &nbsp;&nbsp; <span class="cm cm-o"></span> Optional &nbsp;&nbsp; <span class="cm-x">\u2715</span> nicht relevant</div>';
+  }
+  function exportProcessCatalog() {
+    const objs = (state.detail && state.detail.objects || []).filter((o) => /^ptk_/.test(o.symbolType));
+    const seen = {}; const types = [];
+    objs.forEach((o) => { if (!seen[o.symbolType]) { const pt = processTypeBySym(o.symbolType); if (pt) { seen[o.symbolType] = 1; types.push(pt); } } });
+    types.sort((a, b) => (+a.sym.replace('ptk_', '')) - (+b.sym.replace('ptk_', '')));
+    if (!types.length) { toast('Keine Prozesstypen auf dem Layout platziert.'); return; }
+    let el = document.getElementById('catPrint');
+    if (!el) { el = document.createElement('div'); el.id = 'catPrint'; document.body.appendChild(el); }
+    el.innerHTML = buildCatalogHtml(types);
+    document.body.classList.add('cat-printing');
+    const done = () => { document.body.classList.remove('cat-printing'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(() => { window.print(); }, 150);
+  }
+
   const PROCESS_META = { soft: '#EAF1F6', action: 'PROZESSTYP SETZEN', palette: PROCESS_TYPES.map((p) => [p.name, p.sym]) };
   function processTypeByName(name) { const base = String(name || '').replace(/_\d+$/, ''); return PROCESS_TYPES.find((p) => p.name === base) || null; }
   function processTypeBySym(sym) { return PROCESS_TYPES.find((p) => p.sym === sym) || null; }
@@ -1351,6 +1432,7 @@ const STATE_ICONS = {
       + '<div class="exp-ctl">'
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
       + '<button class="btn" data-act="export-csv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>'
+      + '<button class="btn" data-act="export-catalog" title="Prozesstyp-Katalog der platzierten Typen als PDF drucken"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M8 13h8M8 16h5"/></svg> KATALOG</button>'
       + '<button class="btn" data-act="editor-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ZURÜCK</button>'
       + '</div></div></div>'
       + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'
