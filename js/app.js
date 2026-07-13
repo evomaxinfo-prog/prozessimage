@@ -1478,15 +1478,19 @@ const STATE_ICONS = {
         protectObj(z.id);
         var sentPts = z.points.map(function (p) { return { x: p.x, y: p.y }; });
         try {
-          await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
-          // Kontroll-Lesen FRISCH vom Server -> beweist unabhängig von der Speicher-Antwort, ob wirklich gespeichert wurde
-          try {
-            var srvList = await Api.getObjects(state.detail.id);
-            var srvObj = (srvList || []).find(function (o) { return String(o.id) === String(z.id); });
-            if (srvObj && !pointsMatch(srvObj.points, sentPts)) {
-              toast('⚠ Server speichert die Verschiebung NICHT – Kontroll-Lesen ergab die alte Position (Backend/DB)');
-            }
-          } catch (e3) { /* Kontroll-Lesen ist optional */ }
+          const resp = await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
+          if (!resp || resp._ctrl !== 'pf2') {
+            toast('⚠ Altes Backend aktiv: ObjectController.php ist nicht live. Bitte Datei hochladen UND PHP-FPM neu starten (OPcache leeren).');
+          } else {
+            // Neue Version läuft -> Kontroll-Lesen: speichert der Server die Punkte wirklich?
+            try {
+              var srvList = await Api.getObjects(state.detail.id);
+              var srvObj = (srvList || []).find(function (o) { return String(o.id) === String(z.id); });
+              if (srvObj && !pointsMatch(srvObj.points, sentPts)) {
+                toast('⚠ Backend ist aktuell, aber der Server speichert die Punkte nicht (DB-Ebene) – bitte melden.');
+              }
+            } catch (e3) { /* Kontroll-Lesen ist optional */ }
+          }
         } catch (e2) { toast('Speichern fehlgeschlagen (' + (e2 && (e2.status || e2.message) || '?') + ')'); }
         renderEditor(); return;
       }
