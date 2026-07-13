@@ -1503,12 +1503,6 @@ const STATE_ICONS = {
     if (state.zoneDrag) {
       const zd = state.zoneDrag; state.zoneDrag = null;
       const z = (state.detail.objects || []).find((o) => o.id === zd.id);
-      // TEMPORÄRE DIAGNOSE: zeigt beim Loslassen, ob es als echte Verschiebung erkannt wird
-      if (zd.moved || zd.type === 'move' || zd.type === 'vertex') {
-        const willSave = (zd.type === 'vertex' || zd.type === 'move') && zd.moved && !!z;
-        zoneSaveDebug('ZONE LOSGELASSEN\nErkannt als: ' + zd.type + '\nbewegt: ' + (zd.moved ? 'ja' : 'nein') + '\nObjekt gefunden: ' + (z ? 'ja' : 'NEIN')
-          + '\n⇒ ' + (willSave ? 'wird gespeichert' : 'wird NICHT gespeichert (nur Auswahl)'), willSave);
-      }
       if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
         protectObj(z.id);
         var sentPts = z.points.map(function (p) { return { x: p.x, y: p.y }; });
@@ -1863,11 +1857,8 @@ const STATE_ICONS = {
         const x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
         const z = zoneAt(x, y);
         if (z) {
-          if (z.id === state.selectedZone) {
-            state.zoneDrag = { type: 'move', id: z.id, sx: x, sy: y, moved: false, orig: z.points.map((p) => ({ x: p.x, y: p.y })) };
-          } else {
-            state.zoneDrag = { type: 'select', id: z.id, sx: x, sy: y, moved: false };
-          }
+          // Jedes Ziehen verschiebt direkt; ein reiner Klick (keine Bewegung) wählt nur aus.
+          state.zoneDrag = { type: 'move', id: z.id, sx: x, sy: y, moved: false, orig: z.points.map((p) => ({ x: p.x, y: p.y })) };
           try { doc.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
         } else if (state.selectedZone) {
           state.selectedZone = null; renderEditor();
