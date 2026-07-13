@@ -1403,6 +1403,10 @@ const STATE_ICONS = {
     const y = Math.min(0.96, Math.max(0.04, (e.clientY - r.top) / r.height));
     dragMove.nx = x; dragMove.ny = y;
     dragMove.el.style.left = (x * 100) + '%'; dragMove.el.style.top = (y * 100) + '%'; dragMove.el.style.cursor = 'grabbing';
+    // Zustands-Icon-Verbindungslinien live mitziehen (Prozesstyp-Ende der Linie)
+    document.querySelectorAll('[data-sline^="' + dragMove.oid + '__"]').forEach((ln) => {
+      ln.setAttribute('x1', x * 100); ln.setAttribute('y1', y * 100);
+    });
     // Technologie-Linie live mitziehen (Roboter-Ende der Linie)
     const tline = document.getElementById('tech-line-' + dragMove.oid);
     if (tline) {
