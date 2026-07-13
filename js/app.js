@@ -582,6 +582,12 @@
   // Rollen-/Gruppen-Sichtbarkeit: Admins sehen immer alles; sonst null = alle, oder nur die Codes in der Liste
   function layerAllowed(code) { return state.role === 'admin' || !state.visibleLayers || state.visibleLayers.indexOf(code) >= 0; }
   function allowedLayers() { return (state.detail.layers || []).filter((l) => layerAllowed(l.code)); }
+  // Sichtbarkeits-Map layerId -> bool (Auge-Zustand kombiniert mit Rollen-/Gruppensicht)
+  function visibleMap() {
+    const v = {};
+    (state.detail.layers || []).forEach((l) => { v[l.id] = (l.visible !== false) && layerAllowed(l.code); });
+    return v;
+  }
   function objectsOfLayer(id) { return (state.detail.objects || []).filter((o) => o.layerId === id); }
 
   /* ---- Punkt-basierte Formen: Schutzbereich (geschlossen) + Materialfluss-Förderweg (offen) ---- */
@@ -934,8 +940,7 @@
         + '<rect x="40" y="40" width="680" height="440" fill="none" stroke="#8FA3B0" stroke-width="2.5"/></svg>';
     const badge = state.layoutBlobUrl ? '<div class="layout-badge">eigenes Layout</div>' : '<div class="layout-badge muted">Schema-Layout</div>';
 
-    const visible = {};
-    (state.detail.layers || []).forEach((l) => { visible[l.id] = (l.visible !== false) && layerAllowed(l.code); });
+    const visible = visibleMap();
     const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
       const chips = o.metatags.map((m) => m.value).filter(Boolean);
       return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
@@ -1038,7 +1043,7 @@
     }).join('');
   }
   function techBadgeLayer() {
-    const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = (l.visible !== false) && layerAllowed(l.code); });
+    const visible = visibleMap();
     const editable = canEdit();
     const badges = (state.detail.objects || []).map((o) => {
       if (visible[o.layerId] === false) return '';
@@ -1573,7 +1578,7 @@
   }
 
   function zoneAt(x, y) {
-    const visible = {}; (state.detail.layers || []).forEach((l) => { visible[l.id] = (l.visible !== false) && layerAllowed(l.code); });
+    const visible = visibleMap();
     const shapes = (state.detail.objects || []).filter((o) => isShape(o) && o.points && visible[o.layerId] !== false);
     for (let i = shapes.length - 1; i >= 0; i--) {
       const o = shapes[i];

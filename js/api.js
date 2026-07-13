@@ -138,7 +138,6 @@
       if (!res.ok) throw new ApiError(res.status, (data && data.message) || 'Upload fehlgeschlagen.', data);
       return data;
     },
-    layoutUrl(stationId) { return API_BASE + '/stations/' + stationId + '/layout'; },
 
     // ---- Benutzer- & Gruppenverwaltung (admin) ----
     getWerke() { return this.request('/werke'); },
@@ -156,8 +155,6 @@
     updateUser(id, data) { return this.request('/users/' + id, { method: 'PATCH', body: data }); },
     resetUserPassword(id, newPassword) { return this.request('/users/' + id + '/reset-password', { method: 'POST', body: { newPassword } }); },
     deleteUser(id) { return this.request('/users/' + id, { method: 'DELETE' }); },
-    exportCsvUrl(stationId) { return API_BASE + '/stations/' + stationId + '/export.csv'; },
-    exportPdfUrl(stationId) { return API_BASE + '/stations/' + stationId + '/export.pdf'; },
   };
 
   global.Api = Api;
