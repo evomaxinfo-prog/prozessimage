@@ -598,34 +598,34 @@
   };
 
 const PROCESS_TYPES = [
-    { name: '01 Automatik Prozess', sym: 'ptk_1', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Aktiv', meld: 'Automatik, Störung, Hand, Ausgeschaltet' },
-    { name: '02 Automatik Prozess', sym: 'ptk_2', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Aktiv', meld: 'Automatik, Störung, Hand, Ausgeschaltet' },
-    { name: '03 Semi-Automatikprozess', sym: 'ptk_3', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Aktiv', meld: 'Automatik, Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet' },
-    { name: '04 Manueller Prozess', sym: 'ptk_4', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Aktiv', meld: 'Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet' },
-    { name: '05 Handling Prozess', sym: 'ptk_5', ptyp: 'Handling Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Aktiv', meld: 'Automatik, Störung, Hand, Ausgeschaltet' },
-    { name: '06 Transport,  Zuführung, Einschleusung', sym: 'ptk_6', ptyp: 'Transport,  Zuführung, Einschleusung (In), Ausschleusung (Out)', hwart: 'TIA/BF · Aktiv', meld: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet' },
-    { name: '07 Fahrerloser Transport', sym: 'ptk_7', ptyp: 'Fahrerloser Transport', hwart: 'MSB/PLC · Aktiv', meld: 'Automatik, ohne Bearbeitung, Auslauf belegt, Störung, Hand' },
-    { name: '08 Durchlaufprozess', sym: 'ptk_8', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Aktiv', meld: 'Automatik, Störung, Hand, Ausgeschaltet' },
-    { name: '09 Universeller Prozesstyp', sym: 'ptk_9', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Aktiv', meld: 'Störung, Hand, Ausgeschaltet' },
-    { name: '11 Automatik Prozess', sym: 'ptk_11', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Passiv', meld: 'Automatik, Störung, Hand, Ausgeschaltet' },
-    { name: '12 Automatik Prozess', sym: 'ptk_12', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Passiv', meld: 'Automatik, Störung, Hand, Ausgeschaltet' },
-    { name: '13 Semi-Automatikprozess', sym: 'ptk_13', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Passiv', meld: 'Automatik, Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet' },
-    { name: '14 Manueller Prozess', sym: 'ptk_14', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Passiv', meld: 'Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet' },
-    { name: '15 Belade Prozess', sym: 'ptk_15', ptyp: 'Belade Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Passiv', meld: 'Automatik, Störung, Hand, Ausgeschaltet' },
-    { name: '16 Transport,  Zuführung, Nacharbeit', sym: 'ptk_16', ptyp: 'Transport,  Zuführung, Nacharbeit', hwart: 'TIA/BF · Passiv', meld: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet' },
-    { name: '18 Durchlaufprozess', sym: 'ptk_18', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Passiv', meld: 'Automatik, Störung, Hand, Ausgeschaltet' },
-    { name: '19 Universeller Prozesstyp', sym: 'ptk_19', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Passiv', meld: 'Störung, Hand, Ausgeschaltet' },
-    { name: '70 KPI Bereich OP', sym: 'ptk_70', ptyp: 'KPI Bereich OP', hwart: 'TIA/BF · Passiv', meld: '' },
-    { name: '80 KPI Bereich OP', sym: 'ptk_80', ptyp: 'KPI Bereich OP', hwart: 'TIA · Aktiv', meld: '' },
-    { name: '81 IR, Lader', sym: 'ptk_81', ptyp: 'IR, Lader (Physisch)', hwart: 'TIA · Aktiv', meld: '' },
-    { name: '90 KPI Bereich OP', sym: 'ptk_90', ptyp: 'KPI Bereich OP', hwart: 'SDE', meld: '' },
-    { name: '91 IR, Lader', sym: 'ptk_91', ptyp: 'IR, Lader (Physisch)', hwart: 'SDE', meld: '' },
-    { name: '92 Parallelmaschinen', sym: 'ptk_92', ptyp: 'Parallelmaschinen', hwart: 'SDE', meld: '' },
-    { name: '93 #Zählpunkt', sym: 'ptk_93', ptyp: '#Zählpunkt', hwart: 'SDE', meld: '' },
-    { name: '94 ID Puffer / Bestand FIFO', sym: 'ptk_94', ptyp: 'ID Puffer / Bestand FIFO', hwart: 'SDE', meld: '' },
-    { name: '95 virtueller Puffer', sym: 'ptk_95', ptyp: 'virtueller Puffer', hwart: 'SDE', meld: '' },
-    { name: '96 ID Puffer / Bestand NonFIFO', sym: 'ptk_96', ptyp: 'ID Puffer / Bestand NonFIFO', hwart: 'SDE', meld: '' },
-    { name: '99 Direkte Roboterschnittstelle', sym: 'ptk_99', ptyp: 'Direkte Roboterschnittstelle', hwart: 'XML', meld: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet' },
+    { name: '01 Automatik Prozess', sym: 'ptk_1', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '02 Automatik Prozess', sym: 'ptk_2', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '03 Semi-Automatikprozess', sym: 'ptk_3', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '04 Manueller Prozess', sym: 'ptk_4', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Aktiv', muss: 'Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '05 Handling Prozess', sym: 'ptk_5', ptyp: 'Handling Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '06 Transport,  Zuführung, Einschleusung', sym: 'ptk_6', ptyp: 'Transport,  Zuführung, Einschleusung (In), Ausschleusung (Out)', hwart: 'TIA/BF · Aktiv', muss: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '07 Fahrerloser Transport', sym: 'ptk_7', ptyp: 'Fahrerloser Transport', hwart: 'MSB/PLC · Aktiv', muss: 'Automatik, ohne Bearbeitung, Auslauf belegt, Störung, Hand', opt: '' },
+    { name: '08 Durchlaufprozess', sym: 'ptk_8', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '09 Universeller Prozesstyp', sym: 'ptk_9', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Aktiv', muss: 'Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '11 Automatik Prozess', sym: 'ptk_11', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '12 Automatik Prozess', sym: 'ptk_12', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '13 Semi-Automatikprozess', sym: 'ptk_13', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '14 Manueller Prozess', sym: 'ptk_14', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Passiv', muss: 'Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '15 Belade Prozess', sym: 'ptk_15', ptyp: 'Belade Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '16 Transport,  Zuführung, Nacharbeit', sym: 'ptk_16', ptyp: 'Transport,  Zuführung, Nacharbeit', hwart: 'TIA/BF · Passiv', muss: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
+    { name: '18 Durchlaufprozess', sym: 'ptk_18', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Beladen  (nicht mehr im Prozess), Q-Stop' },
+    { name: '19 Universeller Prozesstyp', sym: 'ptk_19', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Passiv', muss: 'Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Beladen  (nicht mehr im Prozess), Q-Stop' },
+    { name: '70 KPI Bereich OP', sym: 'ptk_70', ptyp: 'KPI Bereich OP', hwart: 'TIA/BF · Passiv', muss: '', opt: '' },
+    { name: '80 KPI Bereich OP', sym: 'ptk_80', ptyp: 'KPI Bereich OP', hwart: 'TIA · Aktiv', muss: '', opt: '' },
+    { name: '81 IR, Lader', sym: 'ptk_81', ptyp: 'IR, Lader (Physisch)', hwart: 'TIA · Aktiv', muss: '', opt: '' },
+    { name: '90 KPI Bereich OP', sym: 'ptk_90', ptyp: 'KPI Bereich OP', hwart: 'SDE', muss: '', opt: '' },
+    { name: '91 IR, Lader', sym: 'ptk_91', ptyp: 'IR, Lader (Physisch)', hwart: 'SDE', muss: '', opt: '' },
+    { name: '92 Parallelmaschinen', sym: 'ptk_92', ptyp: 'Parallelmaschinen', hwart: 'SDE', muss: '', opt: '' },
+    { name: '93 #Zählpunkt', sym: 'ptk_93', ptyp: '#Zählpunkt', hwart: 'SDE', muss: '', opt: '' },
+    { name: '94 ID Puffer / Bestand FIFO', sym: 'ptk_94', ptyp: 'ID Puffer / Bestand FIFO', hwart: 'SDE', muss: '', opt: '' },
+    { name: '95 virtueller Puffer', sym: 'ptk_95', ptyp: 'virtueller Puffer', hwart: 'SDE', muss: '', opt: '' },
+    { name: '96 ID Puffer / Bestand NonFIFO', sym: 'ptk_96', ptyp: 'ID Puffer / Bestand NonFIFO', hwart: 'SDE', muss: '', opt: '' },
+    { name: '99 Direkte Roboterschnittstelle', sym: 'ptk_99', ptyp: 'Direkte Roboterschnittstelle', hwart: 'XML', muss: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet', opt: '' },
   ];
   const PROCESS_META = { soft: '#EAF1F6', action: 'PROZESSTYP SETZEN', palette: PROCESS_TYPES.map((p) => [p.name, p.sym]) };
   function processTypeByName(name) { const base = String(name || '').replace(/_\d+$/, ''); return PROCESS_TYPES.find((p) => p.name === base) || null; }
@@ -1275,7 +1275,8 @@ const PROCESS_TYPES = [
             { position: 1, label: 'Prozesstyp', value: pt.ptyp },
             { position: 2, label: 'Hardware · Art', value: pt.hwart },
           ];
-          if (pt.meld) tags.push({ position: 3, label: 'Meldungen', value: pt.meld });
+          if (pt.muss) tags.push({ position: 3, label: 'Muss-Betriebszustände', value: pt.muss });
+          if (pt.opt) tags.push({ position: 4, label: 'Optionale Betriebszustände', value: pt.opt });
           const upd = await Api.setMetatags(obj.id, tags);
           obj.metatags = (upd && upd.metatags) || obj.metatags;
         } catch (e2) { /* Metatags optional */ }
