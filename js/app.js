@@ -566,7 +566,67 @@
     light: '<path d="M6 4v16M18 4v16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6 8h12M6 12h12M6 16h12" stroke="currentColor" stroke-width="1.2" stroke-dasharray="1.5 2"/>',
     switch: '<rect x="5" y="9" width="14" height="6" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="12" r="1.8" fill="currentColor"/>',
     load: '<path d="M5 16h14M8 16V8l4-3 4 3v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+    // --- Prozesstypen (Katalog L7.0) ---
+    pt_clock: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='8'/><path d='M12 8v4l3 2' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_auto: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='3.4'/><path d='M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2' stroke-linecap='round'/></g>",
+    pt_semi: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='8'/><path d='M12 4a8 8 0 0 1 0 16z' fill='currentColor' stroke='none'/></g>",
+    pt_hand: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M8 11V6a1.5 1.5 0 0 1 3 0v4M11 10V5a1.5 1.5 0 0 1 3 0v5M14 10.5V7a1.5 1.5 0 0 1 3 0v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-4-2l-2.2-2.6a1.4 1.4 0 0 1 2-1.9L8 13' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_load: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='4' y='14' width='16' height='5' rx='1'/><path d='M12 4v7M9 8l3 3 3-3' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_transport: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='6' cy='16' r='1.9'/><circle cx='18' cy='16' r='1.9'/><path d='M6 14h12'/><path d='M8 8.5h6M12 5.5l3 3-3 3' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_agv: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='4' y='8' width='16' height='6' rx='1'/><circle cx='8' cy='17' r='1.5'/><circle cx='16' cy='17' r='1.5'/><path d='M10 11h5M13.5 9l2 2-2 2' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_flow: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M5 7v10M19 7v10' stroke-linecap='round'/><path d='M4 12h12M12 8l4 4-4 4' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_universal: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M12 4v16M4.5 7.5l15 9M19.5 7.5l-15 9' stroke-linecap='round'/></g>",
+    pt_kpi: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20h16' stroke-linecap='round'/><path d='M6 20v-6M11 20V6M16 20v-9' stroke-linecap='round'/></g>",
+    pt_loader: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='13' y='12' width='7' height='7' rx='1'/><path d='M4 5v9a2 2 0 0 0 2 2h6' stroke-linecap='round'/><path d='M4 5h4M6.5 8.5l3 3' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_parallel: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M4 6h6l4 6-4 6H4' stroke-linecap='round' stroke-linejoin='round'/><path d='M13 12h7M17 9l3 3-3 3' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_count: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M9.5 4L7.5 20M16.5 4l-2 16M4 9h16M4 15h16' stroke-linecap='round'/></g>",
+    pt_fifo: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='3.5' y='8' width='4.5' height='8' rx='1'/><rect x='9.75' y='8' width='4.5' height='8' rx='1'/><rect x='16' y='8' width='4.5' height='8' rx='1'/><path d='M3 5.5h15M15.5 3.5l2 2-2 2' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_nonfifo: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='3.5' y='8' width='4.5' height='8' rx='1'/><rect x='9.75' y='8' width='4.5' height='8' rx='1'/><rect x='16' y='8' width='4.5' height='8' rx='1'/><path d='M4 5.5h6M14 5.5h6M8 3.5l2 2-2 2M16 7.5l-2-2 2-2' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_bufcount: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='4' y='6' width='16' height='12' rx='1.5' stroke-dasharray='3 2.2'/><path d='M11 15V9l-2 1.4' stroke-linecap='round' stroke-linejoin='round'/></g>",
+    pt_robotarm: "<g fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='5' r='2'/><path d='M12 7v4l5 4M12 11l-5 5' stroke-linecap='round' stroke-linejoin='round'/><path d='M5 18h4' stroke-linecap='round'/></g>",
   };
+
+  const PROCESS_TYPES = [
+    { name: '01 Getaktet, aktiv', sym: 'pt_clock', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Aktiv' },
+    { name: '02 Automatik, aktiv', sym: 'pt_auto', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Aktiv' },
+    { name: '03 Semiauto, aktiv', sym: 'pt_semi', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Aktiv' },
+    { name: '04 Hand, aktiv', sym: 'pt_hand', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Aktiv' },
+    { name: '05 Umsetzen, aktiv', sym: 'pt_load', ptyp: 'Belade Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Aktiv' },
+    { name: '06 Transport, aktiv', sym: 'pt_transport', ptyp: 'Transport, Zuführung, Nacharbeit, Einschleusung , Ausschleusung', hwart: 'TIA/BF · Aktiv' },
+    { name: '07 FTS, aktiv', sym: 'pt_agv', ptyp: 'Fahrerloser Transport', hwart: 'MSB/PLC · Aktiv' },
+    { name: '08 Durchlauf, aktiv', sym: 'pt_flow', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Aktiv' },
+    { name: '09 Universal, aktiv', sym: 'pt_universal', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Aktiv' },
+    { name: '11 Getaktet, passiv', sym: 'pt_clock', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Passiv' },
+    { name: '12 Automatik, passiv', sym: 'pt_auto', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Passiv' },
+    { name: '13 Semiauto, passiv', sym: 'pt_semi', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Passiv' },
+    { name: '14 Hand, passiv', sym: 'pt_hand', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Passiv' },
+    { name: '15 Umsetzen, passiv', sym: 'pt_load', ptyp: 'Belade Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Passiv' },
+    { name: '16 Transport, passiv', sym: 'pt_transport', ptyp: 'Transport, Zuführung, Nacharbeit', hwart: 'TIA/BF · Passiv' },
+    { name: '18 Durchlauf, passiv', sym: 'pt_flow', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Passiv' },
+    { name: '19 Universal, passiv', sym: 'pt_universal', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Passiv' },
+    { name: '70 #OP, passiv', sym: 'pt_kpi', ptyp: 'KPI Bereich OP', hwart: 'TIA/BF · Passiv' },
+    { name: '80 #OP, aktiv', sym: 'pt_kpi', ptyp: 'KPI Bereich OP', hwart: 'TIA · Aktiv' },
+    { name: '81 #M, aktiv', sym: 'pt_loader', ptyp: 'IR, Lader (Physisch)', hwart: 'TIA · Aktiv' },
+    { name: '90 #OP, SDE', sym: 'pt_kpi', ptyp: 'KPI Bereich OP', hwart: '[SDE] · SDE' },
+    { name: '91 #M, SDE', sym: 'pt_loader', ptyp: 'IR, Lader (Physisch)', hwart: '[SDE] · SDE' },
+    { name: '92 $Parallel, SDE', sym: 'pt_parallel', ptyp: '92 $Parallel, SDE', hwart: '[SDE] · SDE' },
+    { name: '93 #Zählpunkt, SDE', sym: 'pt_count', ptyp: '#Zählpunkt', hwart: '[SDE] · SDE' },
+    { name: '94 ID Puffer FIFO, SDE', sym: 'pt_fifo', ptyp: 'FIFO Puffer / Bestand', hwart: '[SDE] · SDE' },
+    { name: '95 Counter Puffer, SDE', sym: 'pt_bufcount', ptyp: 'virtueller Puffer', hwart: '[SDE] · SDE' },
+    { name: '96 ID Puffer NonFIFO, SDE', sym: 'pt_nonfifo', ptyp: 'NON FIFO Puffer/Bestand', hwart: '[SDE] · SDE' },
+    { name: '99 Roboter, XML', sym: 'pt_robotarm', ptyp: 'Direkte Roboterschnittstelle', hwart: 'KUKA/ABB · XML' },
+    { name: '21 Getaktet, TCP', sym: 'pt_clock', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'PLC/TCP · Aktiv' },
+    { name: '22 Automatik, TCP', sym: 'pt_auto', ptyp: 'Automatik Prozess', hwart: 'PLC/TCP · Aktiv' },
+    { name: '23 Semiauto, TCP', sym: 'pt_semi', ptyp: 'Semi-Automatikprozess', hwart: 'PLC/TCP · Aktiv' },
+    { name: '24 Hand, TCP', sym: 'pt_hand', ptyp: 'Manueller Prozess', hwart: 'PLC/TCP · Aktiv' },
+    { name: '25 Umsetzen, TCP', sym: 'pt_load', ptyp: 'Belade Prozess (Roboter, Lader…)', hwart: 'PLC/TCP · Aktiv' },
+    { name: '26 Transport, TCP', sym: 'pt_transport', ptyp: 'Transport, Zuführung, Nacharbeit', hwart: 'PLC/TCP · Aktiv' },
+    { name: '27 FTS, TCP', sym: 'pt_agv', ptyp: 'Fahrerloser Transport', hwart: 'PLC/TCP · Aktiv' },
+    { name: '28 Durchlauf, TCP', sym: 'pt_flow', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'PLC/TCP · Aktiv' },
+    { name: '29 Universal, TCP', sym: 'pt_universal', ptyp: 'Universeller Prozesstyp', hwart: 'PLC/TCP · Aktiv' },
+  ];
+  const PROCESS_META = { soft: '#EAF1F6', action: 'PROZESSTYP SETZEN', palette: PROCESS_TYPES.map((p) => [p.name, p.sym]) };
+  function processTypeByName(name) { const base = String(name || '').replace(/_\d+$/, ''); return PROCESS_TYPES.find((p) => p.name === base) || null; }
 
   const LAYER_META = {
     'Materialfluss': { soft: '#E2F4EE', action: 'FÖRDERWEG ZIEHEN', palette: [['Quelle', 'src'], ['Senke', 'snk'], ['Puffer', 'buf'], ['Umsetzer', 'xfer']] },
@@ -577,6 +637,13 @@
     'Not-Halt': { soft: '#FBF0E3', action: 'NOTHALT GENERIEREN', palette: [['Not-Halt', 'estop'], ['SmartPad', 'pad'], ['Reißleine', 'pull'], ['Quittier', 'ack']] },
     'Sicherheitslayout': { soft: '#FBEAE8', action: 'SCHUTZZAUN ZIEHEN', palette: [['Sicherheitstür', 'door'], ['Lichtgitter', 'light'], ['Sicherheitsschalter', 'switch'], ['Beladestelle', 'load']] },
   };
+  // Palette-Meta zur Ebene: exakter Name, sonst Prozesstyp-Katalog fuer 'Prozess...'-Ebenen, sonst Default
+  function paletteMetaFor(L) {
+    if (!L) return { soft: '#eef3f7', action: 'OBJEKT SETZEN', palette: [] };
+    if (LAYER_META[L.name]) return LAYER_META[L.name];
+    if (/prozess/i.test(L.name || '')) return PROCESS_META;
+    return { soft: '#eef3f7', action: 'OBJEKT SETZEN', palette: [] };
+  }
 
   function layerById(id) { return (state.detail.layers || []).find((l) => l.id === id) || null; }
   // Rollen-/Gruppen-Sichtbarkeit: Admins sehen immer alles; sonst null = alle, oder nur die Codes in der Liste
@@ -1072,7 +1139,7 @@
     if (!L || !layerAllowed(L.code)) L = allowedLayers()[0] || (state.detail.layers || [])[0];
     if (L && state.activeLayer !== L.id) state.activeLayer = L.id;
     if (!L) { c.innerHTML = '<div class="pad">Keine Ebenen sichtbar.</div>'; return; }
-    const meta = LAYER_META[L.name] || { soft: '#eef3f7', action: 'OBJEKT SETZEN', palette: [] };
+    const meta = paletteMetaFor(L);
 
     const counts = {};
     (state.detail.objects || []).forEach((o) => { counts[o.layerId] = (counts[o.layerId] || 0) + 1; });
@@ -1086,7 +1153,7 @@
       const eye = vis
         ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>'
         : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7c2 0 3.7.6 5.2 1.5M22 12s-3.5 7-10 7c-2 0-3.7-.6-5.2-1.5"/><path d="M4 4l16 16"/></svg>';
-      const lmeta = LAYER_META[l.name] || { soft: '#eef3f7' };
+      const lmeta = paletteMetaFor(l);
       return '<div class="layer ' + (act ? 'active' : '') + ' ' + (vis ? '' : 'hidden') + '" style="--lc:' + l.color + ';--lc-soft:' + lmeta.soft + '" data-act="layer-select" data-layer="' + l.id + '">'
         + '<div class="lbar"></div><div class="lmeta"><span class="lid">' + esc(l.code) + '</span><span class="lcount" title="Objekte auf dieser Ebene">' + (counts[l.id] || 0) + '</span><span class="lname">' + esc(l.name) + '</span></div>'
         + '<button class="eye ' + (vis ? '' : 'off') + '" data-act="layer-eye" data-layer="' + l.id + '" title="Sichtbarkeit">' + eye + '</button></div>';
@@ -1192,6 +1259,17 @@
     const num = String((state.detail.objects || []).filter((o) => o.symbolType === sym).length + 1).padStart(2, '0');
     try {
       const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: base + '_' + num, symbolType: sym, color: color || L.color, x, y });
+      obj.metatags = obj.metatags || [];
+      const pt = processTypeByName(name);
+      if (pt) {
+        try {
+          const upd = await Api.setMetatags(obj.id, [
+            { position: 1, label: 'Prozesstyp', value: pt.ptyp },
+            { position: 2, label: 'Hardware · Art', value: pt.hwart },
+          ]);
+          obj.metatags = (upd && upd.metatags) || obj.metatags;
+        } catch (e2) { /* Metatags optional */ }
+      }
       state.detail.objects.push(obj); protectObj(obj.id);
       toast(name + ' platziert'); renderEditor();
     } catch (e) { toast('Platzieren fehlgeschlagen: ' + e.message); }

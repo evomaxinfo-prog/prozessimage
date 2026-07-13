@@ -1,11 +1,11 @@
 /* Selbst gehostete Schriften (kein Google-Fonts-CDN) – Enterprise-Security: keine Drittanbieter-Verbindung */
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.24.31') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.24.31') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.24.31') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.24.31') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.24.31') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.24.31') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.24.31') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.24.31') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.24.31') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.24.31') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.24.31') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.24.31') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.24.31') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.24.31') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.24.32') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.24.32') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.24.32') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.24.32') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.24.32') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.24.32') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.24.32') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.24.32') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.24.32') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.24.32') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.24.32') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.24.32') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.24.32') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.24.32') format('woff')}
 :root{
     --brand-blue:#0065A5;
     --brand-blue-dark:#004E80;
@@ -327,7 +327,7 @@
     border-radius:10px;padding:11px;box-shadow:0 6px 22px rgba(30,42,51,.09);backdrop-filter:blur(4px);width:186px;
   }
   .palette h4{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:9px}
-  .pal-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .pal-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:56vh;overflow-y:auto;overflow-x:hidden;padding-right:2px}
   .pal-item{
     display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border:1px solid var(--border);
     border-radius:7px;background:var(--bg);cursor:grab;transition:.12s;text-align:center;
