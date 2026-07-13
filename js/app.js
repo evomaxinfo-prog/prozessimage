@@ -922,27 +922,35 @@ const STATE_ICONS = {
     Object.keys(incoming).forEach((id) => {
       if (id === busy) return; // nicht überschreiben, was der Nutzer gerade zieht
       const row = incoming[id];
+      const watch = String(id) === String(state.watchedZone);
       if (idx[id] != null) {
         // Vom Nutzer gerade verschobene Zone/Weg: lokale Geometrie halten, bis der Server die neue Position bestätigt.
         const pend = state.geomPending[id];
         if (pend) {
           if (pointsMatch(row.points, pend.points)) {
             delete state.geomPending[id]; // Server hat die Verschiebung übernommen
+            if (watch) zoneWatchLog('Poll: Server == neue Position → gespeichert ✓', true);
           } else if (Date.now() - pend.ts < 120000) {
             const loc = cur[idx[id]];
             if (loc && !pointsMatch(loc.points, pend.points)) { loc.points = pend.points.map((p) => ({ x: p.x, y: p.y })); dirty = true; patchIds.push(id); }
+            if (watch) zoneWatchLog('Poll: Server hat ALTE Position, halte lokal fest (kein Rücksprung)', true);
             return; // veralteten Serverstand nicht übernehmen
           } else {
             delete state.geomPending[id]; // nach 2 Min. aufgeben (dann greift wieder der Serverstand)
+            if (watch) zoneWatchLog('Poll: pending abgelaufen (2 Min) → Serverstand greift wieder', false);
           }
+        } else if (watch) {
+          zoneWatchLog('Poll: KEIN geomPending für diese Zone gesetzt!', false);
         }
-        if (protectedId(id)) return; // frisch lokal bearbeitet -> Serverstand (evtl. veraltet) nicht übernehmen
+        if (protectedId(id)) { if (watch) zoneWatchLog('Poll: geschützt → nicht überschrieben', true); return; } // frisch lokal bearbeitet -> Serverstand (evtl. veraltet) nicht übernehmen
         const old = cur[idx[id]];
-        if (!objChanged(old, row)) return;
+        if (!objChanged(old, row)) { if (watch) zoneWatchLog('Poll: unverändert → ok', true); return; }
         const geomOnly = isShape(old) && isShape(row) && old.symbolType === row.symbolType && shapeVisualKey(old) === shapeVisualKey(row);
+        if (watch) zoneWatchLog('Poll: ÜBERSCHREIBE mit Serverdaten = RÜCKSPRUNG! (pending=' + (pend ? 'ja' : 'nein') + ')', false);
         cur[idx[id]] = row; dirty = true;
         if (geomOnly) patchIds.push(id); else needFull = true;
       } else {
+        if (watch) zoneWatchLog('Poll: Zone nicht mehr in Serverliste → entfernt', false);
         cur.push(row); idx[id] = cur.length - 1; dirty = true; needFull = true;
       }
     });
@@ -950,6 +958,23 @@ const STATE_ICONS = {
   }
   // Markiert ein Objekt kurz als "lokal frisch geändert", damit ein Poll die noch nicht bestätigte Änderung nicht überschreibt/entfernt.
   function protectObj(id) { if (id) state.collab.protect[String(id)] = Date.now() + 6000; }
+  // TEMPORÄR: laufendes Protokoll der Poll-Entscheidungen für die zuletzt verschobene Zone.
+  function zoneWatchLog(msg, ok) {
+    let el = document.getElementById('zoneWatchDbg');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'zoneWatchDbg'; el._lines = [];
+      el.addEventListener('click', () => el.remove());
+      el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;max-width:94vw;'
+        + 'padding:11px 15px;border-radius:10px;font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre;'
+        + 'box-shadow:0 8px 26px rgba(0,0,0,.28);cursor:pointer;background:#1c2b36;color:#e6edf3;border:1px solid rgba(255,255,255,.2)';
+      document.body.appendChild(el);
+    }
+    const t = new Date().toLocaleTimeString();
+    el._lines.push((ok ? '✓ ' : '⚠ ') + t + '  ' + msg);
+    if (el._lines.length > 7) el._lines.shift();
+    el.textContent = 'POLYGON-TRACE (klick = schließen)\n' + el._lines.join('\n');
+    clearTimeout(el._t); el._t = setTimeout(() => { if (el) el.remove(); }, 60000);
+  }
   // Dauerhaft sichtbare Diagnose-Box (überlebt Re-Renders, da an document.body) – zum Einkreisen des Polygon-Bugs.
   function zoneSaveDebug(text, ok) {
     let el = document.getElementById('zoneSaveDbg');
@@ -1507,6 +1532,7 @@ const STATE_ICONS = {
         protectObj(z.id);
         var sentPts = z.points.map(function (p) { return { x: p.x, y: p.y }; });
         state.geomPending[z.id] = { points: sentPts, ts: Date.now() };
+        state.watchedZone = z.id; zoneWatchLog('Verschoben → gespeichert & festgehalten. Warte auf Poll …', true);
         try {
           const fmt = (p) => p ? '(' + (p.x != null ? p.x.toFixed(3) : '?') + ',' + (p.y != null ? p.y.toFixed(3) : '?') + ')' : '?';
           const resp = await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
