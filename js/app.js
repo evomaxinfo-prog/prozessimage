@@ -776,7 +776,7 @@ const STATE_ICONS = {
   function routeArrowFromTan(tip, tanVb, ar) {
     let sdx = tanVb.x * ar, sdy = tanVb.y;
     const len = Math.hypot(sdx, sdy) || 1e-6; sdx /= len; sdy /= len;
-    const back = { x: -sdx, y: -sdy }, L = 2.5, ang = Math.PI * 0.15;
+    const back = { x: -sdx, y: -sdy }, L = 1.8, ang = Math.PI * 0.15;
     const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
     const w1 = rot(back, ang), w2 = rot(back, -ang);
     const tvx = tip.x * 100, tvy = tip.y * 100;
@@ -1133,7 +1133,7 @@ const STATE_ICONS = {
       const dash = ROUTE_DASH[routeArt(r)] || '';
       const line = '<path id="zone-poly-' + r.id + '" d="' + cv.d + '" fill="none" stroke="' + col + '" stroke-width="' + (sel ? 2.8 : 2) + '" '
         + (dash ? ('stroke-dasharray="' + dash + '" ') : '') + 'stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" class="mf-line' + (sel ? ' sel' : '') + '" style="pointer-events:none"/>';
-      const arrow = '<path id="route-arrow-' + r.id + '" d="' + routeArrowFromTan(r.points[r.points.length - 1], cv.tan, ar) + '" fill="' + col + '" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      const arrow = '<path id="route-arrow-' + r.id + '" d="' + routeArrowFromTan(r.points[r.points.length - 1], cv.tan, ar) + '" fill="' + col + '" stroke="' + col + '" stroke-width="0.9" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       return line + arrow;
     }).join('');
     let draft = '';
