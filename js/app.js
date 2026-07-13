@@ -1109,7 +1109,7 @@ const STATE_ICONS = {
   function editorFloorplan() {
     const op = (state.sat || 100) / 100;
     const bg = state.layoutBlobUrl
-      ? '<img class="floor-bg floor-photo" src="' + state.layoutBlobUrl + '" alt="Anlagenlayout" style="opacity:' + op + ';object-fit:fill">'
+      ? '<img class="floor-bg floor-photo" draggable="false" src="' + state.layoutBlobUrl + '" alt="Anlagenlayout" style="opacity:' + op + ';object-fit:fill">'
       : '<svg class="floor-bg floor-schema" viewBox="0 0 760 520" preserveAspectRatio="xMidYMid meet" style="opacity:' + op + '" xmlns="http://www.w3.org/2000/svg">'
         + '<defs><pattern id="bp" width="26" height="26" patternUnits="userSpaceOnUse"><path d="M26 0H0V26" fill="none" stroke="#D3DEE6" stroke-width="1"/></pattern>'
         + '<pattern id="bp2" width="130" height="130" patternUnits="userSpaceOnUse"><path d="M130 0H0V130" fill="none" stroke="#B9C7D1" stroke-width="1.3"/></pattern></defs>'
@@ -1532,7 +1532,6 @@ const STATE_ICONS = {
         protectObj(z.id);
         var sentPts = z.points.map(function (p) { return { x: p.x, y: p.y }; });
         state.geomPending[z.id] = { points: sentPts, ts: Date.now() };
-        state.watchedZone = z.id; zoneWatchLog('Verschoben → gespeichert & festgehalten. Warte auf Poll …', true);
         try {
           const fmt = (p) => p ? '(' + (p.x != null ? p.x.toFixed(3) : '?') + ',' + (p.y != null ? p.y.toFixed(3) : '?') + ')' : '?';
           const resp = await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
