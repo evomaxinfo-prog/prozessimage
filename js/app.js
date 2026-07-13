@@ -629,6 +629,12 @@ const PROCESS_TYPES = [
   ];
   const PROCESS_META = { soft: '#EAF1F6', action: 'PROZESSTYP SETZEN', palette: PROCESS_TYPES.map((p) => [p.name, p.sym]) };
   function processTypeByName(name) { const base = String(name || '').replace(/_\d+$/, ''); return PROCESS_TYPES.find((p) => p.name === base) || null; }
+  function processTypeBySym(sym) { return PROCESS_TYPES.find((p) => p.sym === sym) || null; }
+  function ptStateList(pt) {
+    const muss = (pt.muss ? String(pt.muss).split(', ') : []).filter(Boolean).map((s) => ({ kind: 'Pflicht', name: s }));
+    const opt = (pt.opt ? String(pt.opt).split(', ') : []).filter(Boolean).map((s) => ({ kind: 'Optional', name: s }));
+    return muss.concat(opt);
+  }
 
   const LAYER_META = {
     'Materialfluss': { soft: '#E2F4EE', action: 'FÖRDERWEG ZIEHEN', palette: [['Quelle', 'src'], ['Senke', 'snk'], ['Puffer', 'buf'], ['Umsetzer', 'xfer']] },
@@ -1011,7 +1017,8 @@ const PROCESS_TYPES = [
 
     const visible = visibleMap();
     const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
-      const chips = o.metatags.map((m) => m.value).filter(Boolean);
+      const isProc = /^ptk_/.test(o.symbolType);
+      const chips = o.metatags.filter((m) => !isProc || (m.position || 0) <= 2).map((m) => m.value).filter(Boolean);
       return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym"><svg width="26" height="26" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg></span>'
@@ -1275,8 +1282,8 @@ const PROCESS_TYPES = [
             { position: 1, label: 'Prozesstyp', value: pt.ptyp },
             { position: 2, label: 'Hardware · Art', value: pt.hwart },
           ];
-          if (pt.muss) tags.push({ position: 3, label: 'Pflicht-Betriebszustände', value: pt.muss });
-          if (pt.opt) tags.push({ position: 4, label: 'Optionale Betriebszustände', value: pt.opt });
+          let pos = 3;
+          ptStateList(pt).forEach((s) => { tags.push({ position: pos++, label: s.kind + ' – ' + s.name, value: '' }); });
           const upd = await Api.setMetatags(obj.id, tags);
           obj.metatags = (upd && upd.metatags) || obj.metatags;
         } catch (e2) { /* Metatags optional */ }
@@ -1412,23 +1419,54 @@ const PROCESS_TYPES = [
     $('mSub').textContent = L ? (L.code + ' · ' + L.name) : '';
     const v1 = (o.metatags.find((m) => m.position === 1) || {}).value || '';
     const v2 = (o.metatags.find((m) => m.position === 2) || {}).value || '';
-    if (o.symbolType === 'robot') {
+    const pt = processTypeBySym(o.symbolType);
+    if (pt) {
+      const desc = (key) => (o.metatags.find((m) => m.label === key) || {}).value || '';
+      const states = ptStateList(pt);
+      const section = (kind) => {
+        const items = states.filter((s) => s.kind === kind);
+        if (!items.length) return '';
+        return '<div class="pt-sec">' + kind + '-Betriebszustände</div>'
+          + items.map((s) => {
+            const key = s.kind + ' – ' + s.name;
+            return '<div class="m-field pt-state"><label>' + esc(s.name) + '</label>'
+              + '<input data-state="' + esc(key) + '" placeholder="Wann tritt dieser Zustand ein? …" value="' + esc(desc(key)) + '"></div>';
+          }).join('') + '</div>';
+      };
+      $('mBody').innerHTML = '<div class="pt-meta"><div class="pt-meta-row"><span>Prozesstyp</span><b>' + esc(pt.ptyp) + '</b></div>'
+        + '<div class="pt-meta-row"><span>Hardware · Art</span><b>' + esc(pt.hwart || '—') + '</b></div></div>'
+        + '<div class="pt-hint">Beschreibe je Betriebszustand, wann er eintritt.</div>'
+        + section('Pflicht') + section('Optional');
+    } else if (o.symbolType === 'robot') {
       $('mBody').innerHTML = tagFieldSelect('mTag1', 'Safe Funktion', ROBOT_RISK, v1) + tagFieldSelect('mTag2', 'Technologie', ROBOT_TECH, v2);
     } else {
       $('mBody').innerHTML = tagFieldInput('mTag1', 'Metatag 1', v1) + tagFieldInput('mTag2', 'Metatag 2', v2);
     }
     $('tagModal').style.display = 'flex';
-    setTimeout(() => { const f = $('mTag1'); if (f) { f.focus(); if (f.tagName === 'INPUT') f.select(); } }, 60);
+    setTimeout(() => { const f = $('mBody').querySelector('input,select'); if (f) { f.focus(); if (f.tagName === 'INPUT') f.select(); } }, 60);
   }
   async function saveTags() {
     const o = (state.detail.objects || []).find((x) => x.id === state.modalObjId);
     if (!o) { closeTagModal(); return; }
-    const e1 = $('mTag1'), e2 = $('mTag2');
-    const t1 = (e1 ? e1.value : '').trim(), t2 = (e2 ? e2.value : '').trim();
-    const l1 = e1 ? (e1.getAttribute('data-label') || '') : '', l2 = e2 ? (e2.getAttribute('data-label') || '') : '';
-    const metatags = [];
-    if (t1) metatags.push(l1 ? { position: 1, label: l1, value: t1 } : { position: 1, value: t1 });
-    if (t2) metatags.push(l2 ? { position: 2, label: l2, value: t2 } : { position: 2, value: t2 });
+    const pt = processTypeBySym(o.symbolType);
+    let metatags;
+    if (pt) {
+      metatags = [
+        { position: 1, label: 'Prozesstyp', value: pt.ptyp },
+        { position: 2, label: 'Hardware · Art', value: pt.hwart },
+      ];
+      let pos = 3;
+      $('mBody').querySelectorAll('input[data-state]').forEach((inp) => {
+        metatags.push({ position: pos++, label: inp.getAttribute('data-state'), value: inp.value.trim() });
+      });
+    } else {
+      const e1 = $('mTag1'), e2 = $('mTag2');
+      const t1 = (e1 ? e1.value : '').trim(), t2 = (e2 ? e2.value : '').trim();
+      const l1 = e1 ? (e1.getAttribute('data-label') || '') : '', l2 = e2 ? (e2.getAttribute('data-label') || '') : '';
+      metatags = [];
+      if (t1) metatags.push(l1 ? { position: 1, label: l1, value: t1 } : { position: 1, value: t1 });
+      if (t2) metatags.push(l2 ? { position: 2, label: l2, value: t2 } : { position: 2, value: t2 });
+    }
     protectObj(o.id); try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast('Metatags nicht gespeichert'); }
     closeTagModal(); toast('Metatags gespeichert'); renderEditor();
   }
