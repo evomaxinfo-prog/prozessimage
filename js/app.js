@@ -1520,7 +1520,9 @@ const STATE_ICONS = {
             else ctrl = pointsMatch(srvObj.points, sentPts) ? 'MATCH (gespeichert)' : ('ALT srv=' + fmt(srvObj.points && srvObj.points[0]));
           } catch (e3) { ctrl = 'Lesefehler (' + (e3 && (e3.status || e3.message) || '?') + ')'; }
           const okAll = hasMarker && ctrl.indexOf('MATCH') === 0;
-          zoneSaveDebug('POLYGON-SPEICHERN\nBackend-Marker: ' + (hasMarker ? 'pf2 (neu ✓)' : 'FEHLT → altes Backend/OPcache') + '\ngesendet:  ' + fmt(sentPts[0]) + '\nAntwort:   ' + fmt(respPt) + '\nKontroll-Lesen: ' + ctrl + '\n⇒ ' + (okAll ? 'OK – Server hat gespeichert' : 'PROBLEM – siehe oben'), okAll);
+          if (!okAll) {
+            zoneSaveDebug('POLYGON-SPEICHERN – PROBLEM\nBackend-Marker: ' + (hasMarker ? 'pf2 (neu ✓)' : 'FEHLT → altes Backend/OPcache') + '\ngesendet:  ' + fmt(sentPts[0]) + '\nAntwort:   ' + fmt(respPt) + '\nKontroll-Lesen: ' + ctrl + '\n⇒ nicht dauerhaft gespeichert', false);
+          }
         } catch (e2) { zoneSaveDebug('POLYGON-SPEICHERN FEHLGESCHLAGEN\nHTTP-Fehler: ' + (e2 && (e2.status || e2.message) || '?'), false); }
         renderEditor(); return;
       }
