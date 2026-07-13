@@ -962,7 +962,8 @@
       const cy = z.points.reduce((s, p) => s + p.y, 0) / z.points.length;
       const tags = (z.metatags || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).map((m) => m.value).filter((v) => v !== null && v !== '');
       const lines = tags.length ? tags : [z.name];
-      const inner = lines.map((t) => '<div class="fgl-line">' + esc(t) + '</div>').join('');
+      const abbrev = (t) => (z.symbolType === 'sb_zone' ? String(t).replace(/Schutzbereich/g, 'SB') : t);
+      const inner = lines.map((t) => '<div class="fgl-line">' + esc(abbrev(t)) + '</div>').join('');
       return '<div class="fg-label" style="left:' + (cx * 100) + '%;top:' + (cy * 100) + '%;color:' + esc(zoneColor(z)) + '">' + inner + '</div>';
     }).join('') + '</div>';
   }
