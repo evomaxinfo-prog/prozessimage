@@ -936,6 +936,21 @@ const STATE_ICONS = {
   }
   // Markiert ein Objekt kurz als "lokal frisch geändert", damit ein Poll die noch nicht bestätigte Änderung nicht überschreibt/entfernt.
   function protectObj(id) { if (id) state.collab.protect[String(id)] = Date.now() + 6000; }
+  // Dauerhaft sichtbare Diagnose-Box (überlebt Re-Renders, da an document.body) – zum Einkreisen des Polygon-Bugs.
+  function zoneSaveDebug(text, ok) {
+    let el = document.getElementById('zoneSaveDbg');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'zoneSaveDbg';
+      el.addEventListener('click', () => el.remove());
+      document.body.appendChild(el);
+    }
+    el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;max-width:92vw;'
+      + 'padding:11px 15px;border-radius:10px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre;'
+      + 'box-shadow:0 8px 26px rgba(0,0,0,.28);cursor:pointer;border:1px solid rgba(255,255,255,.25);'
+      + (ok ? 'background:#0f5132;color:#d1e7dd' : 'background:#842029;color:#f8d7da');
+    el.textContent = text + '\n(zum Schließen klicken)';
+    clearTimeout(el._t); el._t = setTimeout(() => { if (el) el.remove(); }, 30000);
+  }
   // Vergleicht zwei Punktlisten mit Toleranz (Server rundet ggf. Floats).
   function pointsMatch(a, b) {
     a = a || []; b = b || [];
@@ -1478,20 +1493,20 @@ const STATE_ICONS = {
         protectObj(z.id);
         var sentPts = z.points.map(function (p) { return { x: p.x, y: p.y }; });
         try {
+          const fmt = (p) => p ? '(' + (p.x != null ? p.x.toFixed(3) : '?') + ',' + (p.y != null ? p.y.toFixed(3) : '?') + ')' : '?';
           const resp = await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
-          if (!resp || resp._ctrl !== 'pf2') {
-            toast('⚠ Altes Backend aktiv: ObjectController.php ist nicht live. Bitte Datei hochladen UND PHP-FPM neu starten (OPcache leeren).');
-          } else {
-            // Neue Version läuft -> Kontroll-Lesen: speichert der Server die Punkte wirklich?
-            try {
-              var srvList = await Api.getObjects(state.detail.id);
-              var srvObj = (srvList || []).find(function (o) { return String(o.id) === String(z.id); });
-              if (srvObj && !pointsMatch(srvObj.points, sentPts)) {
-                toast('⚠ Backend ist aktuell, aber der Server speichert die Punkte nicht (DB-Ebene) – bitte melden.');
-              }
-            } catch (e3) { /* Kontroll-Lesen ist optional */ }
-          }
-        } catch (e2) { toast('Speichern fehlgeschlagen (' + (e2 && (e2.status || e2.message) || '?') + ')'); }
+          const hasMarker = !!(resp && resp._ctrl === 'pf2');
+          const respPt = resp && resp.points && resp.points[0] ? resp.points[0] : null;
+          let ctrl = 'n/a';
+          try {
+            const srvList = await Api.getObjects(state.detail.id);
+            const srvObj = (srvList || []).find((o) => String(o.id) === String(z.id));
+            if (!srvObj) ctrl = 'Objekt nicht gefunden';
+            else ctrl = pointsMatch(srvObj.points, sentPts) ? 'MATCH (gespeichert)' : ('ALT srv=' + fmt(srvObj.points && srvObj.points[0]));
+          } catch (e3) { ctrl = 'Lesefehler (' + (e3 && (e3.status || e3.message) || '?') + ')'; }
+          const okAll = hasMarker && ctrl.indexOf('MATCH') === 0;
+          zoneSaveDebug('POLYGON-SPEICHERN\nBackend-Marker: ' + (hasMarker ? 'pf2 (neu ✓)' : 'FEHLT → altes Backend/OPcache') + '\ngesendet:  ' + fmt(sentPts[0]) + '\nAntwort:   ' + fmt(respPt) + '\nKontroll-Lesen: ' + ctrl + '\n⇒ ' + (okAll ? 'OK – Server hat gespeichert' : 'PROBLEM – siehe oben'), okAll);
+        } catch (e2) { zoneSaveDebug('POLYGON-SPEICHERN FEHLGESCHLAGEN\nHTTP-Fehler: ' + (e2 && (e2.status || e2.message) || '?'), false); }
         renderEditor(); return;
       }
       // Klick ohne Bewegung: Auswahl bzw. Doppelklick (zeitbasiert, re-render-fest)
