@@ -1053,9 +1053,20 @@ const STATE_ICONS = {
     const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
       const isProc = /^ptk_/.test(o.symbolType);
       const chips = o.metatags.filter((m) => !isProc || (m.position || 0) <= 2).map((m) => m.value).filter(Boolean);
+      let stateIcons = '';
+      if (isProc) {
+        const ics = o.metatags
+          .filter((m) => (m.position || 0) >= 3 && m.value && String(m.value).trim())
+          .map((m) => {
+            const nm = String(m.label || '').replace(/^(Pflicht|Optional) – /, '');
+            return STATE_ICONS[nm] ? '<img class="p-state-ic" src="' + STATE_ICONS[nm] + '" title="' + esc(nm + ': ' + m.value) + '" alt="' + esc(nm) + '">' : '';
+          }).filter(Boolean).join('');
+        if (ics) stateIcons = '<div class="p-state-icons">' + ics + '</div>';
+      }
       return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym"><svg width="26" height="26" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg></span>'
+        + stateIcons
         + (chips.length ? '<div class="ptags">' + chips.map((t) => '<span class="ptag">' + esc(t) + '</span>').join('') + '</div>' : '')
         + '</div>';
     }).join('');
