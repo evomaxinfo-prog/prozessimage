@@ -665,7 +665,7 @@ const STATE_ICONS = {
   const PT_COLOR_GROUPS = [
     { key: 'a', label: 'Aktiv', swatch: '#17708C' },
     { key: 'p', label: 'Passiv', swatch: '#505050' },
-    { key: 's', label: 'SDE', swatch: '#ffffff' },
+    { key: 's', label: 'Weiß', swatch: '#ffffff' },
   ];
   function ptStateGroups(pt) {
     const parse = (s) => (s ? String(s).split(', ') : []).filter(Boolean);
