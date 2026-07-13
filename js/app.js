@@ -1318,6 +1318,14 @@ const STATE_ICONS = {
 
   function applyZoomSat() { const doc = document.getElementById('canvasDoc'); if (doc) doc.style.transform = 'scale(' + (state.zoom || 1) + ')'; }
   function zoomStep(d) { state.zoom = Math.min(2.2, Math.max(0.5, (state.zoom || 1) + d)); applyZoomSat(); const z = document.querySelector('.zoom-ctl .z'); if (z) z.textContent = Math.round(state.zoom * 100) + '%'; }
+  function onWheelZoom(e) {
+    if (state.view !== 'editor') return;
+    const stage = e.target.closest && e.target.closest('.canvas-stage');
+    if (!stage) return;
+    e.preventDefault();
+    const d = Math.max(-0.2, Math.min(0.2, -e.deltaY * 0.0016));
+    if (d) zoomStep(d);
+  }
   function onSat(v) { state.sat = +v; const sv = document.getElementById('satVal'); if (sv) sv.textContent = v + '%'; const bg = document.querySelector('.floor-bg'); if (bg) bg.style.opacity = (+v / 100); }
 
   function selectLayer(id) {
@@ -2238,6 +2246,7 @@ const STATE_ICONS = {
     c.addEventListener('drop', onContentDrop);
     c.addEventListener('dblclick', onContentDblClick);
     c.addEventListener('pointerdown', onContentPointerDown);
+    c.addEventListener('wheel', onWheelZoom, { passive: false });
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', endMove);
     window.addEventListener('keydown', onEditorKey);
