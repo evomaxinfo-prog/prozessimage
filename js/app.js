@@ -1310,6 +1310,11 @@ const STATE_ICONS = {
 
   function actionPanelHtml(L) {
     const isL0 = L && L.name === 'Materialfluss';
+    const isFG = L && L.name === 'Funktionsgruppen';
+    const isSteuer = L && (L.name === 'Steuerungstechnik' || String(L.code || '').indexOf('L2.0') === 0);
+    // Zeichen-Werkzeuge nur für diese drei Ebenen: Materialfluss (Förderweg), Funktionsgruppen (FG-Zone),
+    // Steuerungstechnik L2.0 (Schutzbereich). Auf allen anderen Ebenen kein Werkzeug einblenden.
+    if (!isL0 && !isFG && !isSteuer) return '';
     const zoneActive = state.drawShape === 'zone';
     const routeActive = state.drawShape === 'route';
     let btn, hint, extra = '';
