@@ -690,6 +690,36 @@ const CAT_COLS = [
     { n: 'Bearbeitungseinheiten', g: 'info', bg: '#4472C4', fg: '#fff' },
     { n: 'Belegdruck', g: 'info', bg: '#2E4E86', fg: '#fff' },
   ];
+const PTL_META = {
+    '1': { hw: 'TIA/BF', art: 'Aktiv', typ: 'G', fkt: 'A-Z', schritt: 'A-Z', besch: 'Wertschöpfende Prozesse (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…)  Starr Verkettet oder getaktet (Rundtakttische, Fließfertigung…) (M) nur bei ersten Prozess, (B) nur bei letzten, bei den dazwischenliegenden Prozessen wird (O) für (M) & (B) gemeldet.' },
+    '2': { hw: 'TIA/BF', art: 'Aktiv', typ: 'A', fkt: 'A-Z', schritt: 'A-Z', besch: 'Wertschöpfende Prozesse  (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…) Entkoppelt.' },
+    '3': { hw: 'TIA/BF', art: 'Aktiv', typ: 'S', fkt: 'A-Z', schritt: 'A-Z', besch: 'Wertschöpfende Prozesse mit Anteilen aus Automatikprozessen und Manuellen Mitarbeiterabhängigen Prozessen. (Montage & Schrauben, Messen, SPC, Nacharbeit…)' },
+    '4': { hw: 'TIA/BF', art: 'Aktiv', typ: 'M', fkt: 'A-Z', schritt: 'A-Z', besch: 'Prozesse die von Mitarbeitern durchgeführt werden  (Montage nur durch Mitarbeiter,  SPC, Nacharbeit…)' },
+    '5': { hw: 'TIA/BF', art: 'Aktiv', typ: 'H/L/R', fkt: 'A-Z', schritt: 'A-Z', besch: 'Bewegen/Handeln der Werkstücke (durch Roboter, Lader; Portallader, Shuttle, Handhabungsgerät…)' },
+    '6': { hw: 'TIA/BF', art: 'Aktiv', typ: 'T/I/O', fkt: 'A-Z', schritt: 'A-Z', besch: 'Teiletransport, Verkettungen, Transporteinrichtungen, Ein-/Ausschleusen im Prozess, getaktet nicht getaktet' },
+    '7': { hw: 'MSB/PLC', art: 'Aktiv', typ: 'F', fkt: 'T', schritt: 'A-Z', besch: 'Fahrerlose Transportsysteme (FTS) Fahrerloses Transportfahrzeug (FTF, englisch Automated Guided Vehicle, AGV)' },
+    '8': { hw: 'TIA/BF', art: 'Aktiv', typ: 'D', fkt: 'A-Z', schritt: 'A-Z', besch: 'Prozesse auf denen oder durch die Wstk. Mit zum Teil veränderbarer Geschwindigkeit transportiert werden. Fließfertigung / Fließmontage' },
+    '9': { hw: 'TIA/BF', art: 'Aktiv', typ: 'U', fkt: 'A-Z', schritt: 'A-Z', besch: 'AUSNAHME: Nur anzuwenden wenn keine der anderen Prozesstypen passend ist. Als Platzhalter für spätere Zuordnung/Definition.' },
+    '11': { hw: 'TIA/BF', art: 'Passiv', typ: 'g', fkt: 'a-z', schritt: 'a-z', besch: 'Wertschöpfende Prozesse (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…)  Starr Verkettet oder getaktet (Rundtakttische, Fließfertigung…) (M) nur bei ersten Prozess, (B) nur bei letzten, bei den dazwischenliegenden Prozessen wird (O) für (M) & (B) gemeldet.' },
+    '12': { hw: 'TIA/BF', art: 'Passiv', typ: 'a', fkt: 'a-z', schritt: 'a-z', besch: 'Wertschöpfende Prozesse  (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…) Entkoppelt.' },
+    '13': { hw: 'TIA/BF', art: 'Passiv', typ: 's', fkt: 'a-z', schritt: 'a-z', besch: 'Wertschöpfende Prozesse mit Anteilen aus Automatikprozessen und Manuellen Mitarbeiterabhängigen Prozessen. (Montage & Schrauben, Messen, SPC, Nacharbeit…)' },
+    '14': { hw: 'TIA/BF', art: 'Passiv', typ: 'm', fkt: 'a-z', schritt: 'a-z', besch: 'Prozesse die von Mitarbeitern durchgeführt werden  (Montage nur durch Mitarbeiter,  SPC, Nacharbeit…)' },
+    '15': { hw: 'TIA/BF', art: 'Passiv', typ: 'h/l/r', fkt: 'a-z', schritt: 'a-z', besch: '“Beladen“ -> von einem Nicht Wertschöpfenden Prozess zu einem Wertschöpfenden.' },
+    '16': { hw: 'TIA/BF', art: 'Passiv', typ: 't/e/a', fkt: 'a-z', schritt: 'a-z', besch: 'Teiletransport, Verkettungen, Transporteinrichtungen  (z.B Medienzuführung,  Heizgerät)' },
+    '18': { hw: 'TIA/BF', art: 'Passiv', typ: 'd', fkt: 'a-z', schritt: 'a-z', besch: 'Prozesse auf denen oder durch die Wstk. Mit zum Teil veränderbarer Geschwindigkeit transportiert werden. Fließfertigung / Fließmontage' },
+    '19': { hw: 'TIA/BF', art: 'Passiv', typ: 'u', fkt: 'a-z', schritt: 'a-z', besch: 'AUSNAHME: Nur anzuwenden wenn keine der anderen Prozesstypen passend ist. Als Platzhalter für spätere Zuordnung/Definition.' },
+    '70': { hw: 'TIA/BF', art: 'Passiv', typ: 'A-Z', fkt: 'A-Z', schritt: '1-9', besch: 'HBF/Gesamtmaschine (Verbund aus mehreren Einzelprozessen)' },
+    '80': { hw: 'TIA', art: 'Aktiv', typ: 'A-Z', fkt: 'A-Z', schritt: '', besch: 'HBF/Gesamtmaschine (Verbund aus mehreren Einzelprozessen)' },
+    '81': { hw: 'TIA', art: 'Aktiv', typ: 'A-Z', fkt: 'A-Z', schritt: '1-9', besch: 'Logische Zusammenfassung IR und Lader Prozesse' },
+    '90': { hw: '', art: 'SDE', typ: 'A-Z', fkt: 'A-Z', schritt: '', besch: 'Verbund aus mehreren Einzelprozessen (KPI Bereich)' },
+    '91': { hw: '', art: 'SDE', typ: 'A-Z', fkt: 'A-Z', schritt: '1-9', besch: 'Logische Zusammenfassung IR und Lader Prozesse' },
+    '92': { hw: '', art: 'SDE', typ: 'P', fkt: '$', schritt: '1-9', besch: 'Zusammenfassung mehrer Paralellmaschinen zu einem Meldepunkt' },
+    '93': { hw: '', art: 'SDE', typ: 'Z', fkt: 'P', schritt: '1-9', besch: 'Zusätzlicher Meldepunkt für Kennzahlen KPI (OEE, Stkz, Trend ….)' },
+    '94': { hw: '', art: 'SDE', typ: '###', fkt: '###', schritt: '', besch: 'Puffer/Bestand zwischen definierten Prozessen für Echtzeit Monitor Modellierung' },
+    '95': { hw: '', art: 'SDE', typ: '###', fkt: '###', schritt: '', besch: 'Virtueller Puffer für Bestand ohne Modellierung' },
+    '96': { hw: '', art: 'SDE', typ: '###', fkt: '###', schritt: '', besch: 'Puffer/Bestand zwischen definierten Prozessen für Echtzeit Monitor Modellierung' },
+    '99': { hw: '', art: 'XML', typ: 'R', fkt: '1-9', schritt: 'A-Z', besch: 'XML mit Nummerierung bei mehreren Robotern' },
+  };
   function catMark(pt, col, o) {
     const inList = (v) => (v ? String(v).split(', ') : []).indexOf(col.n) >= 0;
     const muss = col.g === 'bz' ? pt.muss : col.g === 'mps' ? pt.mpsMuss : pt.infoMuss;
@@ -705,21 +735,27 @@ const CAT_COLS = [
   function buildCatalogHtml(rows) {
     const gl = { bz: 'Betriebszust\u00e4nde', mps: 'MPS-Meldungen', info: 'Informationen' };
     const span = { bz: 0, mps: 0, info: 0 }; CAT_COLS.forEach((c) => { span[c.g]++; });
-    let gh = '<tr class="cat-grp"><th colspan="4"></th>';
+    let gh = '<tr class="cat-grp"><th colspan="9"></th>';
     ['bz', 'mps', 'info'].forEach((g) => { gh += '<th colspan="' + span[g] + '" class="gh-' + g + '">' + gl[g] + '</th>'; });
     gh += '</tr>';
-    let ch = '<tr class="cat-cols"><th class="bh">No</th><th class="bh">Icon</th><th class="bh bh-l">Hardware \u00b7 Art</th><th class="bh bh-l">Prozesstyp</th>';
+    let ch = '<tr class="cat-cols"><th class="bh">No</th><th class="bh">ICO</th><th class="bh bh-l">Hardware</th><th class="bh">Art</th><th class="bh">Typ</th><th class="bh">Funktion</th><th class="bh">Schritt</th><th class="bh bh-l">Prozesstyp</th><th class="bh bh-l">Beschreibung</th>';
     CAT_COLS.forEach((c) => { ch += '<th class="vh" style="background:' + c.bg + ';color:' + c.fg + '"><span>' + esc(c.n) + '</span></th>'; });
     ch += '</tr>';
     let body = '';
     rows.forEach((r) => {
       const pt = r.pt; const o = r.o;
       const no = pt.sym.replace('ptk_', '');
+      const md = PTL_META[no] || {};
       const oname = (o && o.name && o.name !== pt.name && o.name !== pt.ptyp) ? '<span class="c-oname"> \u00b7 ' + esc(o.name) + '</span>' : '';
       body += '<tr><td class="c-no">' + esc(no) + '</td>'
         + '<td class="c-ico"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[pt.sym] || SYM.box) + '</svg></td>'
-        + '<td class="c-hw">' + esc(pt.hwart || '') + '</td>'
-        + '<td class="c-pt">' + esc(pt.ptyp || pt.name) + oname + '</td>';
+        + '<td class="c-hw">' + esc(md.hw || '') + '</td>'
+        + '<td class="c-art">' + esc(md.art || '') + '</td>'
+        + '<td class="c-typ">' + esc(md.typ || '') + '</td>'
+        + '<td class="c-fkt">' + esc(md.fkt || '') + '</td>'
+        + '<td class="c-schr">' + esc(md.schritt || '') + '</td>'
+        + '<td class="c-pt">' + esc(pt.ptyp || pt.name) + oname + '</td>'
+        + '<td class="c-besch">' + esc(md.besch || '') + '</td>';
       CAT_COLS.forEach((c) => { body += '<td class="c-m c-' + c.g + '">' + catMark(pt, c, o) + '</td>'; });
       body += '</tr>';
     });
