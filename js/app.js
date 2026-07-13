@@ -953,9 +953,9 @@
       + bg + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
   }
 
-  // Metatags einer Funktionsgruppe dauerhaft mittig im Polygon anzeigen (HTML-Overlay, damit kein Verzerren)
+  // Metatags einer Funktionsgruppe/eines Schutzbereichs dauerhaft mittig im Polygon anzeigen (HTML-Overlay, damit kein Verzerren)
   function fgLabelLayer(visible) {
-    const zones = (state.detail.objects || []).filter((o) => o.symbolType === 'fg_zone' && o.points && o.points.length >= 3 && visible[o.layerId] !== false);
+    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'fg_zone' || o.symbolType === 'sb_zone') && o.points && o.points.length >= 3 && visible[o.layerId] !== false);
     if (!zones.length) return '';
     return '<div class="fg-label-layer">' + zones.map((z) => {
       const cx = z.points.reduce((s, p) => s + p.x, 0) / z.points.length;
