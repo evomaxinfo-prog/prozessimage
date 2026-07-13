@@ -1701,10 +1701,11 @@
     if (a.loading) body = '<div class="adm-loading">Lädt …</div>';
     else if (a.pwForm) body = renderPwForm(a);
     else if (a.tab === 'users') body = a.userForm ? renderUserForm(a) : renderAdminUsers(a);
+    else if (a.tab === 'layers') body = a.layerForm ? renderLayerForm(a) : renderAdminLayers(a);
     else body = a.groupForm ? renderGroupForm(a) : renderAdminGroups(a);
     $('adminOverlay').innerHTML = '<div class="adm-backdrop" id="admBackdrop"><div class="adm-card">'
-      + '<div class="adm-head"><div class="adm-title">Benutzerverwaltung</div>'
-      + '<div class="adm-tabs">' + tabBtn('users', 'Benutzer') + tabBtn('groups', 'Gruppen') + '</div>'
+      + '<div class="adm-head"><div class="adm-title">Verwaltung</div>'
+      + '<div class="adm-tabs">' + tabBtn('users', 'Benutzer') + tabBtn('groups', 'Gruppen') + tabBtn('layers', 'Ebenen') + '</div>'
       + '<button class="adm-x" data-adm="close" title="Schließen">×</button></div>'
       + '<div class="adm-body">' + body + '</div></div></div>';
   }
@@ -1757,6 +1758,35 @@
       + '<table class="adm-table"><thead><tr><th>Name</th><th>Rolle</th><th>Werke</th><th>Mitglieder</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
+  function renderLayerForm(a) {
+    const f = a.layerForm, isNew = !f.id;
+    const cats = (f.categories || []).join('\n');
+    return '<div class="adm-form"><h3>' + (isNew ? 'Neue Ebene' : 'Ebene bearbeiten') + '</h3>'
+      + '<label>Name</label><input id="admLName" value="' + esc(f.name || '') + '" placeholder="z. B. Qualitätssicherung">'
+      + '<div class="adm-hint">Der Name steuert das Werkzeug: „Materialfluss" = Förderweg, „Funktionsgruppen" = FG-Polygon, „Saferobot / Technologie" = Roboter-Palette. Andere Namen erhalten das Schutzbereich-Polygon.</div>'
+      + '<label>Code</label><input id="admLCode" value="' + esc(f.code || '') + '" placeholder="z. B. L7.0">'
+      + '<label>Farbe</label><div class="adm-color"><input type="color" id="admLColor" value="' + esc(f.color || '#0065A5') + '"><input id="admLColorHex" value="' + esc(f.color || '#0065A5') + '" maxlength="7"></div>'
+      + '<label>Kategorien (eine pro Zeile, optional)</label><textarea id="admLCats" rows="3" placeholder="Förderwege&#10;Quellen &amp; Senken">' + esc(cats) + '</textarea>'
+      + '<div class="adm-msg" id="admMsg"></div>'
+      + '<div class="adm-form-actions"><button class="btn" data-adm="form-cancel">Abbrechen</button><button class="btn primary" data-adm="layer-save">Speichern</button></div></div>';
+  }
+
+  function renderAdminLayers(a) {
+    const layers = (a.layers || []).slice().sort((x, y) => (y.sortOrder || 0) - (x.sortOrder || 0)); // oben = höchste sort_order
+    const rows = layers.length ? layers.map((l, i) =>
+      '<tr><td><span class="adm-lswatch" style="background:' + esc(l.color) + '"></span><span class="adm-lcode">' + esc(l.code) + '</span></td>'
+      + '<td>' + esc(l.name) + '</td>'
+      + '<td>' + ((l.categories && l.categories.length) ? l.categories.map((c) => esc(c.name)).join(', ') : '—') + '</td>'
+      + '<td class="adm-actions">'
+      + '<button data-adm="layer-up" data-id="' + l.id + '" title="Nach oben"' + (i === 0 ? ' disabled' : '') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>'
+      + '<button data-adm="layer-down" data-id="' + l.id + '" title="Nach unten"' + (i === layers.length - 1 ? ' disabled' : '') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M6 13l6 6 6-6"/></svg></button>'
+      + '<button data-adm="layer-edit" data-id="' + l.id + '" title="Bearbeiten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
+      + '<button class="del" data-adm="layer-del" data-id="' + l.id + '" title="Löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
+      + '</td></tr>').join('') : '<tr><td colspan="4" class="adm-empty">Noch keine Ebenen.</td></tr>';
+    return '<div class="adm-toolbar"><button class="btn primary" data-adm="layer-new">+ Ebene hinzufügen</button></div>'
+      + '<table class="adm-table"><thead><tr><th>Code</th><th>Name</th><th>Kategorien</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
   function renderGroupForm(a) {
     const f = a.groupForm, isNew = !f.id;
     const roleOpts = ['viewer', 'editor', 'admin'].map((r) => '<option value="' + r + '"' + (f.role === r ? ' selected' : '') + '>' + roleLabel(r) + '</option>').join('');
@@ -1780,8 +1810,8 @@
     const el = e.target.closest('[data-adm]'); if (!el) return;
     const act = el.getAttribute('data-adm');
     if (act === 'close') { closeAdmin(); }
-    else if (act === 'tab') { a.tab = el.getAttribute('data-tab'); a.userForm = a.groupForm = a.pwForm = null; renderAdmin(); }
-    else if (act === 'form-cancel') { a.userForm = a.groupForm = a.pwForm = null; renderAdmin(); }
+    else if (act === 'tab') { a.tab = el.getAttribute('data-tab'); a.userForm = a.groupForm = a.pwForm = a.layerForm = null; renderAdmin(); }
+    else if (act === 'form-cancel') { a.userForm = a.groupForm = a.pwForm = a.layerForm = null; renderAdmin(); }
     else if (act === 'user-new') { a.userForm = { name: '', email: '', password: '', groupId: (a.groups[0] || {}).id || '' }; renderAdmin(); }
     else if (act === 'user-edit') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.userForm = { id: u.id, name: u.name, email: u.email, groupId: u.group ? u.group.id : '', active: u.active }; renderAdmin(); } }
     else if (act === 'user-save') { saveUser(); }
@@ -1792,10 +1822,18 @@
     else if (act === 'group-edit') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g) { a.groupForm = { id: g.id, name: g.name, role: g.role, allWerke: g.allWerke, werkIds: new Set(g.werke.map((w) => w.id)), allLayers: g.allLayers !== false && !(g.layerCodes && g.layerCodes.length), layerCodes: new Set(g.layerCodes || []) }; renderAdmin(); } }
     else if (act === 'group-save') { saveGroup(); }
     else if (act === 'group-del') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g && window.confirm('Gruppe „' + g.name + '" wirklich löschen?')) delGroup(g.id); }
+    else if (act === 'layer-new') { a.layerForm = { name: '', code: '', color: '#0065A5', categories: [] }; renderAdmin(); }
+    else if (act === 'layer-edit') { const l = (a.layers || []).find((x) => String(x.id) === el.getAttribute('data-id')); if (l) { a.layerForm = { id: l.id, name: l.name, code: l.code, color: l.color, categories: (l.categories || []).map((c) => c.name) }; renderAdmin(); } }
+    else if (act === 'layer-save') { saveLayerDef(); }
+    else if (act === 'layer-del') { const l = (a.layers || []).find((x) => String(x.id) === el.getAttribute('data-id')); if (l && window.confirm('Ebene „' + l.code + ' ' + l.name + '" wirklich löschen?')) delLayerDef(l.id); }
+    else if (act === 'layer-up') { moveLayerDef(el.getAttribute('data-id'), 1); }
+    else if (act === 'layer-down') { moveLayerDef(el.getAttribute('data-id'), -1); }
   }
 
   function onAdminChange(e) {
     const a = state.admin; if (!a) return;
+    if (e.target.id === 'admLColor') { const h = document.getElementById('admLColorHex'); if (h) h.value = e.target.value; return; }
+    if (e.target.id === 'admLColorHex') { const p = document.getElementById('admLColor'); if (p && /^#[0-9a-fA-F]{6}$/.test(e.target.value)) p.value = e.target.value; return; }
     if (e.target.id === 'admGAll' && a.groupForm) { a.groupForm.allWerke = e.target.checked; renderAdmin(); return; }
     if (e.target.id === 'admGAllLayers' && a.groupForm) { a.groupForm.allLayers = e.target.checked; renderAdmin(); return; }
     if (e.target.classList && e.target.classList.contains('admWerk') && a.groupForm) {
@@ -1864,6 +1902,37 @@
   async function delGroup(id) {
     try { await Api.deleteGroup(id); state.admin.groups = await Api.getGroups(); renderAdmin(); toast('Gruppe gelöscht'); }
     catch (err) { toast((err.data && err.data.message) || 'Löschen fehlgeschlagen'); }
+  }
+  async function saveLayerDef() {
+    const a = state.admin, f = a.layerForm; if (!f) return;
+    const msg = document.getElementById('admMsg');
+    const name = (document.getElementById('admLName').value || '').trim();
+    const code = (document.getElementById('admLCode').value || '').trim();
+    let color = (document.getElementById('admLColorHex').value || '').trim();
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = document.getElementById('admLColor').value || '#0065A5';
+    const categories = (document.getElementById('admLCats').value || '').split('\n').map((s) => s.trim()).filter(Boolean);
+    if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
+    if (!code) { msg.textContent = 'Bitte einen Code eingeben (z. B. L7.0).'; return; }
+    try {
+      if (!f.id) await Api.createLayer({ name, code, color, categories });
+      else await Api.updateLayerDef(f.id, { name, code, color, categories });
+      a.layers = await Api.getLayers();
+      a.layerForm = null; renderAdmin(); toast('Ebene gespeichert');
+    } catch (err) { msg.textContent = (err.data && err.data.message) || 'Speichern fehlgeschlagen (Code evtl. schon vergeben?)'; }
+  }
+  async function delLayerDef(id) {
+    try { await Api.deleteLayer(id); state.admin.layers = await Api.getLayers(); renderAdmin(); toast('Ebene gelöscht'); }
+    catch (err) { toast((err.data && err.data.message) || 'Löschen fehlgeschlagen'); }
+  }
+  async function moveLayerDef(id, dir) {
+    const a = state.admin;
+    const asc = (a.layers || []).slice().sort((x, y) => (x.sortOrder || 0) - (y.sortOrder || 0)); // unten -> oben
+    const i = asc.findIndex((l) => String(l.id) === String(id));
+    const j = i + dir; // dir=1 -> nach oben (höhere sort_order), dir=-1 -> nach unten
+    if (i < 0 || j < 0 || j >= asc.length) return;
+    const tmp = asc[i]; asc[i] = asc[j]; asc[j] = tmp;
+    try { a.layers = await Api.reorderLayers(asc.map((l) => l.id)); renderAdmin(); }
+    catch (err) { toast('Reihenfolge nicht gespeichert'); }
   }
 
   /* ---------------- Verdrahtung ---------------- */
