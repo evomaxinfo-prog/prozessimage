@@ -690,15 +690,19 @@ const CAT_COLS = [
     { n: 'Bearbeitungseinheiten', g: 'info', bg: '#4472C4', fg: '#fff' },
     { n: 'Belegdruck', g: 'info', bg: '#2E4E86', fg: '#fff' },
   ];
-  function catMark(pt, col) {
+  function catMark(pt, col, o) {
     const inList = (v) => (v ? String(v).split(', ') : []).indexOf(col.n) >= 0;
     const muss = col.g === 'bz' ? pt.muss : col.g === 'mps' ? pt.mpsMuss : pt.infoMuss;
     const opt = col.g === 'bz' ? pt.opt : col.g === 'mps' ? pt.mpsOpt : pt.infoOpt;
-    if (inList(muss)) return '<span class="cm cm-p"></span>';
+    if (inList(muss)) {
+      const md = (o && o.metatags || []).find((x) => x.label === 'Pflicht \u2013 ' + col.n);
+      const filled = md && md.value && String(md.value).trim();
+      return filled ? '<span class="cm cm-p"></span>' : '<span class="cm cm-r"></span>';
+    }
     if (inList(opt)) return '<span class="cm cm-o"></span>';
     return '<span class="cm-x">\u2715</span>';
   }
-  function buildCatalogHtml(types) {
+  function buildCatalogHtml(rows) {
     const gl = { bz: 'Betriebszust\u00e4nde', mps: 'MPS-Meldungen', info: 'Informationen' };
     const span = { bz: 0, mps: 0, info: 0 }; CAT_COLS.forEach((c) => { span[c.g]++; });
     let gh = '<tr class="cat-grp"><th colspan="4"></th>';
@@ -708,29 +712,31 @@ const CAT_COLS = [
     CAT_COLS.forEach((c) => { ch += '<th class="vh" style="background:' + c.bg + ';color:' + c.fg + '"><span>' + esc(c.n) + '</span></th>'; });
     ch += '</tr>';
     let body = '';
-    types.forEach((pt) => {
+    rows.forEach((r) => {
+      const pt = r.pt; const o = r.o;
       const no = pt.sym.replace('ptk_', '');
+      const oname = (o && o.name && o.name !== pt.name && o.name !== pt.ptyp) ? '<span class="c-oname"> \u00b7 ' + esc(o.name) + '</span>' : '';
       body += '<tr><td class="c-no">' + esc(no) + '</td>'
         + '<td class="c-ico"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[pt.sym] || SYM.box) + '</svg></td>'
         + '<td class="c-hw">' + esc(pt.hwart || '') + '</td>'
-        + '<td class="c-pt">' + esc(pt.ptyp || pt.name) + '</td>';
-      CAT_COLS.forEach((c) => { body += '<td class="c-m c-' + c.g + '">' + catMark(pt, c) + '</td>'; });
+        + '<td class="c-pt">' + esc(pt.ptyp || pt.name) + oname + '</td>';
+      CAT_COLS.forEach((c) => { body += '<td class="c-m c-' + c.g + '">' + catMark(pt, c, o) + '</td>'; });
       body += '</tr>';
     });
     const title = esc((state.detail && state.detail.anlagenname) || 'Anlage');
-    return '<div class="cat-head"><b>Prozesstyp-Katalog</b> \u00b7 ' + title + ' \u00b7 ' + types.length + ' Prozesstyp' + (types.length !== 1 ? 'en' : '') + ' auf dem Layout</div>'
+    return '<div class="cat-head"><b>PTL Export</b> \u00b7 ' + title + ' \u00b7 ' + rows.length + ' platzierte' + (rows.length !== 1 ? '' : 'r') + ' Prozesstyp' + (rows.length !== 1 ? 'en' : '') + '</div>'
       + '<table class="cat-tbl"><thead>' + gh + ch + '</thead><tbody>' + body + '</tbody></table>'
-      + '<div class="cat-legend"><span class="cm cm-p"></span> Pflicht &nbsp;&nbsp; <span class="cm cm-o"></span> Optional &nbsp;&nbsp; <span class="cm-x">\u2715</span> nicht relevant</div>';
+      + '<div class="cat-legend"><span class="cm cm-p"></span> Pflicht (Beschreibung vorhanden) &nbsp;&nbsp; <span class="cm cm-r"></span> Pflicht ohne Beschreibung &nbsp;&nbsp; <span class="cm cm-o"></span> Optional &nbsp;&nbsp; <span class="cm-x">\u2715</span> nicht relevant</div>';
   }
   function exportProcessCatalog() {
     const objs = (state.detail && state.detail.objects || []).filter((o) => /^ptk_/.test(o.symbolType));
-    const seen = {}; const types = [];
-    objs.forEach((o) => { if (!seen[o.symbolType]) { const pt = processTypeBySym(o.symbolType); if (pt) { seen[o.symbolType] = 1; types.push(pt); } } });
-    types.sort((a, b) => (+a.sym.replace('ptk_', '')) - (+b.sym.replace('ptk_', '')));
-    if (!types.length) { toast('Keine Prozesstypen auf dem Layout platziert.'); return; }
+    const rows = [];
+    objs.forEach((o) => { const pt = processTypeBySym(o.symbolType); if (pt) rows.push({ o: o, pt: pt }); });
+    rows.sort((a, b) => ((+a.pt.sym.replace('ptk_', '')) - (+b.pt.sym.replace('ptk_', ''))) || String(a.o.name || '').localeCompare(String(b.o.name || '')));
+    if (!rows.length) { toast('Keine Prozesstypen auf dem Layout platziert.'); return; }
     let el = document.getElementById('catPrint');
     if (!el) { el = document.createElement('div'); el.id = 'catPrint'; document.body.appendChild(el); }
-    el.innerHTML = buildCatalogHtml(types);
+    el.innerHTML = buildCatalogHtml(rows);
     document.body.classList.add('cat-printing');
     const done = () => { document.body.classList.remove('cat-printing'); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
@@ -1432,7 +1438,7 @@ const CAT_COLS = [
       + '<div class="exp-ctl">'
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
       + '<button class="btn" data-act="export-csv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>'
-      + '<button class="btn" data-act="export-catalog" title="Prozesstyp-Katalog der platzierten Typen als PDF drucken"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M8 13h8M8 16h5"/></svg> KATALOG</button>'
+      + '<button class="btn" data-act="export-catalog" title="PTL Export: platzierte Prozesstypen als PDF drucken"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M8 13h8M8 16h5"/></svg> PTL Export</button>'
       + '<button class="btn" data-act="editor-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ZURÜCK</button>'
       + '</div></div></div>'
       + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'
