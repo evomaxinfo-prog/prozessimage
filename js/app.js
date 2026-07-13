@@ -1275,7 +1275,7 @@ const PROCESS_TYPES = [
             { position: 1, label: 'Prozesstyp', value: pt.ptyp },
             { position: 2, label: 'Hardware · Art', value: pt.hwart },
           ];
-          if (pt.muss) tags.push({ position: 3, label: 'Muss-Betriebszustände', value: pt.muss });
+          if (pt.muss) tags.push({ position: 3, label: 'Pflicht-Betriebszustände', value: pt.muss });
           if (pt.opt) tags.push({ position: 4, label: 'Optionale Betriebszustände', value: pt.opt });
           const upd = await Api.setMetatags(obj.id, tags);
           obj.metatags = (upd && upd.metatags) || obj.metatags;
