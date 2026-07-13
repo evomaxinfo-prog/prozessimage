@@ -1503,6 +1503,12 @@ const STATE_ICONS = {
     if (state.zoneDrag) {
       const zd = state.zoneDrag; state.zoneDrag = null;
       const z = (state.detail.objects || []).find((o) => o.id === zd.id);
+      // TEMPORÄRE DIAGNOSE: zeigt beim Loslassen, ob es als echte Verschiebung erkannt wird
+      if (zd.moved || zd.type === 'move' || zd.type === 'vertex') {
+        const willSave = (zd.type === 'vertex' || zd.type === 'move') && zd.moved && !!z;
+        zoneSaveDebug('ZONE LOSGELASSEN\nErkannt als: ' + zd.type + '\nbewegt: ' + (zd.moved ? 'ja' : 'nein') + '\nObjekt gefunden: ' + (z ? 'ja' : 'NEIN')
+          + '\n⇒ ' + (willSave ? 'wird gespeichert' : 'wird NICHT gespeichert (nur Auswahl)'), willSave);
+      }
       if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
         protectObj(z.id);
         var sentPts = z.points.map(function (p) { return { x: p.x, y: p.y }; });
