@@ -1053,20 +1053,9 @@ const STATE_ICONS = {
     const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
       const isProc = /^ptk_/.test(o.symbolType);
       const chips = o.metatags.filter((m) => !isProc || (m.position || 0) <= 2).map((m) => m.value).filter(Boolean);
-      let stateIcons = '';
-      if (isProc) {
-        const ics = o.metatags
-          .filter((m) => (m.position || 0) >= 3 && m.value && String(m.value).trim())
-          .map((m) => {
-            const nm = String(m.label || '').replace(/^(Pflicht|Optional) – /, '');
-            return STATE_ICONS[nm] ? '<img class="p-state-ic" src="' + STATE_ICONS[nm] + '" title="' + esc(nm + ': ' + m.value) + '" alt="' + esc(nm) + '">' : '';
-          }).filter(Boolean).join('');
-        if (ics) stateIcons = '<div class="p-state-icons">' + ics + '</div>';
-      }
       return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym"><svg width="26" height="26" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg></span>'
-        + stateIcons
         + (chips.length ? '<div class="ptags">' + chips.map((t) => '<span class="ptag">' + esc(t) + '</span>').join('') + '</div>' : '')
         + '</div>';
     }).join('');
@@ -1076,7 +1065,40 @@ const STATE_ICONS = {
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
+  }
+
+  // Frei platzierbare Zustands-Icons mit Verbindungslinie zum Prozesstyp
+  function iconPosMap(o) {
+    const m = (o.metatags || []).find((x) => x.label === 'Icon-Positionen');
+    if (m && m.value) { try { return JSON.parse(m.value) || {}; } catch (e) { return {}; } }
+    return {};
+  }
+  function describedStateIcons(o) {
+    const pos = iconPosMap(o); const out = []; let i = 0;
+    (o.metatags || []).filter((m) => (m.position || 0) >= 3 && m.value && String(m.value).trim() && m.label !== 'Icon-Positionen')
+      .forEach((m) => {
+        const nm = String(m.label || '').replace(/^(Pflicht|Optional) – /, '');
+        if (!STATE_ICONS[nm]) return;
+        const dp = pos[nm];
+        const x = dp ? clamp01(dp.x) : clamp01(o.x + 0.07 + (i % 3) * 0.055);
+        const y = dp ? clamp01(dp.y) : clamp01(o.y - 0.10 + Math.floor(i / 3) * 0.055);
+        out.push({ name: nm, desc: m.value, x, y }); i++;
+      });
+    return out;
+  }
+  function stateIconLayer(visible) {
+    const objs = (state.detail.objects || []).filter((o) => /^ptk_/.test(o.symbolType) && visible[o.layerId] !== false);
+    const lines = []; const icons = [];
+    objs.forEach((o) => {
+      describedStateIcons(o).forEach((it) => {
+        const key = o.id + '__' + it.name;
+        lines.push('<line data-sline="' + esc(key) + '" x1="' + (o.x * 100) + '" y1="' + (o.y * 100) + '" x2="' + (it.x * 100) + '" y2="' + (it.y * 100) + '"/>');
+        icons.push('<div class="state-icon" data-sicon-parent="' + o.id + '" data-sicon-state="' + esc(it.name) + '" style="left:' + (it.x * 100) + '%;top:' + (it.y * 100) + '%" title="' + esc(it.name + ': ' + it.desc) + '"><img src="' + STATE_ICONS[it.name] + '" alt=""></div>');
+      });
+    });
+    if (!icons.length) return '';
+    return '<svg class="state-link-svg" viewBox="0 0 100 100" preserveAspectRatio="none">' + lines.join('') + '</svg>' + icons.join('');
   }
 
   // Metatags einer Funktionsgruppe/eines Schutzbereichs dauerhaft mittig im Polygon anzeigen (HTML-Overlay, damit kein Verzerren)
@@ -1346,7 +1368,27 @@ const STATE_ICONS = {
     dragMove = { oid, el, doc, sx: e.clientX, sy: e.clientY, moved: false, nx: null, ny: null };
     try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
   }
+  function onIconDrag(e) {
+    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const r = doc.getBoundingClientRect();
+    const x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+    state.iconDrag.moved = true; state.iconDrag.nx = x; state.iconDrag.ny = y;
+    if (state.iconDrag.el) { state.iconDrag.el.style.left = (x * 100) + '%'; state.iconDrag.el.style.top = (y * 100) + '%'; }
+    const ln = document.querySelector('[data-sline="' + (window.CSS && CSS.escape ? CSS.escape(state.iconDrag.oid + '__' + state.iconDrag.st) : (state.iconDrag.oid + '__' + state.iconDrag.st)) + '"]');
+    if (ln) { ln.setAttribute('x2', x * 100); ln.setAttribute('y2', y * 100); }
+  }
+  async function endIconDrag() {
+    const id = state.iconDrag; state.iconDrag = null;
+    if (!id || !id.moved || id.nx == null) return;
+    const o = (state.detail.objects || []).find((x) => x.id === id.oid); if (!o) return;
+    const map = iconPosMap(o); map[id.st] = { x: id.nx, y: id.ny };
+    const metatags = (o.metatags || []).filter((m) => m.label !== 'Icon-Positionen')
+      .concat([{ position: 90, label: 'Icon-Positionen', value: JSON.stringify(map) }]);
+    protectObj(o.id);
+    try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast('Icon-Position nicht gespeichert'); }
+  }
   function onMove(e) {
+    if (state.iconDrag) { onIconDrag(e); return; }
     if (state.techDrag) { onTechDrag(e); return; }
     if (state.zoneDrag) { onZoneDrag(e); return; }
     if (state.drawZone && state.zoneDraft.length) {
@@ -1375,6 +1417,7 @@ const STATE_ICONS = {
     }
   }
   async function endMove() {
+    if (state.iconDrag) { await endIconDrag(); return; }
     if (state.techDrag) {
       const td = state.techDrag; state.techDrag = null;
       const o = (state.detail.objects || []).find((z) => z.id === td.id);
@@ -1709,6 +1752,15 @@ const STATE_ICONS = {
       e.preventDefault();
       state.zoneDrag = { type: 'vertex', id: v.getAttribute('data-zone'), idx: +v.getAttribute('data-vidx'), moved: false };
       try { v.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      return;
+    }
+    // Frei platziertes Zustands-Icon greifen
+    const si = e.target.closest('.state-icon');
+    if (si) {
+      e.preventDefault();
+      const doc = e.target.closest('#canvasDoc');
+      state.iconDrag = { oid: si.getAttribute('data-sicon-parent'), st: si.getAttribute('data-sicon-state'), el: si, moved: false, nx: null, ny: null };
+      try { (doc || si).setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
       return;
     }
     // Symbol verschieben
