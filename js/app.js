@@ -1244,7 +1244,7 @@
         const now = Date.now();
         const dbl = state.lastZoneUp && state.lastZoneUp.id === z.id && (now - state.lastZoneUp.t) < 400;
         state.lastZoneUp = dbl ? null : { id: z.id, t: now };
-        if (dbl) { if (z.symbolType === 'mf_route') openRouteModal(z.id); else if (z.symbolType === 'sb_zone') openZoneAssignModal(z.id); return; }
+        if (dbl) { if (z.symbolType === 'mf_route') openRouteModal(z.id); else if (z.symbolType === 'sb_zone') openZoneAssignModal(z.id); else if (z.symbolType === 'fg_zone') openTagModal(z.id); return; }
         if (state.selectedZone !== z.id) { state.selectedZone = z.id; renderEditor(); }
         return;
       }
@@ -1295,6 +1295,7 @@
 
   function openTagModal(oid) {
     const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
+    o.metatags = o.metatags || [];
     state.modalObjId = oid;
     const L = layerById(o.layerId);
     const sym = $('mSym'); sym.style.color = o.color; sym.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg>';
