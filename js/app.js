@@ -517,6 +517,11 @@
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
     else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
+    else if (act === 'pal-tab') {
+      const t = el.getAttribute('data-ptab'); state.palTab = t;
+      document.querySelectorAll('.palette .pal-tab').forEach((b) => b.classList.toggle('active', b.getAttribute('data-ptab') === t));
+      document.querySelectorAll('.palette [data-ppanel]').forEach((p) => { p.style.display = p.getAttribute('data-ppanel') === t ? '' : 'none'; });
+    }
     else if (act === 'toggle-zone') { const on = !(state.drawZone && state.drawShape === 'zone'); state.drawZone = on; state.drawShape = on ? 'zone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'toggle-route') { const on = !(state.drawZone && state.drawShape === 'route'); state.drawZone = on; state.drawShape = on ? 'route' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'flow-type') { state.flowType = parseInt(el.getAttribute('data-flow'), 10) || 0; renderEditor(); }
@@ -653,12 +658,14 @@ const STATE_ICONS = {
   const PROCESS_META = { soft: '#EAF1F6', action: 'PROZESSTYP SETZEN', palette: PROCESS_TYPES.map((p) => [p.name, p.sym]) };
   function processTypeByName(name) { const base = String(name || '').replace(/_\d+$/, ''); return PROCESS_TYPES.find((p) => p.name === base) || null; }
   function processTypeBySym(sym) { return PROCESS_TYPES.find((p) => p.sym === sym) || null; }
-  // Farb-Cluster der Prozess-Icons: dunkel (Passiv/XML) vs. teal (Aktiv/SDE)
+  // Farb-Cluster der Prozess-Icons: teal (Aktiv), dunkel (Passiv/XML), weiß/Outline (SDE)
   const PT_DARK = { ptk_11: 1, ptk_12: 1, ptk_13: 1, ptk_14: 1, ptk_15: 1, ptk_16: 1, ptk_18: 1, ptk_19: 1, ptk_70: 1, ptk_99: 1 };
-  function ptColorGroup(sym) { return PT_DARK[sym] ? 'p' : 'a'; }
+  const PT_WHITE = { ptk_90: 1, ptk_91: 1, ptk_92: 1, ptk_93: 1, ptk_94: 1, ptk_95: 1, ptk_96: 1 };
+  function ptColorGroup(sym) { return PT_WHITE[sym] ? 's' : PT_DARK[sym] ? 'p' : 'a'; }
   const PT_COLOR_GROUPS = [
-    { key: 'a', label: 'Aktiv / SDE', swatch: '#17708C' },
-    { key: 'p', label: 'Passiv / XML', swatch: '#505050' },
+    { key: 'a', label: 'Aktiv', swatch: '#17708C' },
+    { key: 'p', label: 'Passiv', swatch: '#505050' },
+    { key: 's', label: 'SDE', swatch: '#ffffff' },
   ];
   function ptStateGroups(pt) {
     const parse = (s) => (s ? String(s).split(', ') : []).filter(Boolean);
@@ -1238,14 +1245,19 @@ const STATE_ICONS = {
     };
     let pal;
     if (meta === PROCESS_META) {
-      pal = PT_COLOR_GROUPS.map((gr) => {
-        const items = (meta.palette || []).filter(([name, sym]) => ptColorGroup(sym) === gr.key);
-        if (!items.length) return '';
-        return '<div class="pal-group"><span class="pal-sw" style="background:' + gr.swatch + '"></span>' + gr.label + '<span class="pal-gc">' + items.length + '</span></div>'
-          + items.map(palItem).join('');
+      const activeTab = state.palTab || 'a';
+      const tabs = PT_COLOR_GROUPS.map((gr) => {
+        const n = (meta.palette || []).filter(([name, sym]) => ptColorGroup(sym) === gr.key).length;
+        return '<button class="pal-tab' + (gr.key === activeTab ? ' active' : '') + '" data-act="pal-tab" data-ptab="' + gr.key + '">'
+          + '<span class="pal-sw' + (gr.key === 's' ? ' ring' : '') + '" style="background:' + gr.swatch + '"></span>' + gr.label + '<span class="pal-gc">' + n + '</span></button>';
       }).join('');
+      const panels = PT_COLOR_GROUPS.map((gr) => {
+        const items = (meta.palette || []).filter(([name, sym]) => ptColorGroup(sym) === gr.key);
+        return '<div class="pal-grid" data-ppanel="' + gr.key + '"' + (gr.key === activeTab ? '' : ' style="display:none"') + '>' + items.map(palItem).join('') + '</div>';
+      }).join('');
+      pal = '<div class="pal-tabs">' + tabs + '</div>' + panels;
     } else {
-      pal = (meta.palette || []).map(palItem).join('');
+      pal = '<div class="pal-grid">' + (meta.palette || []).map(palItem).join('') + '</div>';
     }
 
     const layerStack = (state.detail.layers || []).slice().reverse().filter((l) => layerAllowed(l.code)).map((l) => {
@@ -1280,7 +1292,7 @@ const STATE_ICONS = {
       + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
-      + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + L.color + '"></span><span class="pal-ttl">' + esc(L.name) + '</span><span class="pal-code">' + esc(L.code) + '</span></div><div class="pal-grid">' + pal + '</div></div>' : '')
+      + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + L.color + '"></span><span class="pal-ttl">' + esc(L.name) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
