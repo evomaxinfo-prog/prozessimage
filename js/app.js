@@ -661,35 +661,36 @@ const STATE_ICONS = {
 
   // Prozesstyp-Katalog (Masterliste) der platzierten Typen -> Druckansicht -> "Als PDF speichern"
 const CAT_COLS = [
-    { n: 'Automatik', g: 'bz', bg: '#00E000', fg: '#000' },
-    { n: 'Leertakten', g: 'bz', bg: '#9FE89F', fg: '#000' },
-    { n: 'Teilautomatikbetrieb', g: 'bz', bg: '#9FE89F', fg: '#000' },
-    { n: 'ohne Bearbeitung', g: 'bz', bg: '#AEB4B8', fg: '#000' },
-    { n: 'kein T am Einlauf', g: 'bz', bg: '#B8791A', fg: '#fff' },
-    { n: 'Ladungsträgermangel', g: 'bz', bg: '#B8791A', fg: '#fff' },
-    { n: 'Auslauf belegt', g: 'bz', bg: '#F2E400', fg: '#000' },
-    { n: 'Ladungsträgerstau', g: 'bz', bg: '#F2E400', fg: '#000' },
-    { n: 'Zuführteilemangel', g: 'bz', bg: '#F5B301', fg: '#000' },
-    { n: 'Störung', g: 'bz', bg: '#E42320', fg: '#fff' },
-    { n: 'Hand', g: 'bz', bg: '#1B3FD6', fg: '#fff' },
-    { n: 'Beladen  (nicht mehr im Prozess)', g: 'bz', bg: '#1B3FD6', fg: '#fff' },
-    { n: 'Q-Stop', g: 'bz', bg: '#9A2AA0', fg: '#fff' },
-    { n: 'Ausgeschaltet', g: 'bz', bg: '#FFFFFF', fg: '#000' },
-    { n: 'Qualitäts Alarm', g: 'mps', bg: '#9FB9E3', fg: '#000' },
-    { n: 'Zuführteile Vorwarngrenze', g: 'mps', bg: '#9FB9E3', fg: '#000' },
-    { n: 'Werkzeugstandzahl', g: 'mps', bg: '#9FB9E3', fg: '#000' },
-    { n: 'Teilefertigmeldung mit Taktzeit', g: 'mps', bg: '#DCE6F3', fg: '#000' },
-    { n: 'Teileident Report mit/iohne Werkstückträger ID', g: 'mps', bg: '#DCE6F3', fg: '#000' },
-    { n: 'Teileident Set Report', g: 'mps', bg: '#DCE6F3', fg: '#000' },
-    { n: 'Zusammenbau Report pro Anbau-Teil ID', g: 'mps', bg: '#DCE6F3', fg: '#000' },
-    { n: 'XML-Datencontainer', g: 'mps', bg: '#DCE6F3', fg: '#000' },
-    { n: 'Aktionierung (Sperrliste)', g: 'mps', bg: '#DCE6F3', fg: '#000' },
-    { n: 'Remote Abschaltung', g: 'mps', bg: '#DCE6F3', fg: '#000' },
-    { n: 'Rückmeldung an ERP System (SAP)', g: 'info', bg: '#4472C4', fg: '#fff' },
-    { n: 'TeileID Lesung durch DMC Kamera', g: 'info', bg: '#4472C4', fg: '#fff' },
-    { n: 'Bearbeitungseinheiten', g: 'info', bg: '#4472C4', fg: '#fff' },
-    { n: 'Belegdruck', g: 'info', bg: '#2E4E86', fg: '#fff' },
+    { n: 'Automatik', code: 'A', bg: '#00FF00', fg: '#000', g: 'bz' },
+    { n: 'Leertakten', code: 'L', bg: '#99FF99', fg: '#000', g: 'bz' },
+    { n: 'Teilautomatikbetrieb', code: 'T', bg: '#99FF99', fg: '#000', g: 'bz' },
+    { n: 'ohne Bearbeitung', code: 'O', bg: '#A6A6A6', fg: '#000', g: 'bz' },
+    { n: 'kein T am Einlauf', code: 'M', bg: '#C08000', fg: '#fff', g: 'bz' },
+    { n: 'Ladungsträgermangel', code: 'm', bg: '#C08000', fg: '#fff', g: 'bz' },
+    { n: 'Auslauf belegt', code: 'B', bg: '#FFFF00', fg: '#000', g: 'bz' },
+    { n: 'Ladungsträgerstau', code: 'b', bg: '#FFFF00', fg: '#000', g: 'bz' },
+    { n: 'Zuführteilemangel', code: 'Z', bg: '#FFC000', fg: '#000', g: 'bz' },
+    { n: 'Störung', code: 'S', bg: '#FF0000', fg: '#fff', g: 'bz' },
+    { n: 'Hand', code: 'H', bg: '#0307BD', fg: '#fff', g: 'bz' },
+    { n: 'Beladen  (nicht mehr im Prozess)', code: 'F', bg: '#0307BD', fg: '#fff', g: 'bz' },
+    { n: 'Q-Stop', code: 'Q', bg: '#A722AA', fg: '#fff', g: 'bz' },
+    { n: 'Ausgeschaltet', code: '_', bg: '#FFFFFF', fg: '#000', g: 'bz' },
+    { n: 'Qualitäts Alarm', code: 'QAL', bg: '#93CDDD', fg: '#000', g: 'mps' },
+    { n: 'Zuführteile Vorwarngrenze', code: 'VWG (Z)', bg: '#93CDDD', fg: '#000', g: 'mps' },
+    { n: 'Werkzeugstandzahl', code: 'WKZ', bg: '#93CDDD', fg: '#000', g: 'mps' },
+    { n: 'Teilefertigmeldung mit Taktzeit', code: 'TFM', bg: '#DBEEF4', fg: '#000', g: 'mps' },
+    { n: 'Teileident Report mit/iohne Werkstückträger ID', code: 'TIR', bg: '#DBEEF4', fg: '#000', g: 'mps' },
+    { n: 'Teileident Set Report', code: 'TISR', bg: '#DBEEF4', fg: '#000', g: 'mps' },
+    { n: 'Zusammenbau Report pro Anbau-Teil ID', code: 'ZBR', bg: '#DBEEF4', fg: '#000', g: 'mps' },
+    { n: 'XML-Datencontainer', code: 'XDC', bg: '#DBEEF4', fg: '#000', g: 'mps' },
+    { n: 'Aktionierung (Sperrliste)', code: 'AK', bg: '#DBEEF4', fg: '#000', g: 'mps' },
+    { n: 'Remote Abschaltung', code: 'RA', bg: '#DBEEF4', fg: '#000', g: 'mps' },
+    { n: 'Rückmeldung an ERP System (SAP)', code: 'FST', bg: '#4BACC6', fg: '#000', g: 'info' },
+    { n: 'TeileID Lesung durch DMC Kamera', code: 'DMC', bg: '#4BACC6', fg: '#000', g: 'info' },
+    { n: 'Bearbeitungseinheiten', code: 'BE', bg: '#4BACC6', fg: '#000', g: 'info' },
+    { n: 'Belegdruck', code: 'BLD', bg: '#265663', fg: '#fff', g: 'info' },
   ];
+  const PTL_VALS = {"1":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,2,1,2,2,2,2,2,2,2,2,2,2],"2":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,2,1,2,2,2,2,2,2,2,2,2,2],"3":[1,2,1,2,2,2,2,2,2,1,1,3,2,1,2,2,2,1,2,2,2,2,2,2,2,2,2,2],"4":[3,2,1,2,2,2,2,2,2,1,1,3,2,1,2,2,3,1,2,2,2,2,2,2,2,2,2,2],"5":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,3,2,2,2,3,3,2,2,2,2,2,2],"6":[2,2,2,1,2,2,2,2,2,1,1,3,2,1,2,2,3,2,2,2,3,2,2,2,2,2,2,2],"7":[1,3,3,1,3,3,1,3,3,1,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],"8":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,3,2,2,2,2,2,2,3,2,2,2,2],"9":[2,2,2,2,2,2,2,2,2,1,1,3,2,1,2,2,2,2,2,2,2,2,2,3,2,2,2,2],"11":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,3,3,3,1,2,3,3,3,3,3,3,2,2,3],"12":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,3,3,3,1,2,3,3,3,3,3,3,2,2,3],"13":[1,2,1,2,2,2,2,2,2,1,1,3,2,1,3,3,3,1,2,3,3,3,3,3,3,2,2,3],"14":[3,2,1,2,2,2,2,2,2,1,1,3,2,1,3,3,3,1,2,3,3,3,3,3,3,2,2,3],"15":[1,2,2,2,2,2,2,2,2,1,1,3,2,1,3,3,3,2,2,3,3,3,3,3,3,2,2,3],"16":[2,2,2,1,2,2,2,2,2,1,1,3,2,1,3,3,3,2,2,3,3,3,3,3,3,2,2,3],"18":[1,2,2,2,2,2,2,2,2,1,1,2,2,1,3,3,3,2,2,3,3,3,3,3,3,2,2,3],"19":[2,2,2,2,2,2,2,2,2,1,1,2,2,1,3,3,3,2,2,3,3,3,3,3,3,2,2,3],"70":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"80":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"81":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"90":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"91":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"92":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"93":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"94":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"95":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"96":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"99":[3,3,3,1,3,3,3,3,3,1,1,3,3,1,3,3,3,3,3,3,3,3,3,3,3,3,3,3]};
 const PTL_META = {
     '1': { hw: 'TIA/BF', art: 'Aktiv', typ: 'G', fkt: 'A-Z', schritt: 'A-Z', besch: 'Wertschöpfende Prozesse (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…)  Starr Verkettet oder getaktet (Rundtakttische, Fließfertigung…) (M) nur bei ersten Prozess, (B) nur bei letzten, bei den dazwischenliegenden Prozessen wird (O) für (M) & (B) gemeldet.' },
     '2': { hw: 'TIA/BF', art: 'Aktiv', typ: 'A', fkt: 'A-Z', schritt: 'A-Z', besch: 'Wertschöpfende Prozesse  (Bearbeiten, Schrauben, Umformen, Gießen, Schweißen…) Entkoppelt.' },
@@ -720,17 +721,17 @@ const PTL_META = {
     '96': { hw: '', art: 'SDE', typ: '###', fkt: '###', schritt: '', besch: 'Puffer/Bestand zwischen definierten Prozessen für Echtzeit Monitor Modellierung' },
     '99': { hw: '', art: 'XML', typ: 'R', fkt: '1-9', schritt: 'A-Z', besch: 'XML mit Nummerierung bei mehreren Robotern' },
   };
-  function catMark(pt, col, o) {
-    const inList = (v) => (v ? String(v).split(', ') : []).indexOf(col.n) >= 0;
-    const muss = col.g === 'bz' ? pt.muss : col.g === 'mps' ? pt.mpsMuss : pt.infoMuss;
-    const opt = col.g === 'bz' ? pt.opt : col.g === 'mps' ? pt.mpsOpt : pt.infoOpt;
-    if (inList(muss)) {
+  function catMark(no, ci, o) {
+    const col = CAT_COLS[ci];
+    const v = ((PTL_VALS[String(no)] || [])[ci]) || 0;
+    if (v === 1) {
       const md = (o && o.metatags || []).find((x) => x.label === 'Pflicht \u2013 ' + col.n);
       const filled = md && md.value && String(md.value).trim();
       return filled ? '<span class="cm cm-p"></span>' : '<span class="cm cm-r"></span>';
     }
-    if (inList(opt)) return '<span class="cm cm-o"></span>';
-    return '<span class="cm-x">\u2715</span>';
+    if (v === 2) return '<span class="cm cm-o"></span>';
+    if (v === 3) return '<span class="cm-x">\u2715</span>';
+    return '';
   }
   function buildCatalogHtml(rows) {
     const gl = { bz: 'Betriebszust\u00e4nde', mps: 'MPS-Meldungen', info: 'Informationen' };
@@ -738,9 +739,15 @@ const PTL_META = {
     let gh = '<tr class="cat-grp"><th colspan="9"></th>';
     ['bz', 'mps', 'info'].forEach((g) => { gh += '<th colspan="' + span[g] + '" class="gh-' + g + '">' + gl[g] + '</th>'; });
     gh += '</tr>';
-    let ch = '<tr class="cat-cols"><th class="bh">No</th><th class="bh">ICO</th><th class="bh bh-l">Hardware</th><th class="bh">Art</th><th class="bh">Typ</th><th class="bh">Funktion</th><th class="bh">Schritt</th><th class="bh bh-l">Prozesstyp</th><th class="bh bh-l">Beschreibung</th>';
+    let ch = '<tr class="cat-cols"><th class="bh" rowspan="2">No</th><th class="bh" rowspan="2">ICO</th><th class="bh bh-l" rowspan="2">Hardware</th><th class="bh" rowspan="2">Art</th><th class="bh" rowspan="2">Typ</th><th class="bh" rowspan="2">Funktion</th><th class="bh" rowspan="2">Schritt</th><th class="bh bh-l" rowspan="2">Prozesstyp</th><th class="bh bh-l" rowspan="2">Beschreibung</th>';
     CAT_COLS.forEach((c) => { ch += '<th class="vh" style="background:' + c.bg + ';color:' + c.fg + '"><span>' + esc(c.n) + '</span></th>'; });
     ch += '</tr>';
+    let cc = '<tr class="cat-codes">';
+    CAT_COLS.forEach((c) => {
+      const ic = STATE_ICONS[c.n] ? '<img class="cc-ic" src="' + STATE_ICONS[c.n] + '" alt="">' : '';
+      cc += '<th class="cc" style="background:' + c.bg + ';color:' + c.fg + '">' + ic + '<span class="cc-code">' + esc(c.code || '') + '</span></th>';
+    });
+    cc += '</tr>';
     let body = '';
     rows.forEach((r) => {
       const pt = r.pt; const o = r.o;
@@ -756,12 +763,12 @@ const PTL_META = {
         + '<td class="c-schr">' + esc(md.schritt || '') + '</td>'
         + '<td class="c-pt">' + esc(pt.ptyp || pt.name) + oname + '</td>'
         + '<td class="c-besch">' + esc(md.besch || '') + '</td>';
-      CAT_COLS.forEach((c) => { body += '<td class="c-m c-' + c.g + '">' + catMark(pt, c, o) + '</td>'; });
+      CAT_COLS.forEach((c, ci) => { body += '<td class="c-m c-' + c.g + '">' + catMark(no, ci, o) + '</td>'; });
       body += '</tr>';
     });
     const title = esc((state.detail && state.detail.anlagenname) || 'Anlage');
     return '<div class="cat-head"><b>PTL Export</b> \u00b7 ' + title + ' \u00b7 ' + rows.length + ' platzierte' + (rows.length !== 1 ? '' : 'r') + ' Prozesstyp' + (rows.length !== 1 ? 'en' : '') + '</div>'
-      + '<table class="cat-tbl"><thead>' + gh + ch + '</thead><tbody>' + body + '</tbody></table>'
+      + '<table class="cat-tbl"><thead>' + gh + ch + cc + '</thead><tbody>' + body + '</tbody></table>'
       + '<div class="cat-legend"><span class="cm cm-p"></span> Pflicht (Beschreibung vorhanden) &nbsp;&nbsp; <span class="cm cm-r"></span> Pflicht ohne Beschreibung &nbsp;&nbsp; <span class="cm cm-o"></span> Optional &nbsp;&nbsp; <span class="cm-x">\u2715</span> nicht relevant</div>';
   }
   function exportProcessCatalog() {
