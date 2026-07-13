@@ -950,7 +950,21 @@
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
+  }
+
+  // Metatags einer Funktionsgruppe dauerhaft mittig im Polygon anzeigen (HTML-Overlay, damit kein Verzerren)
+  function fgLabelLayer(visible) {
+    const zones = (state.detail.objects || []).filter((o) => o.symbolType === 'fg_zone' && o.points && o.points.length >= 3 && visible[o.layerId] !== false);
+    if (!zones.length) return '';
+    return '<div class="fg-label-layer">' + zones.map((z) => {
+      const cx = z.points.reduce((s, p) => s + p.x, 0) / z.points.length;
+      const cy = z.points.reduce((s, p) => s + p.y, 0) / z.points.length;
+      const tags = (z.metatags || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).map((m) => m.value).filter((v) => v !== null && v !== '');
+      const lines = tags.length ? tags : [z.name];
+      const inner = lines.map((t) => '<div class="fgl-line">' + esc(t) + '</div>').join('');
+      return '<div class="fg-label" style="left:' + (cx * 100) + '%;top:' + (cy * 100) + '%;color:' + esc(zoneColor(z)) + '">' + inner + '</div>';
+    }).join('') + '</div>';
   }
 
   function zoneOverlaySvg(visible) {
