@@ -598,42 +598,53 @@
   };
 
 const PROCESS_TYPES = [
-    { name: '01 Automatik Prozess', sym: 'ptk_1', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '02 Automatik Prozess', sym: 'ptk_2', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '03 Semi-Automatikprozess', sym: 'ptk_3', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '04 Manueller Prozess', sym: 'ptk_4', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Aktiv', muss: 'Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '05 Handling Prozess', sym: 'ptk_5', ptyp: 'Handling Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '06 Transport,  Zuführung, Einschleusung', sym: 'ptk_6', ptyp: 'Transport,  Zuführung, Einschleusung (In), Ausschleusung (Out)', hwart: 'TIA/BF · Aktiv', muss: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '07 Fahrerloser Transport', sym: 'ptk_7', ptyp: 'Fahrerloser Transport', hwart: 'MSB/PLC · Aktiv', muss: 'Automatik, ohne Bearbeitung, Auslauf belegt, Störung, Hand', opt: '' },
-    { name: '08 Durchlaufprozess', sym: 'ptk_8', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '09 Universeller Prozesstyp', sym: 'ptk_9', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Aktiv', muss: 'Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '11 Automatik Prozess', sym: 'ptk_11', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '12 Automatik Prozess', sym: 'ptk_12', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '13 Semi-Automatikprozess', sym: 'ptk_13', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '14 Manueller Prozess', sym: 'ptk_14', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Passiv', muss: 'Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '15 Belade Prozess', sym: 'ptk_15', ptyp: 'Belade Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '16 Transport,  Zuführung, Nacharbeit', sym: 'ptk_16', ptyp: 'Transport,  Zuführung, Nacharbeit', hwart: 'TIA/BF · Passiv', muss: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop' },
-    { name: '18 Durchlaufprozess', sym: 'ptk_18', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Beladen  (nicht mehr im Prozess), Q-Stop' },
-    { name: '19 Universeller Prozesstyp', sym: 'ptk_19', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Passiv', muss: 'Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Beladen  (nicht mehr im Prozess), Q-Stop' },
-    { name: '70 KPI Bereich OP', sym: 'ptk_70', ptyp: 'KPI Bereich OP', hwart: 'TIA/BF · Passiv', muss: '', opt: '' },
-    { name: '80 KPI Bereich OP', sym: 'ptk_80', ptyp: 'KPI Bereich OP', hwart: 'TIA · Aktiv', muss: '', opt: '' },
-    { name: '81 IR, Lader', sym: 'ptk_81', ptyp: 'IR, Lader (Physisch)', hwart: 'TIA · Aktiv', muss: '', opt: '' },
-    { name: '90 KPI Bereich OP', sym: 'ptk_90', ptyp: 'KPI Bereich OP', hwart: 'SDE', muss: '', opt: '' },
-    { name: '91 IR, Lader', sym: 'ptk_91', ptyp: 'IR, Lader (Physisch)', hwart: 'SDE', muss: '', opt: '' },
-    { name: '92 Parallelmaschinen', sym: 'ptk_92', ptyp: 'Parallelmaschinen', hwart: 'SDE', muss: '', opt: '' },
-    { name: '93 #Zählpunkt', sym: 'ptk_93', ptyp: '#Zählpunkt', hwart: 'SDE', muss: '', opt: '' },
-    { name: '94 ID Puffer / Bestand FIFO', sym: 'ptk_94', ptyp: 'ID Puffer / Bestand FIFO', hwart: 'SDE', muss: '', opt: '' },
-    { name: '95 virtueller Puffer', sym: 'ptk_95', ptyp: 'virtueller Puffer', hwart: 'SDE', muss: '', opt: '' },
-    { name: '96 ID Puffer / Bestand NonFIFO', sym: 'ptk_96', ptyp: 'ID Puffer / Bestand NonFIFO', hwart: 'SDE', muss: '', opt: '' },
-    { name: '99 Direkte Roboterschnittstelle', sym: 'ptk_99', ptyp: 'Direkte Roboterschnittstelle', hwart: 'XML', muss: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet', opt: '' },
+    { name: '01 Automatik Prozess', sym: 'ptk_1', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: 'Teilefertigmeldung mit Taktzeit', mpsOpt: 'Qualitäts Alarm, Zuführteile Vorwarngrenze, Werkzeugstandzahl, Teileident Report mit/iohne Werkstückträger ID, Teileident Set Report, Zusammenbau Report pro Anbau-Teil ID, XML-Datencontainer, Aktionierung (Sperrliste), Remote Abschaltung', infoMuss: '', infoOpt: 'Rückmeldung an ERP System (SAP), TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten, Belegdruck' },
+    { name: '02 Automatik Prozess', sym: 'ptk_2', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: 'Teilefertigmeldung mit Taktzeit', mpsOpt: 'Qualitäts Alarm, Zuführteile Vorwarngrenze, Werkzeugstandzahl, Teileident Report mit/iohne Werkstückträger ID, Teileident Set Report, Zusammenbau Report pro Anbau-Teil ID, XML-Datencontainer, Aktionierung (Sperrliste), Remote Abschaltung', infoMuss: '', infoOpt: 'Rückmeldung an ERP System (SAP), TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten, Belegdruck' },
+    { name: '03 Semi-Automatikprozess', sym: 'ptk_3', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: 'Teilefertigmeldung mit Taktzeit', mpsOpt: 'Qualitäts Alarm, Zuführteile Vorwarngrenze, Werkzeugstandzahl, Teileident Report mit/iohne Werkstückträger ID, Teileident Set Report, Zusammenbau Report pro Anbau-Teil ID, XML-Datencontainer, Aktionierung (Sperrliste), Remote Abschaltung', infoMuss: '', infoOpt: 'Rückmeldung an ERP System (SAP), TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten, Belegdruck' },
+    { name: '04 Manueller Prozess', sym: 'ptk_4', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Aktiv', muss: 'Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: 'Teilefertigmeldung mit Taktzeit', mpsOpt: 'Qualitäts Alarm, Zuführteile Vorwarngrenze, Teileident Report mit/iohne Werkstückträger ID, Teileident Set Report, Zusammenbau Report pro Anbau-Teil ID, XML-Datencontainer, Aktionierung (Sperrliste), Remote Abschaltung', infoMuss: '', infoOpt: 'Rückmeldung an ERP System (SAP), TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten, Belegdruck' },
+    { name: '05 Handling Prozess', sym: 'ptk_5', ptyp: 'Handling Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: '', mpsOpt: 'Qualitäts Alarm, Zuführteile Vorwarngrenze, Teilefertigmeldung mit Taktzeit, Teileident Report mit/iohne Werkstückträger ID, Teileident Set Report, Aktionierung (Sperrliste), Remote Abschaltung', infoMuss: '', infoOpt: 'Rückmeldung an ERP System (SAP), TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten, Belegdruck' },
+    { name: '06 Transport,  Zuführung, Einschleusung', sym: 'ptk_6', ptyp: 'Transport,  Zuführung, Einschleusung (In), Ausschleusung (Out)', hwart: 'TIA/BF · Aktiv', muss: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: '', mpsOpt: 'Qualitäts Alarm, Zuführteile Vorwarngrenze, Teilefertigmeldung mit Taktzeit, Teileident Report mit/iohne Werkstückträger ID, Teileident Set Report, XML-Datencontainer, Aktionierung (Sperrliste), Remote Abschaltung', infoMuss: '', infoOpt: 'Rückmeldung an ERP System (SAP), TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten, Belegdruck' },
+    { name: '07 Fahrerloser Transport', sym: 'ptk_7', ptyp: 'Fahrerloser Transport', hwart: 'MSB/PLC · Aktiv', muss: 'Automatik, ohne Bearbeitung, Auslauf belegt, Störung, Hand', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '08 Durchlaufprozess', sym: 'ptk_8', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Aktiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: '', mpsOpt: 'Qualitäts Alarm, Zuführteile Vorwarngrenze, Teilefertigmeldung mit Taktzeit, Teileident Report mit/iohne Werkstückträger ID, Teileident Set Report, Zusammenbau Report pro Anbau-Teil ID, XML-Datencontainer, Aktionierung (Sperrliste)', infoMuss: '', infoOpt: 'Rückmeldung an ERP System (SAP), TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten, Belegdruck' },
+    { name: '09 Universeller Prozesstyp', sym: 'ptk_9', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Aktiv', muss: 'Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: '', mpsOpt: 'Qualitäts Alarm, Zuführteile Vorwarngrenze, Werkzeugstandzahl, Teilefertigmeldung mit Taktzeit, Teileident Report mit/iohne Werkstückträger ID, Teileident Set Report, Zusammenbau Report pro Anbau-Teil ID, XML-Datencontainer, Aktionierung (Sperrliste)', infoMuss: '', infoOpt: 'Rückmeldung an ERP System (SAP), TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten, Belegdruck' },
+    { name: '11 Automatik Prozess', sym: 'ptk_11', ptyp: 'Automatik Prozess (starr verkettet, getaktet)', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: 'Teilefertigmeldung mit Taktzeit', mpsOpt: 'Teileident Report mit/iohne Werkstückträger ID', infoMuss: '', infoOpt: 'TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten' },
+    { name: '12 Automatik Prozess', sym: 'ptk_12', ptyp: 'Automatik Prozess', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: 'Teilefertigmeldung mit Taktzeit', mpsOpt: 'Teileident Report mit/iohne Werkstückträger ID', infoMuss: '', infoOpt: 'TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten' },
+    { name: '13 Semi-Automatikprozess', sym: 'ptk_13', ptyp: 'Semi-Automatikprozess', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: 'Teilefertigmeldung mit Taktzeit', mpsOpt: 'Teileident Report mit/iohne Werkstückträger ID', infoMuss: '', infoOpt: 'TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten' },
+    { name: '14 Manueller Prozess', sym: 'ptk_14', ptyp: 'Manueller Prozess', hwart: 'TIA/BF · Passiv', muss: 'Teilautomatikbetrieb, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: 'Teilefertigmeldung mit Taktzeit', mpsOpt: 'Teileident Report mit/iohne Werkstückträger ID', infoMuss: '', infoOpt: 'TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten' },
+    { name: '15 Belade Prozess', sym: 'ptk_15', ptyp: 'Belade Prozess (Roboter, Lader…)', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: '', mpsOpt: 'Teilefertigmeldung mit Taktzeit, Teileident Report mit/iohne Werkstückträger ID', infoMuss: '', infoOpt: 'TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten' },
+    { name: '16 Transport,  Zuführung, Nacharbeit', sym: 'ptk_16', ptyp: 'Transport,  Zuführung, Nacharbeit', hwart: 'TIA/BF · Passiv', muss: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Q-Stop', mpsMuss: '', mpsOpt: 'Teilefertigmeldung mit Taktzeit, Teileident Report mit/iohne Werkstückträger ID', infoMuss: '', infoOpt: 'TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten' },
+    { name: '18 Durchlaufprozess', sym: 'ptk_18', ptyp: 'Durchlaufprozess (ohne Taktung)', hwart: 'TIA/BF · Passiv', muss: 'Automatik, Störung, Hand, Ausgeschaltet', opt: 'Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Beladen  (nicht mehr im Prozess), Q-Stop', mpsMuss: '', mpsOpt: 'Teilefertigmeldung mit Taktzeit, Teileident Report mit/iohne Werkstückträger ID', infoMuss: '', infoOpt: 'TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten' },
+    { name: '19 Universeller Prozesstyp', sym: 'ptk_19', ptyp: 'Universeller Prozesstyp', hwart: 'TIA/BF · Passiv', muss: 'Störung, Hand, Ausgeschaltet', opt: 'Automatik, Leertakten, Teilautomatikbetrieb, ohne Bearbeitung, kein T am Einlauf, Ladungsträgermangel, Auslauf belegt, Ladungsträgerstau, Zuführteilemangel, Beladen  (nicht mehr im Prozess), Q-Stop', mpsMuss: '', mpsOpt: 'Teilefertigmeldung mit Taktzeit, Teileident Report mit/iohne Werkstückträger ID', infoMuss: '', infoOpt: 'TeileID Lesung durch DMC Kamera, Bearbeitungseinheiten' },
+    { name: '70 KPI Bereich OP', sym: 'ptk_70', ptyp: 'KPI Bereich OP', hwart: 'TIA/BF · Passiv', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '80 KPI Bereich OP', sym: 'ptk_80', ptyp: 'KPI Bereich OP', hwart: 'TIA · Aktiv', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '81 IR, Lader', sym: 'ptk_81', ptyp: 'IR, Lader (Physisch)', hwart: 'TIA · Aktiv', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '90 KPI Bereich OP', sym: 'ptk_90', ptyp: 'KPI Bereich OP', hwart: 'SDE', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '91 IR, Lader', sym: 'ptk_91', ptyp: 'IR, Lader (Physisch)', hwart: 'SDE', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '92 Parallelmaschinen', sym: 'ptk_92', ptyp: 'Parallelmaschinen', hwart: 'SDE', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '93 #Zählpunkt', sym: 'ptk_93', ptyp: '#Zählpunkt', hwart: 'SDE', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '94 ID Puffer / Bestand FIFO', sym: 'ptk_94', ptyp: 'ID Puffer / Bestand FIFO', hwart: 'SDE', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '95 virtueller Puffer', sym: 'ptk_95', ptyp: 'virtueller Puffer', hwart: 'SDE', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '96 ID Puffer / Bestand NonFIFO', sym: 'ptk_96', ptyp: 'ID Puffer / Bestand NonFIFO', hwart: 'SDE', muss: '', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
+    { name: '99 Direkte Roboterschnittstelle', sym: 'ptk_99', ptyp: 'Direkte Roboterschnittstelle', hwart: 'XML', muss: 'ohne Bearbeitung, Störung, Hand, Ausgeschaltet', opt: '', mpsMuss: '', mpsOpt: '', infoMuss: '', infoOpt: '' },
   ];
   const PROCESS_META = { soft: '#EAF1F6', action: 'PROZESSTYP SETZEN', palette: PROCESS_TYPES.map((p) => [p.name, p.sym]) };
   function processTypeByName(name) { const base = String(name || '').replace(/_\d+$/, ''); return PROCESS_TYPES.find((p) => p.name === base) || null; }
   function processTypeBySym(sym) { return PROCESS_TYPES.find((p) => p.sym === sym) || null; }
+  function ptStateGroups(pt) {
+    const parse = (s) => (s ? String(s).split(', ') : []).filter(Boolean);
+    return [
+      { group: 'Betriebszustände', muss: parse(pt.muss), opt: parse(pt.opt) },
+      { group: 'MPS-Meldungen', muss: parse(pt.mpsMuss), opt: parse(pt.mpsOpt) },
+      { group: 'Informationen', muss: parse(pt.infoMuss), opt: parse(pt.infoOpt) },
+    ];
+  }
   function ptStateList(pt) {
-    const muss = (pt.muss ? String(pt.muss).split(', ') : []).filter(Boolean).map((s) => ({ kind: 'Pflicht', name: s }));
-    const opt = (pt.opt ? String(pt.opt).split(', ') : []).filter(Boolean).map((s) => ({ kind: 'Optional', name: s }));
-    return muss.concat(opt);
+    const out = [];
+    ptStateGroups(pt).forEach((g) => {
+      g.muss.forEach((n) => out.push({ group: g.group, kind: 'Pflicht', name: n }));
+      g.opt.forEach((n) => out.push({ group: g.group, kind: 'Optional', name: n }));
+    });
+    return out;
   }
 
   const LAYER_META = {
@@ -1422,21 +1433,19 @@ const PROCESS_TYPES = [
     const pt = processTypeBySym(o.symbolType);
     if (pt) {
       const desc = (key) => (o.metatags.find((m) => m.label === key) || {}).value || '';
-      const states = ptStateList(pt);
-      const section = (kind) => {
-        const items = states.filter((s) => s.kind === kind);
-        if (!items.length) return '';
-        return '<div class="pt-sec">' + kind + '-Betriebszustände</div>'
-          + items.map((s) => {
-            const key = s.kind + ' – ' + s.name;
-            return '<div class="m-field pt-state"><label>' + esc(s.name) + '</label>'
-              + '<input data-state="' + esc(key) + '" placeholder="Wann tritt dieser Zustand ein? …" value="' + esc(desc(key)) + '"></div>';
-          }).join('') + '</div>';
+      const fieldFor = (kind, name) => {
+        const key = kind + ' – ' + name;
+        return '<div class="m-field pt-state"><label>' + esc(name) + '<span class="pt-kind ' + (kind === 'Pflicht' ? 'req' : 'opt') + '">' + kind + '</span></label>'
+          + '<input data-state="' + esc(key) + '" placeholder="Wann tritt das ein? …" value="' + esc(desc(key)) + '"></div>';
       };
+      const groupHtml = ptStateGroups(pt).map((g) => {
+        const items = g.muss.map((n) => fieldFor('Pflicht', n)).concat(g.opt.map((n) => fieldFor('Optional', n)));
+        return items.length ? '<div class="pt-sec">' + esc(g.group) + '</div>' + items.join('') : '';
+      }).join('');
       $('mBody').innerHTML = '<div class="pt-meta"><div class="pt-meta-row"><span>Prozesstyp</span><b>' + esc(pt.ptyp) + '</b></div>'
         + '<div class="pt-meta-row"><span>Hardware · Art</span><b>' + esc(pt.hwart || '—') + '</b></div></div>'
-        + '<div class="pt-hint">Beschreibe je Betriebszustand, wann er eintritt.</div>'
-        + section('Pflicht') + section('Optional');
+        + '<div class="pt-hint">Beschreibe je Betriebszustand, Meldung und Information, wann sie eintritt.</div>'
+        + (groupHtml || '<div class="pt-hint">Für diesen Prozesstyp sind keine Zustände/Meldungen hinterlegt.</div>');
     } else if (o.symbolType === 'robot') {
       $('mBody').innerHTML = tagFieldSelect('mTag1', 'Safe Funktion', ROBOT_RISK, v1) + tagFieldSelect('mTag2', 'Technologie', ROBOT_TECH, v2);
     } else {
