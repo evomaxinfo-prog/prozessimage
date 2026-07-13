@@ -26,6 +26,7 @@
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
     drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null, flowType: 0, flowLegend: true,
     collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false, protect: {} },
+    geomPending: {},
   };
 
   /* ---------------- Toast ---------------- */
@@ -922,6 +923,19 @@ const STATE_ICONS = {
       if (id === busy) return; // nicht überschreiben, was der Nutzer gerade zieht
       const row = incoming[id];
       if (idx[id] != null) {
+        // Vom Nutzer gerade verschobene Zone/Weg: lokale Geometrie halten, bis der Server die neue Position bestätigt.
+        const pend = state.geomPending[id];
+        if (pend) {
+          if (pointsMatch(row.points, pend.points)) {
+            delete state.geomPending[id]; // Server hat die Verschiebung übernommen
+          } else if (Date.now() - pend.ts < 120000) {
+            const loc = cur[idx[id]];
+            if (loc && !pointsMatch(loc.points, pend.points)) { loc.points = pend.points.map((p) => ({ x: p.x, y: p.y })); dirty = true; patchIds.push(id); }
+            return; // veralteten Serverstand nicht übernehmen
+          } else {
+            delete state.geomPending[id]; // nach 2 Min. aufgeben (dann greift wieder der Serverstand)
+          }
+        }
         if (protectedId(id)) return; // frisch lokal bearbeitet -> Serverstand (evtl. veraltet) nicht übernehmen
         const old = cur[idx[id]];
         if (!objChanged(old, row)) return;
@@ -1492,6 +1506,7 @@ const STATE_ICONS = {
       if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
         protectObj(z.id);
         var sentPts = z.points.map(function (p) { return { x: p.x, y: p.y }; });
+        state.geomPending[z.id] = { points: sentPts, ts: Date.now() };
         try {
           const fmt = (p) => p ? '(' + (p.x != null ? p.x.toFixed(3) : '?') + ',' + (p.y != null ? p.y.toFixed(3) : '?') + ')' : '?';
           const resp = await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
