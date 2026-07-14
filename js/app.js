@@ -350,9 +350,11 @@
       + '<div class="stat"><div class="k">…</div><div class="l">Dokumentiert</div></div></div>'
       + (stations.length ? '<div class="line-grid">' + stations.map(skel).join('') + '</div>'
         : '<div class="pad" style="color:var(--muted)">Keine Stationen unter dieser Linie.</div>')
+      + '<div id="linieStatus" class="line-sec"></div>'
+      + '<div id="linieRobots" class="line-sec"></div>'
       + '</div>';
     if (!stations.length) return;
-    let sps = 0, objs = 0, docn = 0;
+    let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [];
     await Promise.all(stations.map(async (n) => {
       try {
         const full = await Api.getStationFull(n.stationId);
@@ -361,6 +363,18 @@
         sps += nP; objs += nO; if (isDoc) docn++;
         const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span><b>' + nP + '</b> SPS</span><span><b>' + nO + '</b> Objekte</span><span><b>' + nL + '</b> Ebenen</span>';
         const bd = $('lcb-' + n.id); if (bd) { bd.textContent = isDoc ? 'Dokumentiert' : 'Offen'; bd.className = 'lc-badge ' + (isDoc ? 'doc' : 'undoc'); }
+        const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
+        const stName = full.anlagenname || n.name;
+        (full.objects || []).forEach((o) => {
+          if (/^ptk_/.test(o.symbolType)) {
+            const mt = o.metatags || [];
+            const val = (lbl) => (mt.find((x) => x.label === lbl) || {}).value || '';
+            const pflicht = mt.filter((x) => /^Pflicht \u2013 /.test(x.label || ''));
+            const filled = pflicht.filter((x) => x.value && String(x.value).trim()).length;
+            ptkRows.push({ st: stName, no: o.symbolType.replace('ptk_', ''), sym: o.symbolType, pt: val('Prozesstyp') || o.name, fg: val('Funktionsgruppen'), filled: filled, total: pflicht.length });
+          }
+          if (lname[o.layerId] === 'Saferobot / Technologie') roboRows.push({ st: stName, type: o.symbolType, name: o.name });
+        });
       } catch (e) {
         const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span class="lc-err">nicht ladbar</span>';
       }
@@ -370,6 +384,41 @@
       + '<div class="stat"><div class="k">' + sps + '</div><div class="l">SPS gesamt</div></div>'
       + '<div class="stat"><div class="k">' + objs + '</div><div class="l">Objekte</div></div>'
       + '<div class="stat"><div class="k">' + Math.round(100 * docn / stations.length) + '%</div><div class="l">Dokumentiert</div></div>';
+    const es = $('linieStatus'); if (es) es.innerHTML = linieStatusHtml(ptkRows);
+    const er = $('linieRobots'); if (er) er.innerHTML = linieRobotsHtml(roboRows);
+  }
+  // Prozesstyp-Statusbericht (Zuordnung zur Funktionsgruppe + Pflichtfeld-Vollständigkeit) – aggregiert über die Linie.
+  function linieStatusHtml(rows) {
+    if (!rows.length) return '<div class="ls-head">Prozesstyp-Status</div><div class="ls-empty">Keine Prozesstypen auf dieser Linie platziert.</div>';
+    rows.sort((a, b) => String(a.st).localeCompare(String(b.st)) || (+a.no - +b.no));
+    const body = rows.map((r) => {
+      const pct = r.total ? Math.round(100 * r.filled / r.total) : 100;
+      const ok = r.filled >= r.total && !!r.fg;
+      const bar = ok ? '#16A34A' : '#E0A800';
+      return '<tr><td class="ls-st">' + esc(r.st) + '</td>'
+        + '<td class="ls-ic"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[r.sym] || SYM.box) + '</svg></td>'
+        + '<td class="ls-no">' + esc(r.no) + '</td>'
+        + '<td class="ls-pt">' + esc(r.pt) + '</td>'
+        + '<td>' + (r.fg ? '<span class="ls-fg">' + esc(r.fg) + '</span>' : '<span class="ls-none">nicht zugeordnet</span>') + '</td>'
+        + '<td><span class="ls-bar"><span style="width:' + pct + '%;background:' + bar + '"></span></span><span class="ls-pc">' + r.filled + '/' + r.total + '</span></td>'
+        + '<td>' + (ok ? '<span class="ls-ok">✓ vollständig</span>' : '<span class="ls-warn">⚠ offen</span>') + '</td></tr>';
+    }).join('');
+    return '<div class="ls-head">Prozesstyp-Status <span class="ls-sub">Zuordnung &amp; Pflichtfelder · ' + rows.length + ' Prozesstyp' + (rows.length !== 1 ? 'en' : '') + '</span></div>'
+      + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Icon</th><th>No</th><th>Prozesstyp</th><th>Funktionsgruppe</th><th>Pflichtfelder</th><th>Status</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+  // Übersicht der Objekte der Ebene „Saferobot / Technologie".
+  function linieRobotsHtml(rows) {
+    const LBL = { robot: 'Roboter', ctrl: 'Techno-Steuerung', grip: 'Greifer', cell: 'Zelle' };
+    if (!rows.length) return '<div class="ls-head">Roboter · Safe &amp; Technologie</div><div class="ls-empty">Keine Objekte der Ebene „Saferobot / Technologie" auf dieser Linie.</div>';
+    rows.sort((a, b) => String(a.st).localeCompare(String(b.st)) || String(a.type).localeCompare(String(b.type)));
+    const cnt = {}; rows.forEach((r) => { cnt[r.type] = (cnt[r.type] || 0) + 1; });
+    const summary = Object.keys(LBL).filter((k) => cnt[k]).map((k) => '<span class="ls-chip"><svg viewBox="0 0 24 24" width="14" height="14">' + (SYM[k] || SYM.box) + '</svg>' + cnt[k] + '× ' + LBL[k] + '</span>').join('');
+    const body = rows.map((r) => '<tr><td class="ls-st">' + esc(r.st) + '</td>'
+      + '<td class="ls-ic"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[r.type] || SYM.box) + '</svg></td>'
+      + '<td>' + esc(LBL[r.type] || r.type) + '</td><td class="ls-pt">' + esc(r.name) + '</td></tr>').join('');
+    return '<div class="ls-head">Roboter · Safe &amp; Technologie <span class="ls-sub">' + rows.length + ' Objekt' + (rows.length !== 1 ? 'e' : '') + '</span></div>'
+      + (summary ? '<div class="ls-chips">' + summary + '</div>' : '')
+      + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Icon</th><th>Typ</th><th>Bezeichnung</th></tr></thead><tbody>' + body + '</tbody></table></div>';
   }
 
   /* -------- Detailansicht (Schritt 2) -------- */
