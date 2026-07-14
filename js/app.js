@@ -334,10 +334,27 @@
     (node.children || []).forEach(walk);
     return out;
   }
+  // Mini-Editor-Vorschau: Zonen (Polygone), Förderwege (Linien) und Symbole (Punkte) in 0–100-Koordinaten.
+  function stationPreviewSvg(full) {
+    let inner = '';
+    (full.objects || []).forEach((o) => {
+      if (o.points && o.points.length >= 2) {
+        const pts = o.points.map((p) => (p.x * 100).toFixed(1) + ',' + (p.y * 100).toFixed(1)).join(' ');
+        const col = o.color || '#8FA3B0';
+        if (/zone/.test(o.symbolType || '') && o.points.length >= 3) inner += '<polygon points="' + pts + '" fill="' + col + '" fill-opacity="0.16" stroke="' + col + '" stroke-width="0.7"/>';
+        else inner += '<polyline points="' + pts + '" fill="none" stroke="' + col + '" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/>';
+      } else if (o.x != null && o.y != null) {
+        inner += '<circle cx="' + (o.x * 100).toFixed(1) + '" cy="' + (o.y * 100).toFixed(1) + '" r="1.9" fill="' + (o.color || '#0065A5') + '" stroke="#fff" stroke-width="0.5"/>';
+      }
+    });
+    return '<svg class="lc-ov" viewBox="0 0 100 100" preserveAspectRatio="none">' + inner + '</svg>';
+  }
   async function renderLinie(node) {
     const stations = collectStationNodes(node);
+    (state.linieBlobs || []).forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } });
+    state.linieBlobs = [];
     const skel = (n) => '<div class="line-card" data-act="open-station" data-id="' + n.id + '" title="Station öffnen">'
-      + '<div class="lc-thumb">' + schemaThumb() + '<span class="lc-badge" id="lcb-' + n.id + '"></span></div>'
+      + '<div class="lc-thumb" id="lct-' + n.id + '"><span class="lc-load-mini">lädt …</span></div>'
       + '<div class="lc-body"><div class="lc-name">' + esc(n.name) + '</div>'
       + '<div class="lc-meta" id="lcm-' + n.id + '"><span class="lc-load">lädt …</span></div>'
       + '<div class="lc-open">Station öffnen ›</div></div></div>';
@@ -362,7 +379,14 @@
         const isDoc = nO > 0 || !!full.hasLayout;
         sps += nP; objs += nO; if (isDoc) docn++;
         const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span><b>' + nP + '</b> SPS</span><span><b>' + nO + '</b> Objekte</span><span><b>' + nL + '</b> Ebenen</span>';
-        const bd = $('lcb-' + n.id); if (bd) { bd.textContent = isDoc ? 'Dokumentiert' : 'Offen'; bd.className = 'lc-badge ' + (isDoc ? 'doc' : 'undoc'); }
+        // Editor-Vorschau: Layout-Bild (falls vorhanden) + platzierte Objekte/Zonen als Mini-Overlay
+        let layoutUrl = null;
+        if (full.hasLayout) {
+          try { const res = await Api.raw('/stations/' + n.stationId + '/layout'); if (res && res.ok) { layoutUrl = URL.createObjectURL(await res.blob()); state.linieBlobs.push(layoutUrl); } } catch (e) { /* ohne Bild */ }
+        }
+        const t = $('lct-' + n.id);
+        if (t) t.innerHTML = (layoutUrl ? '<img class="lc-bg" src="' + layoutUrl + '" alt="">' : '') + stationPreviewSvg(full)
+          + '<span class="lc-badge ' + (isDoc ? 'doc' : 'undoc') + '">' + (isDoc ? 'Dokumentiert' : 'Offen') + '</span>';
         const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
         const stName = full.anlagenname || n.name;
         (full.objects || []).forEach((o) => {
@@ -381,6 +405,7 @@
         });
       } catch (e) {
         const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span class="lc-err">nicht ladbar</span>';
+        const t = $('lct-' + n.id); if (t) t.innerHTML = '<span class="lc-load-mini">—</span>';
       }
     }));
     const st = $('linieStats');
