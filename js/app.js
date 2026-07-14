@@ -431,10 +431,10 @@
       + '<div class="stat"><div class="k">' + sps + '</div><div class="l">SPS gesamt</div></div>'
       + '<div class="stat"><div class="k">' + objs + '</div><div class="l">Objekte</div></div>'
       + '<div class="stat"><div class="k">' + Math.round(100 * docn / stations.length) + '%</div><div class="l">Dokumentiert</div></div>';
-    // Ebenen als Folder: Daten merken, Auf/Zu-Status je Ebene (Standard: Ebenen mit Objekten offen)
+    // Ebenen als horizontale Ordner (Tabs): Daten merken, aktive Ebene wählen
     const names = Object.keys(layerAgg);
-    if (!state.linieOpenLayers) state.linieOpenLayers = new Set();
-    state.linieOpenLayers = new Set(names.filter((nm) => layerAgg[nm].objects > 0));
+    const withObj = names.filter((nm) => layerAgg[nm].objects > 0).sort((a, b) => { const ia = LAYER_ORDER.indexOf(a), ib = LAYER_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+    state.linieActiveLayer = withObj[0] || names[0] || null;
     state.linieData = { agg: layerAgg, ptkRows: ptkRows, roboRows: roboRows };
     const ebT = $('linieEbTitle'); if (ebT) ebT.style.display = names.length ? '' : 'none';
     renderLinieFolders();
@@ -480,28 +480,31 @@
     }
     return chips;
   }
-  function folderHtml(nm, a, ptkRows, roboRows) {
-    const open = state.linieOpenLayers.has(nm);
-    const col = a.color || '#8FA3B0';
-    const ns = a.stations.size;
+  function panelHtml(nm, a, ptkRows, roboRows) {
+    const col = a.color || '#8FA3B0'; const ns = a.stations.size;
     const chips = layerKpis(nm, a, ptkRows, roboRows).map((k) => '<span class="lk-chip ' + (k.tone || '') + '"><b>' + k.val + '</b> ' + esc(k.label) + '</span>').join('');
     let detail = '';
     if (nm === 'Prozesstypen') detail = linieStatusHtml(ptkRows);
     else if (nm === 'Saferobot / Technologie') detail = linieRobotsHtml(roboRows);
-    return '<div class="lay-folder ' + (open ? 'open' : '') + '" style="--lc:' + col + '">'
-      + '<div class="lay-fhead" data-act="toggle-layer" data-layer="' + esc(nm) + '">'
-      + '<svg class="lf-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M9 6l6 6-6 6"/></svg>'
-      + '<span class="lay-dot" style="background:' + col + '"></span>'
-      + '<span class="lay-name">' + esc(nm) + '</span>'
+    return '<div class="lp-head" style="--lc:' + col + '"><span class="lay-dot" style="background:' + col + '"></span><b>' + esc(nm) + '</b>'
       + (a.code ? '<span class="lay-code">' + esc(a.code) + '</span>' : '')
       + '<span class="lf-meta">' + a.objects + ' Objekt' + (a.objects !== 1 ? 'e' : '') + ' · ' + ns + ' Station' + (ns !== 1 ? 'en' : '') + '</span></div>'
-      + '<div class="lay-fbody">' + (chips ? '<div class="lk-chips">' + chips + '</div>' : '<div class="lk-empty">Keine Objekte auf dieser Ebene.</div>') + detail + '</div></div>';
+      + (chips ? '<div class="lk-chips">' + chips + '</div>' : '<div class="lk-empty">Keine Objekte auf dieser Ebene.</div>') + detail;
   }
   function renderLinieFolders() {
     const host = $('linieFolders'); if (!host || !state.linieData) return;
     const d = state.linieData; const agg = d.agg;
     const names = Object.keys(agg).sort((a, b) => { const ia = LAYER_ORDER.indexOf(a), ib = LAYER_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
-    host.innerHTML = names.map((nm) => folderHtml(nm, agg[nm], d.ptkRows, d.roboRows)).join('');
+    if (!names.length) { host.innerHTML = ''; return; }
+    if (!state.linieActiveLayer || !agg[state.linieActiveLayer]) state.linieActiveLayer = names.filter((nm) => agg[nm].objects > 0)[0] || names[0];
+    const tabs = names.map((nm) => {
+      const a = agg[nm]; const active = nm === state.linieActiveLayer; const col = a.color || '#8FA3B0';
+      return '<button class="lay-tab ' + (active ? 'active' : '') + (a.objects ? '' : ' empty') + '" data-act="pick-layer" data-layer="' + esc(nm) + '" style="--lc:' + col + '">'
+        + '<span class="lay-dot" style="background:' + col + '"></span>'
+        + '<span class="lt-name">' + esc(nm) + '</span>'
+        + '<span class="lt-n">' + a.objects + '</span></button>';
+    }).join('');
+    host.innerHTML = '<div class="lay-tabs">' + tabs + '</div><div class="lay-panel">' + panelHtml(state.linieActiveLayer, agg[state.linieActiveLayer], d.ptkRows, d.roboRows) + '</div>';
   }
   // Prozesstyp-Statusbericht (Zuordnung zur Funktionsgruppe + Pflichtfeld-Vollständigkeit) – aggregiert über die Linie.
   function linieStatusHtml(rows) {
@@ -738,7 +741,7 @@
     else if (act === 'open-editor') { openEditor(); }
     else if (act === 'open-station') { selectNode(el.getAttribute('data-id')); }
     else if (act === 'goto-obj') { e.stopPropagation(); gotoObject(el.getAttribute('data-node'), el.getAttribute('data-obj')); }
-    else if (act === 'toggle-layer') { const nm = el.getAttribute('data-layer'); if (state.linieOpenLayers.has(nm)) state.linieOpenLayers.delete(nm); else state.linieOpenLayers.add(nm); renderLinieFolders(); }
+    else if (act === 'pick-layer') { state.linieActiveLayer = el.getAttribute('data-layer'); renderLinieFolders(); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
     else if (act === 'editor-upload') { triggerUpload(); }
