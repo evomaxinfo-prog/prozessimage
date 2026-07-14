@@ -334,20 +334,24 @@
     (node.children || []).forEach(walk);
     return out;
   }
-  // Mini-Editor-Vorschau: Zonen (Polygone), Förderwege (Linien) und Symbole (Punkte) in 0–100-Koordinaten.
-  function stationPreviewSvg(full) {
+  // Mini-Editor-Vorschau seitenverhältnis-treu: viewBox hat das Layout-Seitenverhältnis, Objekte in 0–1 → skaliert.
+  function stationPreviewSvg(full, aspect) {
+    const a = aspect && aspect > 0 ? aspect : (760 / 520);
+    const vbW = a >= 1 ? 100 : 100 * a;
+    const vbH = a >= 1 ? 100 / a : 100;
+    const dot = (Math.min(vbW, vbH) * 0.02).toFixed(2);
     let inner = '';
     (full.objects || []).forEach((o) => {
       if (o.points && o.points.length >= 2) {
-        const pts = o.points.map((p) => (p.x * 100).toFixed(1) + ',' + (p.y * 100).toFixed(1)).join(' ');
+        const pts = o.points.map((p) => (p.x * vbW).toFixed(1) + ',' + (p.y * vbH).toFixed(1)).join(' ');
         const col = o.color || '#8FA3B0';
-        if (/zone/.test(o.symbolType || '') && o.points.length >= 3) inner += '<polygon points="' + pts + '" fill="' + col + '" fill-opacity="0.16" stroke="' + col + '" stroke-width="0.7"/>';
-        else inner += '<polyline points="' + pts + '" fill="none" stroke="' + col + '" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/>';
+        if (/zone/.test(o.symbolType || '') && o.points.length >= 3) inner += '<polygon points="' + pts + '" fill="' + col + '" fill-opacity="0.16" stroke="' + col + '" stroke-width="1.4" vector-effect="non-scaling-stroke"/>';
+        else inner += '<polyline points="' + pts + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
       } else if (o.x != null && o.y != null) {
-        inner += '<circle cx="' + (o.x * 100).toFixed(1) + '" cy="' + (o.y * 100).toFixed(1) + '" r="1.9" fill="' + (o.color || '#0065A5') + '" stroke="#fff" stroke-width="0.5"/>';
+        inner += '<circle cx="' + (o.x * vbW).toFixed(1) + '" cy="' + (o.y * vbH).toFixed(1) + '" r="' + dot + '" fill="' + (o.color || '#0065A5') + '" stroke="#fff" stroke-width="0.8" vector-effect="non-scaling-stroke"/>';
       }
     });
-    return '<svg class="lc-ov" viewBox="0 0 100 100" preserveAspectRatio="none">' + inner + '</svg>';
+    return '<svg class="lc-ov" viewBox="0 0 ' + vbW.toFixed(1) + ' ' + vbH.toFixed(1) + '" preserveAspectRatio="xMidYMid meet">' + inner + '</svg>';
   }
   async function renderLinie(node) {
     const stations = collectStationNodes(node);
@@ -380,12 +384,18 @@
         sps += nP; objs += nO; if (isDoc) docn++;
         const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span><b>' + nP + '</b> SPS</span><span><b>' + nO + '</b> Objekte</span><span><b>' + nL + '</b> Ebenen</span>';
         // Editor-Vorschau: Layout-Bild (falls vorhanden) + platzierte Objekte/Zonen als Mini-Overlay
-        let layoutUrl = null;
+        let layoutUrl = null, aspect = 760 / 520;
         if (full.hasLayout) {
-          try { const res = await Api.raw('/stations/' + n.stationId + '/layout'); if (res && res.ok) { layoutUrl = URL.createObjectURL(await res.blob()); state.linieBlobs.push(layoutUrl); } } catch (e) { /* ohne Bild */ }
+          try {
+            const res = await Api.raw('/stations/' + n.stationId + '/layout');
+            if (res && res.ok) {
+              layoutUrl = URL.createObjectURL(await res.blob()); state.linieBlobs.push(layoutUrl);
+              aspect = await new Promise((resolve) => { const im = new Image(); im.onload = () => resolve(im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 760 / 520); im.onerror = () => resolve(760 / 520); im.src = layoutUrl; });
+            }
+          } catch (e) { /* ohne Bild */ }
         }
         const t = $('lct-' + n.id);
-        if (t) t.innerHTML = (layoutUrl ? '<img class="lc-bg" src="' + layoutUrl + '" alt="">' : '') + stationPreviewSvg(full)
+        if (t) t.innerHTML = (layoutUrl ? '<img class="lc-bg" src="' + layoutUrl + '" alt="">' : '') + stationPreviewSvg(full, aspect)
           + '<span class="lc-badge ' + (isDoc ? 'doc' : 'undoc') + '">' + (isDoc ? 'Dokumentiert' : 'Offen') + '</span>';
         const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
         const stName = full.anlagenname || n.name;
