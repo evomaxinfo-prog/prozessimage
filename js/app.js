@@ -363,7 +363,8 @@
       + '<div class="lc-meta" id="lcm-' + n.id + '"><span class="lc-load">lädt …</span></div>'
       + '<div class="lc-open">Station öffnen ›</div></div></div>';
     $('content').innerHTML = breadcrumb(node.id)
-      + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1><p>Stationsübersicht · Dashboard</p></div></div>'
+      + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1><p>Linien-Dashboard</p></div></div>'
+      + '<div class="ls-section-title">Übersicht <span>allgemeine Themen</span></div>'
       + '<div class="zone-stats" id="linieStats">'
       + '<div class="stat b"><div class="k">' + stations.length + '</div><div class="l">Stationen</div></div>'
       + '<div class="stat"><div class="k">…</div><div class="l">SPS gesamt</div></div>'
@@ -371,11 +372,13 @@
       + '<div class="stat"><div class="k">…</div><div class="l">Dokumentiert</div></div></div>'
       + (stations.length ? '<div class="line-grid">' + stations.map(skel).join('') + '</div>'
         : '<div class="pad" style="color:var(--muted)">Keine Stationen unter dieser Linie.</div>')
+      + '<div class="ls-section-title" id="linieEbTitle" style="display:none">Ebenen <span>aufgeteilt nach Dokumentations-Ebene</span></div>'
+      + '<div id="linieLayers" class="line-sec"></div>'
       + '<div id="linieStatus" class="line-sec"></div>'
       + '<div id="linieRobots" class="line-sec"></div>'
       + '</div>';
     if (!stations.length) return;
-    let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [];
+    let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {};
     await Promise.all(stations.map(async (n) => {
       try {
         const full = await Api.getStationFull(n.stationId);
@@ -399,7 +402,13 @@
           + '<span class="lc-badge ' + (isDoc ? 'doc' : 'undoc') + '">' + (isDoc ? 'Dokumentiert' : 'Offen') + '</span>';
         const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
         const stName = full.anlagenname || n.name;
+        (full.layers || []).forEach((l) => {
+          if (!layerAgg[l.name]) layerAgg[l.name] = { objects: 0, stations: new Set(), color: l.color, code: l.code };
+          layerAgg[l.name].stations.add(n.id);
+          if (l.color && !layerAgg[l.name].color) layerAgg[l.name].color = l.color;
+        });
         (full.objects || []).forEach((o) => {
+          const ln = lname[o.layerId]; if (ln && layerAgg[ln]) layerAgg[ln].objects++;
           if (/^ptk_/.test(o.symbolType)) {
             const mt = o.metatags || [];
             const val = (lbl) => (mt.find((x) => x.label === lbl) || {}).value || '';
@@ -425,6 +434,22 @@
       + '<div class="stat"><div class="k">' + Math.round(100 * docn / stations.length) + '%</div><div class="l">Dokumentiert</div></div>';
     const es = $('linieStatus'); if (es) es.innerHTML = linieStatusHtml(ptkRows);
     const er = $('linieRobots'); if (er) er.innerHTML = linieRobotsHtml(roboRows);
+    const el2 = $('linieLayers'); if (el2) el2.innerHTML = linieLayersHtml(layerAgg);
+    const ebT = $('linieEbTitle'); if (ebT) ebT.style.display = Object.keys(layerAgg).length ? '' : 'none';
+  }
+  // Ebenen-Übersicht: Objektanzahl je Dokumentations-Ebene über die ganze Linie.
+  function linieLayersHtml(agg) {
+    const order = ['Materialfluss', 'Funktionsgruppen', 'Steuerungstechnik', 'Saferobot / Technologie', 'Antriebstechnik / Ident', 'Not-Halt', 'Sicherheitslayout', 'Prozesstypen'];
+    const names = Object.keys(agg).sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
+    if (!names.length) return '';
+    const tiles = names.map((nm) => {
+      const a = agg[nm]; const col = a.color || '#8FA3B0'; const ns = a.stations.size;
+      return '<div class="lay-tile" style="--lc:' + col + '">'
+        + '<div class="lay-top"><span class="lay-dot" style="background:' + col + '"></span><span class="lay-name">' + esc(nm) + '</span>' + (a.code ? '<span class="lay-code">' + esc(a.code) + '</span>' : '') + '</div>'
+        + '<div class="lay-num">' + a.objects + '</div>'
+        + '<div class="lay-sub">Objekte · ' + ns + ' Station' + (ns !== 1 ? 'en' : '') + '</div></div>';
+    }).join('');
+    return '<div class="ls-head">Ebenen-Übersicht <span class="ls-sub">' + names.length + ' Ebene' + (names.length !== 1 ? 'n' : '') + ' auf der Linie</span></div><div class="lay-grid">' + tiles + '</div>';
   }
   // Prozesstyp-Statusbericht (Zuordnung zur Funktionsgruppe + Pflichtfeld-Vollständigkeit) – aggregiert über die Linie.
   function linieStatusHtml(rows) {
