@@ -405,12 +405,12 @@
             const val = (lbl) => (mt.find((x) => x.label === lbl) || {}).value || '';
             const pflicht = mt.filter((x) => /^Pflicht \u2013 /.test(x.label || ''));
             const filled = pflicht.filter((x) => x.value && String(x.value).trim()).length;
-            ptkRows.push({ st: stName, no: o.symbolType.replace('ptk_', ''), sym: o.symbolType, pt: val('Prozesstyp') || o.name, fg: val('Funktionsgruppen'), filled: filled, total: pflicht.length });
+            ptkRows.push({ st: stName, node: n.id, oid: o.id, no: o.symbolType.replace('ptk_', ''), sym: o.symbolType, pt: val('Prozesstyp') || o.name, fg: val('Funktionsgruppen'), filled: filled, total: pflicht.length });
           }
           if (lname[o.layerId] === 'Saferobot / Technologie') {
             const mt2 = o.metatags || [];
             const gv = (lbl) => (mt2.find((x) => x.label === lbl) || {}).value || '';
-            roboRows.push({ st: stName, type: o.symbolType, name: o.name, safe: gv('Safe Funktion'), tech: gv('Technologie') });
+            roboRows.push({ st: stName, node: n.id, oid: o.id, type: o.symbolType, name: o.name, safe: gv('Safe Funktion'), tech: gv('Technologie') });
           }
         });
       } catch (e) {
@@ -435,7 +435,7 @@
       const ok = r.filled >= r.total && !!r.fg;
       const bar = ok ? '#16A34A' : '#E0A800';
       return '<tr><td class="ls-st">' + esc(r.st) + '</td>'
-        + '<td class="ls-ic"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[r.sym] || SYM.box) + '</svg></td>'
+        + '<td class="ls-ic"><span class="ls-icbtn" data-act="goto-obj" data-node="' + esc(r.node) + '" data-obj="' + esc(r.oid) + '" title="Im Editor öffnen (Metatags)"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[r.sym] || SYM.box) + '</svg></span></td>'
         + '<td class="ls-no">' + esc(r.no) + '</td>'
         + '<td class="ls-pt">' + esc(r.pt) + '</td>'
         + '<td>' + (r.fg ? '<span class="ls-fg">' + esc(r.fg) + '</span>' : '<span class="ls-none">nicht zugeordnet</span>') + '</td>'
@@ -458,13 +458,26 @@
       const safeCell = r.safe ? '<span class="ls-safe">' + (sc ? '<i style="background:' + sc + '"></i>' : '') + esc(r.safe) + '</span>' : '<span class="ls-dash">—</span>';
       const techCell = r.tech ? esc(r.tech) : '<span class="ls-dash">—</span>';
       return '<tr><td class="ls-st">' + esc(r.st) + '</td>'
-        + '<td class="ls-ic"><svg viewBox="0 0 24 24" width="20" height="20"' + (iconCol ? ' style="color:' + iconCol + '"' : '') + '>' + (SYM[r.type] || SYM.box) + '</svg></td>'
+        + '<td class="ls-ic"><span class="ls-icbtn" data-act="goto-obj" data-node="' + esc(r.node) + '" data-obj="' + esc(r.oid) + '" title="Im Editor öffnen (Metatags)"><svg viewBox="0 0 24 24" width="20" height="20"' + (iconCol ? ' style="color:' + iconCol + '"' : '') + '>' + (SYM[r.type] || SYM.box) + '</svg></span></td>'
         + '<td>' + esc(LBL[r.type] || r.type) + '</td><td class="ls-pt">' + esc(r.name) + '</td>'
         + '<td>' + safeCell + '</td><td class="ls-tech">' + techCell + '</td></tr>';
     }).join('');
     return '<div class="ls-head">Roboter · Safe &amp; Technologie <span class="ls-sub">' + rows.length + ' Objekt' + (rows.length !== 1 ? 'e' : '') + '</span></div>'
       + (summary ? '<div class="ls-chips">' + summary + '</div>' : '')
       + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Icon</th><th>Typ</th><th>Bezeichnung</th><th>Safe-Funktion</th><th>Technologie</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
+
+  // Aus dem Linien-Dashboard direkt ins Layout des Objekts springen und dessen Metatags öffnen.
+  async function gotoObject(nodeId, objId) {
+    const n = findNode(nodeId); if (!n) return;
+    state.selected = nodeId; state.confirmDelete = null;
+    await openAnlage(n);
+    if (!state.detail || !state.detail.objects) { renderTree(); return; }
+    const o = state.detail.objects.find((x) => x.id === objId);
+    if (o && o.layerId) state.activeLayer = o.layerId;
+    await openEditor();
+    if (o) openTagModal(objId);
+    renderTree();
   }
 
   /* -------- Detailansicht (Schritt 2) -------- */
@@ -647,6 +660,7 @@
     else if (act === 'journal-add') { addJournalEntry(); }
     else if (act === 'open-editor') { openEditor(); }
     else if (act === 'open-station') { selectNode(el.getAttribute('data-id')); }
+    else if (act === 'goto-obj') { e.stopPropagation(); gotoObject(el.getAttribute('data-node'), el.getAttribute('data-obj')); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
     else if (act === 'editor-upload') { triggerUpload(); }
