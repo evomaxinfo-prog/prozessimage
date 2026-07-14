@@ -24,7 +24,7 @@
   const state = {
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, confirmDelete: null, user: null,
-    drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, zoneDrag: null, flowType: 0, flowLegend: true,
+    drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, selectedObj: null, zoneDrag: null, flowType: 0, flowLegend: true,
     collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false, protect: {} },
     geomPending: {},
   };
@@ -1084,7 +1084,7 @@ const STATE_ICONS = {
       const isProc = /^ptk_/.test(o.symbolType);
       const fgAssigned = isProc && (o.metatags || []).some((m) => m.label === 'Funktionsgruppen' && m.value && String(m.value).trim());
       const chips = o.metatags.filter((m) => !isProc || (m.position || 0) <= 2).map((m) => m.value).filter(Boolean);
-      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
+      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym"><svg width="26" height="26" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg></span>'
         + (chips.length ? '<div class="ptags">' + chips.map((t) => '<span class="ptag">' + esc(t) + '</span>').join('') + '</div>' : '')
@@ -1149,11 +1149,14 @@ const STATE_ICONS = {
 
   function zoneOverlaySvg(visible) {
     const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'fg_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
+    const hlFg = highlightedFgZoneId();
     const polys = zones.map((z) => {
       const pts = z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' ');
       const sel = state.selectedZone === z.id;
-      const col = esc(zoneColor(z));
-      return '<polygon id="zone-poly-' + z.id + '" points="' + pts + '" fill="' + col + '" fill-opacity="0.13" stroke="' + col + '" stroke-width="' + (sel ? 2.4 : 1.6) + '" ' + (sel ? 'stroke-dasharray="4 3" ' : '') + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
+      const hl = z.id === hlFg;
+      const col = hl ? '#16A34A' : esc(zoneColor(z));
+      const sw = hl ? 3.4 : (sel ? 2.4 : 1.6);
+      return '<polygon id="zone-poly-' + z.id + '" points="' + pts + '" fill="' + col + '" fill-opacity="' + (hl ? '0.22' : '0.13') + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : (sel ? 'stroke-dasharray="4 3" ' : '')) + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
     }).join('');
     const ar = docAspect();
     const routes = (state.detail.objects || []).filter((o) => o.symbolType === 'mf_route' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
@@ -1517,8 +1520,14 @@ const STATE_ICONS = {
     if (!dragMove) return;
     const dm = dragMove; dragMove = null;
     if (dm.el) dm.el.style.cursor = '';
+    const clicked = (state.detail.objects || []).find((x) => x.id === dm.oid);
+    let selRender = false;
+    // Prozesstyp anklicken/verschieben -> auswählen, damit die zugeordnete Funktionsgruppe hervorgehoben wird.
+    if (clicked && /^ptk_/.test(clicked.symbolType)) {
+      if (state.selectedObj !== dm.oid) { state.selectedObj = dm.oid; selRender = true; }
+    } else if (state.selectedObj) { state.selectedObj = null; selRender = true; }
     if (dm.moved && dm.nx != null) {
-      const o = (state.detail.objects || []).find((x) => x.id === dm.oid);
+      const o = clicked;
       if (o) {
         o.x = dm.nx; o.y = dm.ny;
         protectObj(o.id); try { await Api.updateObject(o.id, { x: dm.nx, y: dm.ny }); } catch (e) { toast('Verschieben nicht gespeichert'); }
@@ -1534,9 +1543,10 @@ const STATE_ICONS = {
             toast(o.name + ' → Funktionsgruppe „' + fg + '" zugeordnet'); fgChanged = true;
           }
         }
-        if (fgChanged || techInfo(o)) renderEditor();
+        if (fgChanged || techInfo(o)) selRender = true;
       }
     }
+    if (selRender) renderEditor();
   }
 
   const ROBOT_RISK = ['CK (Hohes Risiko)', 'K (Hohes Risiko, nachbar SB)', 'C (Geringes Risiko)', 'BS (Bedienerschutz)', 'T (sichere Werkzeugumschaltung)', 'Kein Risiko'];
@@ -1858,8 +1868,9 @@ const STATE_ICONS = {
           // Jedes Ziehen verschiebt direkt; ein reiner Klick (keine Bewegung) wählt nur aus.
           state.zoneDrag = { type: 'move', id: z.id, sx: x, sy: y, moved: false, orig: z.points.map((p) => ({ x: p.x, y: p.y })) };
           try { doc.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
-        } else if (state.selectedZone) {
-          state.selectedZone = null; renderEditor();
+          if (state.selectedObj) { state.selectedObj = null; renderEditor(); }
+        } else if (state.selectedZone || state.selectedObj) {
+          state.selectedZone = null; state.selectedObj = null; renderEditor();
         }
       }
     }
@@ -1906,6 +1917,17 @@ const STATE_ICONS = {
     return null;
   }
   function detectFgName(x, y) { const z = fgZoneAt(x, y); return z ? fgName(z) : ''; }
+  // fg_zone-ID, die hervorgehoben werden soll, wenn ein zugeordneter Prozesstyp ausgewählt ist.
+  function highlightedFgZoneId() {
+    if (!state.selectedObj) return null;
+    const o = (state.detail && state.detail.objects || []).find((x) => x.id === state.selectedObj);
+    if (!o || !/^ptk_/.test(o.symbolType)) return null;
+    const mt = (o.metatags || []).find((m) => m.label === 'Funktionsgruppen');
+    const fgv = mt && mt.value && String(mt.value).trim();
+    if (!fgv) return null;
+    const z = (state.detail.objects || []).find((x) => x.symbolType === 'fg_zone' && fgName(x) === fgv);
+    return z ? z.id : null;
+  }
   function zoneAt(x, y) {
     const visible = visibleMap();
     const shapes = (state.detail.objects || []).filter((o) => isShape(o) && o.points && visible[o.layerId] !== false);
