@@ -444,10 +444,11 @@
     const summary = Object.keys(LBL).filter((k) => cnt[k]).map((k) => '<span class="ls-chip"><svg viewBox="0 0 24 24" width="14" height="14">' + (SYM[k] || SYM.box) + '</svg>' + cnt[k] + '× ' + LBL[k] + '</span>').join('');
     const body = rows.map((r) => {
       const sc = ROBOT_RISK_COLOR[r.safe];
+      const iconCol = (r.type === 'robot' && sc) ? sc : '';
       const safeCell = r.safe ? '<span class="ls-safe">' + (sc ? '<i style="background:' + sc + '"></i>' : '') + esc(r.safe) + '</span>' : '<span class="ls-dash">—</span>';
       const techCell = r.tech ? esc(r.tech) : '<span class="ls-dash">—</span>';
       return '<tr><td class="ls-st">' + esc(r.st) + '</td>'
-        + '<td class="ls-ic"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[r.type] || SYM.box) + '</svg></td>'
+        + '<td class="ls-ic"><svg viewBox="0 0 24 24" width="20" height="20"' + (iconCol ? ' style="color:' + iconCol + '"' : '') + '>' + (SYM[r.type] || SYM.box) + '</svg></td>'
         + '<td>' + esc(LBL[r.type] || r.type) + '</td><td class="ls-pt">' + esc(r.name) + '</td>'
         + '<td>' + safeCell + '</td><td class="ls-tech">' + techCell + '</td></tr>';
     }).join('');
