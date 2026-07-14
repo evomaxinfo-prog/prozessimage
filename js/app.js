@@ -1082,8 +1082,9 @@ const STATE_ICONS = {
     const visible = visibleMap();
     const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
       const isProc = /^ptk_/.test(o.symbolType);
+      const fgAssigned = isProc && (o.metatags || []).some((m) => m.label === 'Funktionsgruppen' && m.value && String(m.value).trim());
       const chips = o.metatags.filter((m) => !isProc || (m.position || 0) <= 2).map((m) => m.value).filter(Boolean);
-      return '<div class="placed" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
+      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym"><svg width="26" height="26" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg></span>'
         + (chips.length ? '<div class="ptags">' + chips.map((t) => '<span class="ptag">' + esc(t) + '</span>').join('') + '</div>' : '')
