@@ -448,37 +448,69 @@
     if (nm === 'Materialfluss') map.mf_route = 'Förderweg';
     return map;
   }
-  // KPI-Vorschlag je Ebene.
+  // KPI-Vorschlag je Ebene (erweitert).
   function layerKpis(nm, a, ptkRows, roboRows) {
-    const chips = [];
+    const ns = a.stations.size || 1;
+    const avg = Math.round((a.objects / ns) * 10) / 10;
     const labels = symLabelsFor(nm);
-    Object.keys(a.syms).forEach((st) => {
-      const lbl = labels[st] || (/^ptk_/.test(st) ? 'Prozesstyp' : st);
-      chips.push({ val: a.syms[st], label: lbl });
-    });
-    // Ebenen-spezifische Zusatz-Kennzahlen
+    const symChips = Object.keys(a.syms).sort((x, y) => a.syms[y] - a.syms[x]).map((st) => ({ val: a.syms[st], label: labels[st] || (/^ptk_/.test(st) ? 'Prozesstyp' : st) }));
     if (nm === 'Prozesstypen') {
       const zug = ptkRows.filter((r) => r.fg).length;
       const komplett = ptkRows.filter((r) => r.total > 0 && r.filled >= r.total && r.fg).length;
       const offen = ptkRows.length - komplett;
-      chips.length = 0;
-      chips.push({ val: ptkRows.length, label: 'Prozesstypen' });
-      chips.push({ val: zug, label: 'einer FG zugeordnet', tone: 'ok' });
-      chips.push({ val: ptkRows.length - zug, label: 'ohne FG', tone: (ptkRows.length - zug) ? 'warn' : '' });
-      chips.push({ val: komplett, label: 'Pflichtfelder vollständig', tone: 'ok' });
-      chips.push({ val: offen, label: 'offen', tone: offen ? 'warn' : '' });
-    } else if (nm === 'Saferobot / Technologie') {
-      const robs = roboRows.filter((r) => r.type === 'robot');
-      const risk = (v) => robs.filter((r) => ROBOT_RISK_COLOR[r.safe] === v).length;
-      const techs = new Set(robs.map((r) => r.tech).filter(Boolean));
-      chips.push({ val: robs.filter((r) => ['#DC2626', '#EA580C'].indexOf(ROBOT_RISK_COLOR[r.safe]) >= 0).length, label: 'hohes Risiko', tone: 'danger' });
-      chips.push({ val: robs.filter((r) => ROBOT_RISK_COLOR[r.safe] === '#16A34A').length, label: 'kein Risiko', tone: 'ok' });
-      chips.push({ val: techs.size, label: 'Technologien' });
-    } else if (nm === 'Funktionsgruppen') {
-      const zug = ptkRows.filter((r) => r.fg).length;
-      chips.push({ val: zug, label: 'zugeordnete Prozesstypen', tone: 'ok' });
+      const sumT = ptkRows.reduce((s, r) => s + r.total, 0), sumF = ptkRows.reduce((s, r) => s + r.filled, 0);
+      const rate = sumT ? Math.round(100 * sumF / sumT) : 100;
+      const typen = new Set(ptkRows.map((r) => r.sym)).size;
+      return [
+        { val: ptkRows.length, label: 'Prozesstypen' },
+        { val: typen, label: 'verschiedene Typen' },
+        { val: avg, label: 'Ø je Station' },
+        { val: zug, label: 'einer FG zugeordnet', tone: 'ok' },
+        { val: ptkRows.length - zug, label: 'ohne FG', tone: (ptkRows.length - zug) ? 'warn' : '' },
+        { val: komplett, label: 'Pflichtfelder vollständig', tone: 'ok' },
+        { val: offen, label: 'offen', tone: offen ? 'warn' : '' },
+        { val: rate + '%', label: 'Pflichtfelder ausgefüllt', tone: rate >= 100 ? 'ok' : (rate < 50 ? 'warn' : '') },
+      ];
     }
-    return chips;
+    if (nm === 'Saferobot / Technologie') {
+      const robs = roboRows.filter((r) => r.type === 'robot');
+      const byCol = (cols) => robs.filter((r) => cols.indexOf(ROBOT_RISK_COLOR[r.safe]) >= 0).length;
+      const techs = new Set(robs.map((r) => r.tech).filter(Boolean));
+      const unbew = robs.filter((r) => !r.safe).length;
+      const out = symChips.concat([
+        { val: byCol(['#DC2626', '#EA580C']), label: 'hohes Risiko', tone: 'danger' },
+        { val: byCol(['#CA8A04']), label: 'geringes Risiko', tone: 'warn' },
+        { val: byCol(['#2563EB']), label: 'Bedienerschutz' },
+        { val: byCol(['#16A34A']), label: 'kein Risiko', tone: 'ok' },
+      ]);
+      if (unbew) out.push({ val: unbew, label: 'ohne Safe-Funktion', tone: 'warn' });
+      out.push({ val: techs.size, label: 'Technologien' });
+      return out;
+    }
+    if (nm === 'Funktionsgruppen') {
+      const fgCount = a.syms.fg_zone || 0;
+      const zug = ptkRows.filter((r) => r.fg).length;
+      const out = symChips.concat([{ val: zug, label: 'zugeordnete Prozesstypen', tone: 'ok' }]);
+      if (fgCount) out.push({ val: Math.round((zug / fgCount) * 10) / 10, label: 'Ø Prozesstypen je FG' });
+      out.push({ val: avg, label: 'Ø je Station' });
+      return out;
+    }
+    if (nm === 'Materialfluss') {
+      const routes = a.syms.mf_route || 0; const src = a.syms.src || 0; const snk = a.syms.snk || 0;
+      const out = symChips.slice();
+      if (routes) out.push({ val: routes, label: 'Förderwege' });
+      if (src || snk) out.push({ val: src + snk, label: 'Quellen + Senken' });
+      out.push({ val: avg, label: 'Ø je Station' });
+      return out;
+    }
+    if (nm === 'Steuerungstechnik') {
+      const sb = a.syms.sb_zone || 0;
+      const out = symChips.slice();
+      if (sb) out.push({ val: sb, label: 'Schutzbereiche', tone: 'ok' });
+      out.push({ val: avg, label: 'Ø je Station' });
+      return out;
+    }
+    return symChips.concat([{ val: avg, label: 'Ø je Station' }]);
   }
   function panelHtml(nm, a, ptkRows, roboRows) {
     const col = a.color || '#8FA3B0'; const ns = a.stations.size;
