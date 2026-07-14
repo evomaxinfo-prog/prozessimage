@@ -372,10 +372,8 @@
       + '<div class="stat"><div class="k">…</div><div class="l">Dokumentiert</div></div></div>'
       + (stations.length ? '<div class="line-grid">' + stations.map(skel).join('') + '</div>'
         : '<div class="pad" style="color:var(--muted)">Keine Stationen unter dieser Linie.</div>')
-      + '<div class="ls-section-title" id="linieEbTitle" style="display:none">Ebenen <span>aufgeteilt nach Dokumentations-Ebene</span></div>'
-      + '<div id="linieLayers" class="line-sec"></div>'
-      + '<div id="linieStatus" class="line-sec"></div>'
-      + '<div id="linieRobots" class="line-sec"></div>'
+      + '<div class="ls-section-title" id="linieEbTitle" style="display:none">Ebenen <span>aufgeteilt nach Dokumentations-Ebene · je Ebene ein Folder</span></div>'
+      + '<div id="linieFolders" class="line-sec"></div>'
       + '</div>';
     if (!stations.length) return;
     let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {};
@@ -403,12 +401,13 @@
         const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
         const stName = full.anlagenname || n.name;
         (full.layers || []).forEach((l) => {
-          if (!layerAgg[l.name]) layerAgg[l.name] = { objects: 0, stations: new Set(), color: l.color, code: l.code };
+          if (!layerAgg[l.name]) layerAgg[l.name] = { objects: 0, stations: new Set(), color: l.color, code: l.code, syms: {} };
           layerAgg[l.name].stations.add(n.id);
           if (l.color && !layerAgg[l.name].color) layerAgg[l.name].color = l.color;
         });
         (full.objects || []).forEach((o) => {
-          const ln = lname[o.layerId]; if (ln && layerAgg[ln]) layerAgg[ln].objects++;
+          const ln = lname[o.layerId];
+          if (ln && layerAgg[ln]) { layerAgg[ln].objects++; layerAgg[ln].syms[o.symbolType] = (layerAgg[ln].syms[o.symbolType] || 0) + 1; }
           if (/^ptk_/.test(o.symbolType)) {
             const mt = o.metatags || [];
             const val = (lbl) => (mt.find((x) => x.label === lbl) || {}).value || '';
@@ -432,24 +431,77 @@
       + '<div class="stat"><div class="k">' + sps + '</div><div class="l">SPS gesamt</div></div>'
       + '<div class="stat"><div class="k">' + objs + '</div><div class="l">Objekte</div></div>'
       + '<div class="stat"><div class="k">' + Math.round(100 * docn / stations.length) + '%</div><div class="l">Dokumentiert</div></div>';
-    const es = $('linieStatus'); if (es) es.innerHTML = linieStatusHtml(ptkRows);
-    const er = $('linieRobots'); if (er) er.innerHTML = linieRobotsHtml(roboRows);
-    const el2 = $('linieLayers'); if (el2) el2.innerHTML = linieLayersHtml(layerAgg);
-    const ebT = $('linieEbTitle'); if (ebT) ebT.style.display = Object.keys(layerAgg).length ? '' : 'none';
+    // Ebenen als Folder: Daten merken, Auf/Zu-Status je Ebene (Standard: Ebenen mit Objekten offen)
+    const names = Object.keys(layerAgg);
+    if (!state.linieOpenLayers) state.linieOpenLayers = new Set();
+    state.linieOpenLayers = new Set(names.filter((nm) => layerAgg[nm].objects > 0));
+    state.linieData = { agg: layerAgg, ptkRows: ptkRows, roboRows: roboRows };
+    const ebT = $('linieEbTitle'); if (ebT) ebT.style.display = names.length ? '' : 'none';
+    renderLinieFolders();
   }
-  // Ebenen-Übersicht: Objektanzahl je Dokumentations-Ebene über die ganze Linie.
-  function linieLayersHtml(agg) {
-    const order = ['Materialfluss', 'Funktionsgruppen', 'Steuerungstechnik', 'Saferobot / Technologie', 'Antriebstechnik / Ident', 'Not-Halt', 'Sicherheitslayout', 'Prozesstypen'];
-    const names = Object.keys(agg).sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
-    if (!names.length) return '';
-    const tiles = names.map((nm) => {
-      const a = agg[nm]; const col = a.color || '#8FA3B0'; const ns = a.stations.size;
-      return '<div class="lay-tile" style="--lc:' + col + '">'
-        + '<div class="lay-top"><span class="lay-dot" style="background:' + col + '"></span><span class="lay-name">' + esc(nm) + '</span>' + (a.code ? '<span class="lay-code">' + esc(a.code) + '</span>' : '') + '</div>'
-        + '<div class="lay-num">' + a.objects + '</div>'
-        + '<div class="lay-sub">Objekte · ' + ns + ' Station' + (ns !== 1 ? 'en' : '') + '</div></div>';
-    }).join('');
-    return '<div class="ls-head">Ebenen-Übersicht <span class="ls-sub">' + names.length + ' Ebene' + (names.length !== 1 ? 'n' : '') + ' auf der Linie</span></div><div class="lay-grid">' + tiles + '</div>';
+  const LAYER_ORDER = ['Materialfluss', 'Funktionsgruppen', 'Steuerungstechnik', 'Saferobot / Technologie', 'Antriebstechnik / Ident', 'Not-Halt', 'Sicherheitslayout', 'Prozesstypen'];
+  // symbolType -> Anzeigename je Ebene (aus der Palette; Zonen/Förderwege/Prozesstypen gesondert).
+  function symLabelsFor(nm) {
+    const map = {};
+    const meta = LAYER_META[nm];
+    if (meta && meta.palette) meta.palette.forEach((p) => { let st = p[1]; if (st === 'zone') st = (nm === 'Funktionsgruppen') ? 'fg_zone' : 'sb_zone'; map[st] = p[0]; });
+    if (nm === 'Materialfluss') map.mf_route = 'Förderweg';
+    return map;
+  }
+  // KPI-Vorschlag je Ebene.
+  function layerKpis(nm, a, ptkRows, roboRows) {
+    const chips = [];
+    const labels = symLabelsFor(nm);
+    Object.keys(a.syms).forEach((st) => {
+      const lbl = labels[st] || (/^ptk_/.test(st) ? 'Prozesstyp' : st);
+      chips.push({ val: a.syms[st], label: lbl });
+    });
+    // Ebenen-spezifische Zusatz-Kennzahlen
+    if (nm === 'Prozesstypen') {
+      const zug = ptkRows.filter((r) => r.fg).length;
+      const komplett = ptkRows.filter((r) => r.total > 0 && r.filled >= r.total && r.fg).length;
+      const offen = ptkRows.length - komplett;
+      chips.length = 0;
+      chips.push({ val: ptkRows.length, label: 'Prozesstypen' });
+      chips.push({ val: zug, label: 'einer FG zugeordnet', tone: 'ok' });
+      chips.push({ val: ptkRows.length - zug, label: 'ohne FG', tone: (ptkRows.length - zug) ? 'warn' : '' });
+      chips.push({ val: komplett, label: 'Pflichtfelder vollständig', tone: 'ok' });
+      chips.push({ val: offen, label: 'offen', tone: offen ? 'warn' : '' });
+    } else if (nm === 'Saferobot / Technologie') {
+      const robs = roboRows.filter((r) => r.type === 'robot');
+      const risk = (v) => robs.filter((r) => ROBOT_RISK_COLOR[r.safe] === v).length;
+      const techs = new Set(robs.map((r) => r.tech).filter(Boolean));
+      chips.push({ val: robs.filter((r) => ['#DC2626', '#EA580C'].indexOf(ROBOT_RISK_COLOR[r.safe]) >= 0).length, label: 'hohes Risiko', tone: 'danger' });
+      chips.push({ val: robs.filter((r) => ROBOT_RISK_COLOR[r.safe] === '#16A34A').length, label: 'kein Risiko', tone: 'ok' });
+      chips.push({ val: techs.size, label: 'Technologien' });
+    } else if (nm === 'Funktionsgruppen') {
+      const zug = ptkRows.filter((r) => r.fg).length;
+      chips.push({ val: zug, label: 'zugeordnete Prozesstypen', tone: 'ok' });
+    }
+    return chips;
+  }
+  function folderHtml(nm, a, ptkRows, roboRows) {
+    const open = state.linieOpenLayers.has(nm);
+    const col = a.color || '#8FA3B0';
+    const ns = a.stations.size;
+    const chips = layerKpis(nm, a, ptkRows, roboRows).map((k) => '<span class="lk-chip ' + (k.tone || '') + '"><b>' + k.val + '</b> ' + esc(k.label) + '</span>').join('');
+    let detail = '';
+    if (nm === 'Prozesstypen') detail = linieStatusHtml(ptkRows);
+    else if (nm === 'Saferobot / Technologie') detail = linieRobotsHtml(roboRows);
+    return '<div class="lay-folder ' + (open ? 'open' : '') + '" style="--lc:' + col + '">'
+      + '<div class="lay-fhead" data-act="toggle-layer" data-layer="' + esc(nm) + '">'
+      + '<svg class="lf-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M9 6l6 6-6 6"/></svg>'
+      + '<span class="lay-dot" style="background:' + col + '"></span>'
+      + '<span class="lay-name">' + esc(nm) + '</span>'
+      + (a.code ? '<span class="lay-code">' + esc(a.code) + '</span>' : '')
+      + '<span class="lf-meta">' + a.objects + ' Objekt' + (a.objects !== 1 ? 'e' : '') + ' · ' + ns + ' Station' + (ns !== 1 ? 'en' : '') + '</span></div>'
+      + '<div class="lay-fbody">' + (chips ? '<div class="lk-chips">' + chips + '</div>' : '<div class="lk-empty">Keine Objekte auf dieser Ebene.</div>') + detail + '</div></div>';
+  }
+  function renderLinieFolders() {
+    const host = $('linieFolders'); if (!host || !state.linieData) return;
+    const d = state.linieData; const agg = d.agg;
+    const names = Object.keys(agg).sort((a, b) => { const ia = LAYER_ORDER.indexOf(a), ib = LAYER_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
+    host.innerHTML = names.map((nm) => folderHtml(nm, agg[nm], d.ptkRows, d.roboRows)).join('');
   }
   // Prozesstyp-Statusbericht (Zuordnung zur Funktionsgruppe + Pflichtfeld-Vollständigkeit) – aggregiert über die Linie.
   function linieStatusHtml(rows) {
@@ -686,6 +738,7 @@
     else if (act === 'open-editor') { openEditor(); }
     else if (act === 'open-station') { selectNode(el.getAttribute('data-id')); }
     else if (act === 'goto-obj') { e.stopPropagation(); gotoObject(el.getAttribute('data-node'), el.getAttribute('data-obj')); }
+    else if (act === 'toggle-layer') { const nm = el.getAttribute('data-layer'); if (state.linieOpenLayers.has(nm)) state.linieOpenLayers.delete(nm); else state.linieOpenLayers.add(nm); renderLinieFolders(); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
     else if (act === 'editor-upload') { triggerUpload(); }
