@@ -365,11 +365,11 @@
     $('content').innerHTML = breadcrumb(node.id)
       + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1><p>Linien-Dashboard</p></div></div>'
       + '<div class="ls-section-title">Übersicht <span>allgemeine Themen</span></div>'
-      + '<div class="zone-stats" id="linieStats">'
-      + '<div class="stat b"><div class="k">' + stations.length + '</div><div class="l">Stationen</div></div>'
-      + '<div class="stat"><div class="k">…</div><div class="l">SPS gesamt</div></div>'
-      + '<div class="stat"><div class="k">…</div><div class="l">Objekte</div></div>'
-      + '<div class="stat"><div class="k">…</div><div class="l">Dokumentiert</div></div></div>'
+      + '<div class="zone-stats rich" id="linieStats">'
+      + '<div class="stat b"><span class="stat-ic">' + KPI_ICONS.stations + '</span><span class="stat-txt"><span class="k">' + stations.length + '</span><span class="l">Stationen</span></span></div>'
+      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.sps + '</span><span class="stat-txt"><span class="k">…</span><span class="l">SPS gesamt</span></span></div>'
+      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.objects + '</span><span class="stat-txt"><span class="k">…</span><span class="l">Objekte</span></span></div>'
+      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.doc + '</span><span class="stat-txt"><span class="k">…</span><span class="l">Dokumentiert</span></span></div></div>'
       + (stations.length ? '<div class="line-grid">' + stations.map(skel).join('') + '</div>'
         : '<div class="pad" style="color:var(--muted)">Keine Stationen unter dieser Linie.</div>')
       + '<div class="ls-section-title" id="linieEbTitle" style="display:none">Ebenen <span>aufgeteilt nach Dokumentations-Ebene · je Ebene ein Folder</span></div>'
@@ -383,7 +383,7 @@
         const nP = (full.plcs || []).length, nO = (full.objects || []).length, nL = (full.layers || []).length;
         const isDoc = nO > 0 || !!full.hasLayout;
         sps += nP; objs += nO; if (isDoc) docn++;
-        const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span><b>' + nP + '</b> SPS</span><span><b>' + nO + '</b> Objekte</span><span><b>' + nL + '</b> Ebenen</span>';
+        const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span><i class="lc-mi">' + KPI_ICONS.sps + '</i><b>' + nP + '</b> SPS</span><span><i class="lc-mi">' + KPI_ICONS.objects + '</i><b>' + nO + '</b> Objekte</span><span><i class="lc-mi">' + KPI_ICONS.layers + '</i><b>' + nL + '</b> Ebenen</span>';
         // Editor-Vorschau: Layout-Bild (falls vorhanden) + platzierte Objekte/Zonen als Mini-Overlay
         let layoutUrl = null, aspect = 760 / 520;
         if (full.hasLayout) {
@@ -427,10 +427,10 @@
       }
     }));
     const st = $('linieStats');
-    if (st) st.innerHTML = '<div class="stat b"><div class="k">' + stations.length + '</div><div class="l">Stationen</div></div>'
-      + '<div class="stat"><div class="k">' + sps + '</div><div class="l">SPS gesamt</div></div>'
-      + '<div class="stat"><div class="k">' + objs + '</div><div class="l">Objekte</div></div>'
-      + '<div class="stat"><div class="k">' + Math.round(100 * docn / stations.length) + '%</div><div class="l">Dokumentiert</div></div>';
+    if (st) st.innerHTML = '<div class="stat b"><span class="stat-ic">' + KPI_ICONS.stations + '</span><span class="stat-txt"><span class="k">' + stations.length + '</span><span class="l">Stationen</span></span></div>'
+      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.sps + '</span><span class="stat-txt"><span class="k">' + sps + '</span><span class="l">SPS gesamt</span></span></div>'
+      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.objects + '</span><span class="stat-txt"><span class="k">' + objs + '</span><span class="l">Objekte</span></span></div>'
+      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.doc + '</span><span class="stat-txt"><span class="k">' + Math.round(100 * docn / stations.length) + '%</span><span class="l">Dokumentiert</span></span></div>';
     // Ebenen als horizontale Ordner (Tabs): Daten merken, aktive Ebene wählen
     const names = Object.keys(layerAgg);
     const withObj = names.filter((nm) => layerAgg[nm].objects > 0).sort((a, b) => { const ia = LAYER_ORDER.indexOf(a), ib = LAYER_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
@@ -440,6 +440,15 @@
     renderLinieFolders();
   }
   const LAYER_ORDER = ['Materialfluss', 'Funktionsgruppen', 'Steuerungstechnik', 'Saferobot / Technologie', 'Antriebstechnik / Ident', 'Not-Halt', 'Sicherheitslayout', 'Prozesstypen'];
+  const KPI_ICONS = {
+    stations: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="9" width="7" height="12" rx="1"/><rect x="14" y="4" width="7" height="17" rx="1"/><path d="M2 21h20"/></svg>',
+    sps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="6" y="6" width="12" height="12" rx="1.5"/><path d="M9.5 2v3M14.5 2v3M9.5 19v3M14.5 19v3M2 9.5h3M2 14.5h3M19 9.5h3M19 14.5h3"/></svg>',
+    objects: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>',
+    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
+    layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5M3 16l9 5 9-5"/></svg>',
+  };
+  const LAYER_ICON = { 'Materialfluss': 'xfer', 'Funktionsgruppen': 'cell', 'Steuerungstechnik': 'cab', 'Saferobot / Technologie': 'robot', 'Antriebstechnik / Ident': 'motor', 'Not-Halt': 'estop', 'Sicherheitslayout': 'door', 'Prozesstypen': 'box' };
+  function layerIconSvg(nm, px) { return '<svg viewBox="0 0 24 24" width="' + px + '" height="' + px + '">' + (SYM[LAYER_ICON[nm]] || SYM.box) + '</svg>'; }
   // symbolType -> Anzeigename je Ebene (aus der Palette; Zonen/Förderwege/Prozesstypen gesondert).
   function symLabelsFor(nm) {
     const map = {};
@@ -518,7 +527,7 @@
     let detail = '';
     if (nm === 'Prozesstypen') detail = linieStatusHtml(ptkRows);
     else if (nm === 'Saferobot / Technologie') detail = linieRobotsHtml(roboRows);
-    return '<div class="lp-head" style="--lc:' + col + '"><span class="lay-dot" style="background:' + col + '"></span><b>' + esc(nm) + '</b>'
+    return '<div class="lp-head" style="--lc:' + col + '"><span class="lp-ic" style="color:' + col + '">' + layerIconSvg(nm, 22) + '</span><b>' + esc(nm) + '</b>'
       + (a.code ? '<span class="lay-code">' + esc(a.code) + '</span>' : '')
       + '<span class="lf-meta">' + a.objects + ' Objekt' + (a.objects !== 1 ? 'e' : '') + ' · ' + ns + ' Station' + (ns !== 1 ? 'en' : '') + '</span></div>'
       + (chips ? '<div class="lk-chips">' + chips + '</div>' : '<div class="lk-empty">Keine Objekte auf dieser Ebene.</div>') + detail;
@@ -532,7 +541,7 @@
     const tabs = names.map((nm) => {
       const a = agg[nm]; const active = nm === state.linieActiveLayer; const col = a.color || '#8FA3B0';
       return '<button class="lay-tab ' + (active ? 'active' : '') + (a.objects ? '' : ' empty') + '" data-act="pick-layer" data-layer="' + esc(nm) + '" style="--lc:' + col + '">'
-        + '<span class="lay-dot" style="background:' + col + '"></span>'
+        + '<span class="lt-ic" style="color:' + col + '">' + layerIconSvg(nm, 16) + '</span>'
         + '<span class="lt-name">' + esc(nm) + '</span>'
         + '<span class="lt-n">' + a.objects + '</span></button>';
     }).join('');
