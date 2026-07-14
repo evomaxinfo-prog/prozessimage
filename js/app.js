@@ -1404,7 +1404,9 @@ const STATE_ICONS = {
       const pt = processTypeByName(name);
       if (pt) {
         try {
+          const fg = detectFgName(x, y);
           const tags = [
+            { position: 0, label: 'Funktionsgruppen', value: fg },
             { position: 1, label: 'Prozesstyp', value: pt.ptyp },
             { position: 2, label: 'Hardware · Art', value: pt.hwart },
           ];
@@ -1412,10 +1414,12 @@ const STATE_ICONS = {
           ptStateList(pt).forEach((s) => { tags.push({ position: pos++, label: s.kind + ' – ' + s.name, value: '' }); });
           const upd = await Api.setMetatags(obj.id, tags);
           obj.metatags = (upd && upd.metatags) || obj.metatags;
-        } catch (e2) { /* Metatags optional */ }
-      }
+          if (fg) toast(name + ' → Funktionsgruppe „' + fg + '" zugeordnet');
+          else toast(name + ' platziert');
+        } catch (e2) { toast(name + ' platziert'); }
+      } else { toast(name + ' platziert'); }
       state.detail.objects.push(obj); protectObj(obj.id);
-      toast(name + ' platziert'); renderEditor();
+      renderEditor();
     } catch (e) { toast('Platzieren fehlgeschlagen: ' + e.message); }
   }
 
@@ -1517,7 +1521,19 @@ const STATE_ICONS = {
       if (o) {
         o.x = dm.nx; o.y = dm.ny;
         protectObj(o.id); try { await Api.updateObject(o.id, { x: dm.nx, y: dm.ny }); } catch (e) { toast('Verschieben nicht gespeichert'); }
-        if (techInfo(o)) renderEditor();
+        // Prozesstyp auf eine Funktionsgruppe gezogen -> automatisch zuordnen (Metatag „Funktionsgruppen")
+        let fgChanged = false;
+        if (/^ptk_/.test(o.symbolType)) {
+          const fg = detectFgName(dm.nx, dm.ny);
+          const cur = (o.metatags || []).find((m) => m.label === 'Funktionsgruppen');
+          if (fg && (cur ? cur.value : '') !== fg) {
+            o.metatags = o.metatags || [];
+            if (cur) cur.value = fg; else o.metatags.unshift({ position: 0, label: 'Funktionsgruppen', value: fg });
+            protectObj(o.id); try { await Api.setMetatags(o.id, o.metatags); } catch (e) { /* optional */ }
+            toast(o.name + ' → Funktionsgruppe „' + fg + '" zugeordnet'); fgChanged = true;
+          }
+        }
+        if (fgChanged || techInfo(o)) renderEditor();
       }
     }
   }
@@ -1579,7 +1595,14 @@ const STATE_ICONS = {
       };
       const panelZ = sectionFor(groups[0], false) || '<div class="pt-empty">Keine Betriebszustände für diesen Prozesstyp.</div>';
       const panelM = (sectionFor(groups[1], true) + sectionFor(groups[2], true)) || '<div class="pt-empty">Keine Meldungen/Betriebsdaten für diesen Prozesstyp.</div>';
-      $('mBody').innerHTML = '<div class="pt-meta"><div class="pt-meta-row"><span>Prozesstyp</span><b>' + esc(pt.ptyp) + '</b></div>'
+      const fgVal = (o.metatags.find((m) => m.label === 'Funktionsgruppen') || {}).value || '';
+      const fgZones = (state.detail.objects || []).filter((z) => z.symbolType === 'fg_zone');
+      let fgOpts = '<option value="">— keine —</option>';
+      const fgNames = fgZones.map(fgName);
+      if (fgVal && fgNames.indexOf(fgVal) < 0) fgOpts += '<option value="' + esc(fgVal) + '" selected>' + esc(fgVal) + '</option>';
+      fgZones.forEach((z) => { const n = fgName(z); fgOpts += '<option value="' + esc(n) + '"' + (n === fgVal ? ' selected' : '') + '>' + esc(n) + '</option>'; });
+      $('mBody').innerHTML = '<div class="pt-meta"><div class="pt-meta-row"><span>Funktionsgruppe</span><select id="mFg" class="pt-fg">' + fgOpts + '</select></div>'
+        + '<div class="pt-meta-row"><span>Prozesstyp</span><b>' + esc(pt.ptyp) + '</b></div>'
         + '<div class="pt-meta-row"><span>Hardware · Art</span><b>' + esc(pt.hwart || '—') + '</b></div></div>'
         + '<div class="pt-tabs"><button class="pt-tab active" data-pttab="z">Betriebszustände</button>'
         + '<button class="pt-tab" data-pttab="m">Meldungen &amp; Betriebsdaten</button></div>'
@@ -1607,7 +1630,9 @@ const STATE_ICONS = {
     const pt = processTypeBySym(o.symbolType);
     let metatags;
     if (pt) {
+      const fgSel = $('mFg');
       metatags = [
+        { position: 0, label: 'Funktionsgruppen', value: fgSel ? fgSel.value : '' },
         { position: 1, label: 'Prozesstyp', value: pt.ptyp },
         { position: 2, label: 'Hardware · Art', value: pt.hwart },
       ];
@@ -1866,6 +1891,20 @@ const STATE_ICONS = {
     return z.color;
   }
 
+  // Name/Label einer Funktionsgruppe: erster gesetzter Metatag, sonst der Objektname.
+  function fgName(z) {
+    const tags = (z.metatags || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0));
+    const v = tags.map((t) => t.value).find((val) => val && String(val).trim());
+    return v || z.name || 'Funktionsgruppe';
+  }
+  // Funktionsgruppen-Zone, in der der Punkt (x,y) liegt (oberste), sonst null.
+  function fgZoneAt(x, y) {
+    const visible = visibleMap();
+    const zs = (state.detail.objects || []).filter((o) => o.symbolType === 'fg_zone' && o.points && o.points.length >= 3 && visible[o.layerId] !== false);
+    for (let i = zs.length - 1; i >= 0; i--) { if (pointInZone(zs[i], x, y)) return zs[i]; }
+    return null;
+  }
+  function detectFgName(x, y) { const z = fgZoneAt(x, y); return z ? fgName(z) : ''; }
   function zoneAt(x, y) {
     const visible = visibleMap();
     const shapes = (state.detail.objects || []).filter((o) => isShape(o) && o.points && visible[o.layerId] !== false);
