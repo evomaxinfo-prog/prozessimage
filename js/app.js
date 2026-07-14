@@ -250,6 +250,7 @@
     const n = findNode(id); if (!n) return;
     state.selected = id; state.confirmDelete = null;
     if (n.type === 'werk') { renderWerk(n); }
+    else if (n.type === 'linie') { renderLinie(n); }
     else if (n.type === 'anlage') { openAnlage(n); }
     else { toggleNode(id); return; }
     renderTree();
@@ -324,6 +325,51 @@
         + '<div class="stat"><div class="k">' + o.sps + '</div><div class="l">SPS gesamt</div></div>'
         + '<div class="stat"><div class="k">' + o.dokumentiertPercent + '%</div><div class="l">Dokumentiert</div></div>';
     } catch (e) { /* leer lassen */ }
+  }
+
+  /* -------- Linien-Dashboard: Übersicht aller unterlagerten Stationen -------- */
+  function collectStationNodes(node) {
+    const out = [];
+    const walk = (n) => { if (n.stationId) out.push(n); (n.children || []).forEach(walk); };
+    (node.children || []).forEach(walk);
+    return out;
+  }
+  async function renderLinie(node) {
+    const stations = collectStationNodes(node);
+    const skel = (n) => '<div class="line-card" data-act="open-station" data-id="' + n.id + '" title="Station öffnen">'
+      + '<div class="lc-thumb">' + schemaThumb() + '<span class="lc-badge" id="lcb-' + n.id + '"></span></div>'
+      + '<div class="lc-body"><div class="lc-name">' + esc(n.name) + '</div>'
+      + '<div class="lc-meta" id="lcm-' + n.id + '"><span class="lc-load">lädt …</span></div>'
+      + '<div class="lc-open">Station öffnen ›</div></div></div>';
+    $('content').innerHTML = breadcrumb(node.id)
+      + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1><p>Stationsübersicht · Dashboard</p></div></div>'
+      + '<div class="zone-stats" id="linieStats">'
+      + '<div class="stat b"><div class="k">' + stations.length + '</div><div class="l">Stationen</div></div>'
+      + '<div class="stat"><div class="k">…</div><div class="l">SPS gesamt</div></div>'
+      + '<div class="stat"><div class="k">…</div><div class="l">Objekte</div></div>'
+      + '<div class="stat"><div class="k">…</div><div class="l">Dokumentiert</div></div></div>'
+      + (stations.length ? '<div class="line-grid">' + stations.map(skel).join('') + '</div>'
+        : '<div class="pad" style="color:var(--muted)">Keine Stationen unter dieser Linie.</div>')
+      + '</div>';
+    if (!stations.length) return;
+    let sps = 0, objs = 0, docn = 0;
+    await Promise.all(stations.map(async (n) => {
+      try {
+        const full = await Api.getStationFull(n.stationId);
+        const nP = (full.plcs || []).length, nO = (full.objects || []).length, nL = (full.layers || []).length;
+        const isDoc = nO > 0 || !!full.hasLayout;
+        sps += nP; objs += nO; if (isDoc) docn++;
+        const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span><b>' + nP + '</b> SPS</span><span><b>' + nO + '</b> Objekte</span><span><b>' + nL + '</b> Ebenen</span>';
+        const bd = $('lcb-' + n.id); if (bd) { bd.textContent = isDoc ? 'Dokumentiert' : 'Offen'; bd.className = 'lc-badge ' + (isDoc ? 'doc' : 'undoc'); }
+      } catch (e) {
+        const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span class="lc-err">nicht ladbar</span>';
+      }
+    }));
+    const st = $('linieStats');
+    if (st) st.innerHTML = '<div class="stat b"><div class="k">' + stations.length + '</div><div class="l">Stationen</div></div>'
+      + '<div class="stat"><div class="k">' + sps + '</div><div class="l">SPS gesamt</div></div>'
+      + '<div class="stat"><div class="k">' + objs + '</div><div class="l">Objekte</div></div>'
+      + '<div class="stat"><div class="k">' + Math.round(100 * docn / stations.length) + '%</div><div class="l">Dokumentiert</div></div>';
   }
 
   /* -------- Detailansicht (Schritt 2) -------- */
@@ -505,6 +551,7 @@
     else if (act === 'plc-del') { const i = +el.getAttribute('data-idx'); const p = state.detailDraft.plcs[i]; if (p && p.id) state.detailDraft._deleted.push(p.id); state.detailDraft.plcs.splice(i, 1); renderDetail(); }
     else if (act === 'journal-add') { addJournalEntry(); }
     else if (act === 'open-editor') { openEditor(); }
+    else if (act === 'open-station') { selectNode(el.getAttribute('data-id')); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
     else if (act === 'editor-upload') { triggerUpload(); }
