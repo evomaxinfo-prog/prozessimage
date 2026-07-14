@@ -373,7 +373,11 @@
             const filled = pflicht.filter((x) => x.value && String(x.value).trim()).length;
             ptkRows.push({ st: stName, no: o.symbolType.replace('ptk_', ''), sym: o.symbolType, pt: val('Prozesstyp') || o.name, fg: val('Funktionsgruppen'), filled: filled, total: pflicht.length });
           }
-          if (lname[o.layerId] === 'Saferobot / Technologie') roboRows.push({ st: stName, type: o.symbolType, name: o.name });
+          if (lname[o.layerId] === 'Saferobot / Technologie') {
+            const mt2 = o.metatags || [];
+            const gv = (lbl) => (mt2.find((x) => x.label === lbl) || {}).value || '';
+            roboRows.push({ st: stName, type: o.symbolType, name: o.name, safe: gv('Safe Funktion'), tech: gv('Technologie') });
+          }
         });
       } catch (e) {
         const m = $('lcm-' + n.id); if (m) m.innerHTML = '<span class="lc-err">nicht ladbar</span>';
@@ -413,12 +417,18 @@
     rows.sort((a, b) => String(a.st).localeCompare(String(b.st)) || String(a.type).localeCompare(String(b.type)));
     const cnt = {}; rows.forEach((r) => { cnt[r.type] = (cnt[r.type] || 0) + 1; });
     const summary = Object.keys(LBL).filter((k) => cnt[k]).map((k) => '<span class="ls-chip"><svg viewBox="0 0 24 24" width="14" height="14">' + (SYM[k] || SYM.box) + '</svg>' + cnt[k] + '× ' + LBL[k] + '</span>').join('');
-    const body = rows.map((r) => '<tr><td class="ls-st">' + esc(r.st) + '</td>'
-      + '<td class="ls-ic"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[r.type] || SYM.box) + '</svg></td>'
-      + '<td>' + esc(LBL[r.type] || r.type) + '</td><td class="ls-pt">' + esc(r.name) + '</td></tr>').join('');
+    const body = rows.map((r) => {
+      const sc = ROBOT_RISK_COLOR[r.safe];
+      const safeCell = r.safe ? '<span class="ls-safe">' + (sc ? '<i style="background:' + sc + '"></i>' : '') + esc(r.safe) + '</span>' : '<span class="ls-dash">—</span>';
+      const techCell = r.tech ? esc(r.tech) : '<span class="ls-dash">—</span>';
+      return '<tr><td class="ls-st">' + esc(r.st) + '</td>'
+        + '<td class="ls-ic"><svg viewBox="0 0 24 24" width="20" height="20">' + (SYM[r.type] || SYM.box) + '</svg></td>'
+        + '<td>' + esc(LBL[r.type] || r.type) + '</td><td class="ls-pt">' + esc(r.name) + '</td>'
+        + '<td>' + safeCell + '</td><td class="ls-tech">' + techCell + '</td></tr>';
+    }).join('');
     return '<div class="ls-head">Roboter · Safe &amp; Technologie <span class="ls-sub">' + rows.length + ' Objekt' + (rows.length !== 1 ? 'e' : '') + '</span></div>'
       + (summary ? '<div class="ls-chips">' + summary + '</div>' : '')
-      + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Icon</th><th>Typ</th><th>Bezeichnung</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+      + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Icon</th><th>Typ</th><th>Bezeichnung</th><th>Safe-Funktion</th><th>Technologie</th></tr></thead><tbody>' + body + '</tbody></table></div>';
   }
 
   /* -------- Detailansicht (Schritt 2) -------- */
