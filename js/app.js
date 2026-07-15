@@ -2556,9 +2556,28 @@ const STATE_ICONS = {
       + '<div class="adm-body">' + body + '</div></div></div>';
   }
 
+  function userSortVal(u, col) {
+    if (col === 'email') return (u.email || '').toLowerCase();
+    if (col === 'group') return (u.group ? u.group.name : '').toLowerCase();
+    if (col === 'logins') return u.loginCount || 0;
+    if (col === 'status') return u.active ? 1 : 0;
+    return (u.name || '').toLowerCase();
+  }
   function renderAdminUsers(a) {
     const llFmt = (v) => { if (!v) return null; const d = new Date(v); return isNaN(d) ? null : d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
-    const rows = a.users.length ? a.users.map((u) =>
+    const us = a.userSort || (a.userSort = { col: 'name', dir: 'asc' });
+    const sorted = a.users.slice().sort((x, y) => {
+      const vx = userSortVal(x, us.col), vy = userSortVal(y, us.col);
+      const c = (typeof vx === 'number') ? (vx - vy) : String(vx).localeCompare(String(vy), 'de');
+      return us.dir === 'asc' ? c : -c;
+    });
+    const cols = [{ k: 'name', l: 'Name' }, { k: 'email', l: 'E-Mail' }, { k: 'group', l: 'Gruppe' }, { k: 'logins', l: 'Anmeldungen' }, { k: 'status', l: 'Status' }];
+    const heads = cols.map((c) => {
+      const on = us.col === c.k;
+      const arr = on ? (us.dir === 'asc' ? '▲' : '▼') : '↕';
+      return '<th class="adm-sort' + (on ? ' active' : '') + '" data-adm="sort-users" data-col="' + c.k + '">' + c.l + '<span class="adm-arr">' + arr + '</span></th>';
+    }).join('') + '<th></th>';
+    const rows = sorted.length ? sorted.map((u) =>
       '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td>'
       + '<td>' + (u.group ? '<span class="adm-gname">' + esc(u.group.name) + '</span><span class="adm-role r-' + esc(u.group.role) + '">' + esc(roleLabel(u.group.role)) + '</span>' : '—') + '</td>'
       + '<td class="adm-logins"><b>' + (u.loginCount || 0) + '</b><span class="adm-ll">' + (llFmt(u.lastLoginAt) ? 'zuletzt ' + llFmt(u.lastLoginAt) : 'noch nie') + '</span>' + (u.lastLoginIp ? '<span class="adm-ip" title="IP der letzten Anmeldung">' + esc(u.lastLoginIp) + '</span>' : '') + '</td>'
@@ -2569,7 +2588,7 @@ const STATE_ICONS = {
       + '<button class="del" data-adm="user-del" data-id="' + u.id + '" title="Löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
       + '</td></tr>').join('') : '<tr><td colspan="6" class="adm-empty">Noch keine Benutzer.</td></tr>';
     return '<div class="adm-toolbar"><button class="btn primary" data-adm="user-new">+ Benutzer hinzufügen</button></div>'
-      + '<table class="adm-table"><thead><tr><th>Name</th><th>E-Mail</th><th>Gruppe</th><th>Anmeldungen</th><th>Status</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+      + '<table class="adm-table"><thead><tr>' + heads + '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function renderUserForm(a) {
@@ -2661,6 +2680,7 @@ const STATE_ICONS = {
     else if (act === 'tab') { a.tab = el.getAttribute('data-tab'); a.userForm = a.groupForm = a.pwForm = a.layerForm = null; renderAdmin(); }
     else if (act === 'form-cancel') { a.userForm = a.groupForm = a.pwForm = a.layerForm = null; renderAdmin(); }
     else if (act === 'user-new') { a.userForm = { name: '', email: '', password: '', groupId: (a.groups[0] || {}).id || '' }; renderAdmin(); }
+    else if (act === 'sort-users') { const col = el.getAttribute('data-col'); const us = a.userSort || (a.userSort = { col: 'name', dir: 'asc' }); if (us.col === col) { us.dir = us.dir === 'asc' ? 'desc' : 'asc'; } else { us.col = col; us.dir = 'asc'; } renderAdmin(); }
     else if (act === 'user-edit') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.userForm = { id: u.id, name: u.name, email: u.email, groupId: u.group ? u.group.id : '', active: u.active }; renderAdmin(); } }
     else if (act === 'user-save') { saveUser(); }
     else if (act === 'user-pw') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.pwForm = { id: u.id, name: u.name }; renderAdmin(); } }
