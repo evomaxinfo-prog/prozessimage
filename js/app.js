@@ -631,7 +631,7 @@
     const nextT = s.idx < s.stations.length - 1 ? 'Nächste: ' + esc(s.stations[s.idx + 1].name) : 'Letzte Station';
     return '<div class="nav-ctl" title="Station innerhalb der Linie wechseln">'
       + '<button class="nav-arrow" data-act="station-prev"' + prevD + ' title="' + prevT + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>'
-      + '<span class="nav-lbl"><b>' + (s.idx + 1) + '</b> / ' + s.stations.length + ' · Station</span>'
+      + '<span class="nav-lbl">Station <b>' + (s.idx + 1) + '</b> / ' + s.stations.length + '</span>'
       + '<button class="nav-arrow" data-act="station-next"' + nextD + ' title="' + nextT + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button></div>';
   }
 
