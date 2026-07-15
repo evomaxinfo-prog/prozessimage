@@ -2560,7 +2560,7 @@ const STATE_ICONS = {
     const llFmt = (v) => { if (!v) return null; const d = new Date(v); return isNaN(d) ? null : d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
     const rows = a.users.length ? a.users.map((u) =>
       '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td>'
-      + '<td>' + (u.group ? esc(u.group.name) + ' <span class="adm-role r-' + u.group.role + '">' + roleLabel(u.group.role) + '</span>' : '—') + '</td>'
+      + '<td>' + (u.group ? '<span class="adm-gname">' + esc(u.group.name) + '</span><span class="adm-role r-' + esc(u.group.role) + '">' + esc(roleLabel(u.group.role)) + '</span>' : '—') + '</td>'
       + '<td class="adm-logins"><b>' + (u.loginCount || 0) + '</b><span class="adm-ll">' + (llFmt(u.lastLoginAt) ? 'zuletzt ' + llFmt(u.lastLoginAt) : 'noch nie') + '</span>' + (u.lastLoginIp ? '<span class="adm-ip" title="IP der letzten Anmeldung">' + esc(u.lastLoginIp) + '</span>' : '') + '</td>'
       + '<td>' + (u.active ? '<span class="adm-ok">aktiv</span>' : '<span class="adm-off">deaktiviert</span>') + '</td>'
       + '<td class="adm-actions">'
