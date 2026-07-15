@@ -1059,7 +1059,7 @@ const STATE_ICONS = {
 
   function layerById(id) { return (state.detail.layers || []).find((l) => l.id === id) || null; }
   // Rollen-/Gruppen-Sichtbarkeit: Admins sehen immer alles; sonst null = alle, oder nur die Codes in der Liste
-  function layerAllowed(code) { return state.role === 'admin' || state.role === 'werkadmin' || !state.visibleLayers || state.visibleLayers.indexOf(code) >= 0; }
+  function layerAllowed(code) { return state.role === 'admin' || !state.visibleLayers || state.visibleLayers.indexOf(code) >= 0; }
   function allowedLayers() { return (state.detail.layers || []).filter((l) => layerAllowed(l.code)); }
   // Sichtbarkeits-Map layerId -> bool (Auge-Zustand kombiniert mit Rollen-/Gruppensicht)
   function visibleMap() {
