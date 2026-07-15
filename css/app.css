@@ -470,6 +470,32 @@
   .pal-cap{display:flex;flex-direction:column;align-items:center;gap:1px;max-width:100%}
   .pal-no{font-family:var(--font-mono);font-size:9px;font-weight:600;line-height:1;letter-spacing:.4px;color:var(--lc);opacity:.9}
   .pal-nm{font-size:9.5px;line-height:1.18;color:var(--muted);max-width:100%;overflow-wrap:anywhere;hyphens:auto}
+  /* Eigene Palette-Symbole */
+  .pal-custom{margin-top:9px;padding-top:11px;border-top:1px dashed var(--border);grid-column:1 / -1}
+  .pal-custom.pal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pal-item.custom{position:relative}
+  .pal-del{position:absolute;top:-6px;right:-6px;width:19px;height:19px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--muted);font-size:13px;line-height:1;display:none;place-items:center;cursor:pointer;z-index:3;box-shadow:0 2px 6px rgba(20,40,60,.18);padding:0}
+  .pal-item.custom:hover .pal-del{display:grid}
+  .pal-del:hover{background:#fdeceb;border-color:#e6b3ad;color:#b02a1f}
+  .sym-img{object-fit:contain;border-radius:5px;display:block}
+  .p-sym .sym-img{width:26px;height:26px}
+  .pal-add{cursor:pointer;border-style:dashed!important;align-items:center;justify-content:center}
+  .pal-add:hover{background:color-mix(in srgb,var(--lc,#0065A5) 6%,#fff)}
+  .pal-add-plus{width:42px;height:42px;display:grid;place-items:center;border-radius:10px;background:var(--bg);color:var(--brand-blue);font-size:26px;font-weight:300;line-height:1}
+  /* Upload-Dialog eigenes Symbol */
+  .sym-modal{background:#fff;border:1px solid var(--border);border-radius:14px;width:400px;max-width:100%;box-shadow:0 24px 64px rgba(20,40,60,.24);overflow:hidden;animation:mUp .18s ease}
+  .sym-modal .m-head{padding:16px 18px;border-bottom:1px solid var(--border)}
+  .sym-modal .m-head h3{font-size:15px;font-weight:600}
+  .sym-modal .m-sub{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin-top:2px}
+  .sym-body{padding:16px 18px;display:flex;flex-direction:column}
+  .sym-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:2px 0 6px}
+  .sym-in{font:inherit;font-size:13px;border:1px solid var(--border-strong);border-radius:8px;padding:9px 11px;margin-bottom:14px}
+  .sym-in:focus{outline:none;border-color:var(--brand-blue)}
+  .sym-drop{display:grid;place-items:center;min-height:96px;border:2px dashed var(--border-strong);border-radius:10px;color:var(--muted);font-size:12.5px;cursor:pointer;background:var(--bg);padding:10px;text-align:center}
+  .sym-drop:hover{border-color:var(--brand-blue);color:var(--brand-blue)}
+  .sym-drop img{max-width:90px;max-height:90px;object-fit:contain}
+  .sym-msg{min-height:18px;font-size:12px;color:var(--muted);margin-top:10px}
+  .sym-modal .m-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--border);background:var(--panel)}
   /* Eigene (hochgeladene) Palette-Symbole */
   .sym-img{object-fit:contain;border-radius:6px;display:block}
   .pal-item .sym-img{margin:0 auto}
