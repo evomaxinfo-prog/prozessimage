@@ -629,9 +629,10 @@
     const prevD = s.idx <= 0 ? ' disabled' : '', nextD = s.idx >= s.stations.length - 1 ? ' disabled' : '';
     const prevT = s.idx > 0 ? 'Vorherige: ' + esc(s.stations[s.idx - 1].name) : 'Erste Station';
     const nextT = s.idx < s.stations.length - 1 ? 'Nächste: ' + esc(s.stations[s.idx + 1].name) : 'Letzte Station';
-    return '<div class="nav-ctl" title="Station innerhalb der Linie wechseln">'
+    const curName = esc(s.stations[s.idx].name);
+    return '<div class="nav-ctl" title="Station innerhalb der Linie wechseln (' + curName + ')">'
       + '<button class="nav-arrow" data-act="station-prev"' + prevD + ' title="' + prevT + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>'
-      + '<span class="nav-lbl">Station <b>' + (s.idx + 1) + '</b> / ' + s.stations.length + '</span>'
+      + '<span class="nav-lbl"><b>' + (s.idx + 1) + '</b> / ' + s.stations.length + '</span>'
       + '<button class="nav-arrow" data-act="station-next"' + nextD + ' title="' + nextT + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button></div>';
   }
 
@@ -1627,8 +1628,8 @@ const STATE_ICONS = {
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + L.color + '"></span><span class="pal-ttl">' + esc(L.name) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
-      + stationNavHtml()
       + '<div class="exp-ctl">'
+      + stationNavHtml()
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
       + '<button class="btn" data-act="export-csv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>'
       + '<button class="btn" data-act="editor-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ZURÜCK</button>'
