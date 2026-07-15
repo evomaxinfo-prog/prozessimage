@@ -1947,8 +1947,11 @@ const STATE_ICONS = {
       + list.map((o) => '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>').join('');
     return '<div class="m-field"><label>' + esc(label) + '</label><select id="' + id + '" data-label="' + esc(label) + '">' + options + '</select></div>';
   }
-  function tagFieldInput(id, label, val, dataLabel) {
-    return '<div class="m-field"><label>' + esc(label) + '</label><input id="' + id + '" data-label="' + esc(dataLabel || '') + '" placeholder="frei belegbar …" value="' + esc(val) + '"></div>';
+  function tagFieldInput(id, label, val, dataLabel, editLabel) {
+    const head = editLabel
+      ? '<input class="m-lbl-edit" id="' + id + '_lbl" value="' + esc(label) + '" placeholder="Überschrift" title="Überschrift bearbeiten">'
+      : '<label>' + esc(label) + '</label>';
+    return '<div class="m-field">' + head + '<input id="' + id + '" data-label="' + esc(dataLabel || '') + '" placeholder="frei belegbar …" value="' + esc(val) + '"></div>';
   }
 
   function openTagModal(oid) {
@@ -2004,9 +2007,11 @@ const STATE_ICONS = {
     } else if (/^custom:/.test(o.symbolType)) {
       const l1 = (o.metatags.find((m) => m.position === 1) || {}).label || 'Text 1';
       const l2 = (o.metatags.find((m) => m.position === 2) || {}).label || 'Text 2';
-      $('mBody').innerHTML = tagFieldInput('mTag1', l1, v1, l1) + tagFieldInput('mTag2', l2, v2, l2);
+      $('mBody').innerHTML = tagFieldInput('mTag1', l1, v1, l1, canManagePalette()) + tagFieldInput('mTag2', l2, v2, l2, canManagePalette());
     } else {
-      $('mBody').innerHTML = tagFieldInput('mTag1', 'Metatag 1', v1) + tagFieldInput('mTag2', 'Metatag 2', v2);
+      const gl1 = (o.metatags.find((m) => m.position === 1) || {}).label || 'Metatag 1';
+      const gl2 = (o.metatags.find((m) => m.position === 2) || {}).label || 'Metatag 2';
+      $('mBody').innerHTML = tagFieldInput('mTag1', gl1, v1, gl1, canManagePalette()) + tagFieldInput('mTag2', gl2, v2, gl2, canManagePalette());
     }
     $('tagModal').style.display = 'flex';
     setTimeout(() => { const f = $('mBody').querySelector('input,select'); if (f) { f.focus(); if (f.tagName === 'INPUT') f.select(); } }, 60);
@@ -2030,10 +2035,12 @@ const STATE_ICONS = {
     } else {
       const e1 = $('mTag1'), e2 = $('mTag2');
       const t1 = (e1 ? e1.value : '').trim(), t2 = (e2 ? e2.value : '').trim();
-      const l1 = e1 ? (e1.getAttribute('data-label') || '') : '', l2 = e2 ? (e2.getAttribute('data-label') || '') : '';
+      const lb1 = $('mTag1_lbl'), lb2 = $('mTag2_lbl');
+      const l1 = lb1 ? lb1.value.trim() : (e1 ? (e1.getAttribute('data-label') || '') : '');
+      const l2 = lb2 ? lb2.value.trim() : (e2 ? (e2.getAttribute('data-label') || '') : '');
       metatags = [];
-      if (t1) metatags.push(l1 ? { position: 1, label: l1, value: t1 } : { position: 1, value: t1 });
-      if (t2) metatags.push(l2 ? { position: 2, label: l2, value: t2 } : { position: 2, value: t2 });
+      if (t1 || l1) metatags.push(l1 ? { position: 1, label: l1, value: t1 } : { position: 1, value: t1 });
+      if (t2 || l2) metatags.push(l2 ? { position: 2, label: l2, value: t2 } : { position: 2, value: t2 });
     }
     protectObj(o.id); try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast('Metatags nicht gespeichert'); }
     closeTagModal(); toast('Metatags gespeichert'); renderEditor();
