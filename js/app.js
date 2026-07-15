@@ -110,9 +110,9 @@
       .map((s) => s[0].toUpperCase()).join('')) || 'U';
   }
 
-  function canEdit() { return state.role === 'editor' || state.role === 'admin'; }
-  // Eigene Palette-Symbole verwalten (anlegen/bearbeiten/löschen): nur Admin – sie gelten werksweit.
-  function canManagePalette() { return state.role === 'admin'; }
+  function canEdit() { return state.role === 'editor' || state.role === 'admin' || state.role === 'werkadmin'; }
+  // Eigene Palette-Symbole verwalten (anlegen/bearbeiten/löschen): voller Admin oder Werk-Admin (in seinen Werken).
+  function canManagePalette() { return state.role === 'admin' || state.role === 'werkadmin'; }
 
   function applyRoleUi() {
     $('btnAdmin').style.display = state.isAdmin ? '' : 'none';
@@ -1059,7 +1059,7 @@ const STATE_ICONS = {
 
   function layerById(id) { return (state.detail.layers || []).find((l) => l.id === id) || null; }
   // Rollen-/Gruppen-Sichtbarkeit: Admins sehen immer alles; sonst null = alle, oder nur die Codes in der Liste
-  function layerAllowed(code) { return state.role === 'admin' || !state.visibleLayers || state.visibleLayers.indexOf(code) >= 0; }
+  function layerAllowed(code) { return state.role === 'admin' || state.role === 'werkadmin' || !state.visibleLayers || state.visibleLayers.indexOf(code) >= 0; }
   function allowedLayers() { return (state.detail.layers || []).filter((l) => layerAllowed(l.code)); }
   // Sichtbarkeits-Map layerId -> bool (Auge-Zustand kombiniert mit Rollen-/Gruppensicht)
   function visibleMap() {
@@ -2474,7 +2474,7 @@ const STATE_ICONS = {
   }
 
   /* ================= Benutzerverwaltung (admin) ================= */
-  const ROLE_LABEL = { admin: 'Administrator', editor: 'Editor', viewer: 'Betrachter' };
+  const ROLE_LABEL = { admin: 'Administrator', werkadmin: 'Werk-Admin', editor: 'Editor', viewer: 'Betrachter' };
   function roleLabel(r) { return ROLE_LABEL[r] || r; }
 
   const DEFAULT_LAYERS = [
@@ -2594,7 +2594,7 @@ const STATE_ICONS = {
 
   function renderGroupForm(a) {
     const f = a.groupForm, isNew = !f.id;
-    const roleOpts = ['viewer', 'editor', 'admin'].map((r) => '<option value="' + r + '"' + (f.role === r ? ' selected' : '') + '>' + roleLabel(r) + '</option>').join('');
+    const roleOpts = ['viewer', 'editor', 'werkadmin', 'admin'].map((r) => '<option value="' + r + '"' + (f.role === r ? ' selected' : '') + '>' + roleLabel(r) + '</option>').join('');
     const werkChecks = a.werke.length ? a.werke.map((w) => '<label class="adm-werk"><input type="checkbox" class="admWerk" value="' + w.id + '"' + (f.werkIds.has(w.id) ? ' checked' : '') + (f.allWerke ? ' disabled' : '') + '> ' + esc(w.name) + '</label>').join('') : '<div class="adm-empty">Keine Werke vorhanden.</div>';
     const layers = a.layers || [];
     const layerChecks = layers.length ? layers.map((l) => '<label class="adm-werk"><input type="checkbox" class="admLayer" value="' + esc(l.code) + '"' + (f.layerCodes.has(l.code) ? ' checked' : '') + (f.allLayers ? ' disabled' : '') + '> <span class="adm-lcode">' + esc(l.code) + '</span> ' + esc(l.name) + '</label>').join('') : '<div class="adm-empty">Keine Ebenen vorhanden.</div>';
