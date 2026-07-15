@@ -1497,7 +1497,7 @@ const STATE_ICONS = {
       const lines = tags.length ? tags : [z.name];
       const abbrev = (t) => (z.symbolType === 'sb_zone' ? String(t).replace(/Schutzbereich/g, 'SB') : t);
       const inner = lines.map((t) => '<div class="fgl-line">' + esc(abbrev(t)) + '</div>').join('');
-      return '<div class="fg-label" style="left:' + (cx * 100) + '%;top:' + (cy * 100) + '%;color:' + esc(zoneColor(z)) + '">' + inner + '</div>';
+      return '<div class="fg-label" data-zone="' + z.id + '" style="left:' + (cx * 100) + '%;top:' + (cy * 100) + '%;color:' + esc(zoneColor(z)) + '">' + inner + '</div>';
     }).join('') + '</div>';
   }
 
@@ -1872,10 +1872,11 @@ const STATE_ICONS = {
       if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
         protectObj(z.id);
         state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
+        updateZoneDom(z);
         try {
           await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
         } catch (e2) { toast('Position nicht gespeichert'); }
-        renderEditor(); return;
+        return;
       }
       // Klick ohne Bewegung: Auswahl bzw. Doppelklick (zeitbasiert, re-render-fest)
       if (z) {
@@ -2432,6 +2433,14 @@ const STATE_ICONS = {
       const h = document.querySelector('.zone-vertex[data-zone="' + z.id + '"][data-vidx="' + i + '"]');
       if (h) { h.style.left = (p.x * 100) + '%'; h.style.top = (p.y * 100) + '%'; }
     });
+    if (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone') {
+      const lbl = document.querySelector('.fg-label[data-zone="' + z.id + '"]');
+      if (lbl) {
+        const cx = z.points.reduce((s, p) => s + p.x, 0) / z.points.length;
+        const cy = z.points.reduce((s, p) => s + p.y, 0) / z.points.length;
+        lbl.style.left = (cx * 100) + '%'; lbl.style.top = (cy * 100) + '%';
+      }
+    }
   }
   function updateDraftDom() {
     const el = document.getElementById('zone-draft'); if (!el) return;
