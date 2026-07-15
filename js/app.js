@@ -2087,12 +2087,11 @@ const STATE_ICONS = {
     const grp = state.group ? state.group.name : '–';
     const tenant = $('tenantName').textContent || '–';
     m.innerHTML = '<div class="modal sym-modal profile-modal">'
-      + '<div class="m-head"><div><h3>Profil</h3><p class="m-sub">Einstellungen & Passwort</p></div></div>'
+      + '<div class="m-head pf-head"><div class="pf-avatar">' + esc(initials(email || name || '?')) + '</div>'
+      + '<div class="pf-id"><h3>' + esc(name || email || 'Profil') + '</h3><p class="m-sub">' + esc(email) + '</p></div></div>'
       + '<div class="sym-body">'
       + '<div class="pf-info">'
-      + '<div class="pf-row"><span class="pf-k">Name</span><span class="pf-v">' + esc(name || '–') + '</span></div>'
-      + '<div class="pf-row"><span class="pf-k">E-Mail</span><span class="pf-v">' + esc(email) + '</span></div>'
-      + '<div class="pf-row"><span class="pf-k">Rolle</span><span class="pf-v">' + esc(roleLabel(state.role)) + '</span></div>'
+      + '<div class="pf-row"><span class="pf-k">Rolle</span><span class="pf-v"><span class="pf-badge">' + esc(roleLabel(state.role)) + '</span></span></div>'
       + '<div class="pf-row"><span class="pf-k">Gruppe</span><span class="pf-v">' + esc(grp) + '</span></div>'
       + '<div class="pf-row"><span class="pf-k">Mandant</span><span class="pf-v">' + esc(tenant) + '</span></div>'
       + '</div>'
