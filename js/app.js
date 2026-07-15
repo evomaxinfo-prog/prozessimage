@@ -601,8 +601,41 @@
     renderTree();
   }
 
-  /* -------- Detailansicht (Schritt 2) -------- */
-  async function openAnlage(node) {
+  // Nachbar-Stationen (Modellierungen) innerhalb derselben Linie.
+  function lineSiblings() {
+    const cur = state.byId[(state.detail && state.detail.nodeId) || state.selected];
+    if (!cur) return null;
+    let p = cur._parent; while (p && p.type !== 'linie') p = p._parent;
+    if (!p) return null;
+    const stations = collectStationNodes(p);
+    const idx = stations.findIndex((n) => n.id === cur.id);
+    if (idx < 0) return null;
+    return { stations: stations, idx: idx, line: p };
+  }
+  async function gotoStation(dir) {
+    const s = lineSiblings(); if (!s) return;
+    const ni = s.idx + dir;
+    if (ni < 0 || ni >= s.stations.length) return;
+    const target = s.stations[ni];
+    state.selected = target.id;
+    await openAnlage(target);
+    await openEditor();
+    renderTree();
+  }
+  // Pfeil-Leiste über dem ZURÜCK-Button: vorherige/nächste Station der Linie.
+  function stationNavHtml() {
+    const s = lineSiblings();
+    if (!s || s.stations.length < 2) return '';
+    const prevD = s.idx <= 0 ? ' disabled' : '', nextD = s.idx >= s.stations.length - 1 ? ' disabled' : '';
+    const prevT = s.idx > 0 ? 'Vorherige: ' + esc(s.stations[s.idx - 1].name) : 'Erste Station';
+    const nextT = s.idx < s.stations.length - 1 ? 'Nächste: ' + esc(s.stations[s.idx + 1].name) : 'Letzte Station';
+    return '<div class="nav-ctl" title="Station innerhalb der Linie wechseln">'
+      + '<button class="nav-arrow" data-act="station-prev"' + prevD + ' title="' + prevT + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>'
+      + '<span class="nav-lbl"><b>' + (s.idx + 1) + '</b> / ' + s.stations.length + ' · Station</span>'
+      + '<button class="nav-arrow" data-act="station-next"' + nextD + ' title="' + nextT + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button></div>';
+  }
+
+  /* -------- Detailansicht (Schritt 2) -------- */  async function openAnlage(node) {
     if (!node.stationId) {
       $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">Für diese Anlage existiert keine Station.</div></div></div>';
       return;
@@ -785,6 +818,8 @@
     else if (act === 'pick-layer') { state.linieActiveLayer = el.getAttribute('data-layer'); renderLinieFolders(); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
+    else if (act === 'station-prev') { gotoStation(-1); }
+    else if (act === 'station-next') { gotoStation(1); }
     else if (act === 'editor-upload') { triggerUpload(); }
     else if (act === 'detail-upload') { triggerUpload(); }
     else if (act === 'zoom-in') { zoomStep(0.1); }
@@ -1592,6 +1627,7 @@ const STATE_ICONS = {
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + L.color + '"></span><span class="pal-ttl">' + esc(L.name) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
+      + stationNavHtml()
       + '<div class="exp-ctl">'
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
       + '<button class="btn" data-act="export-csv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>'
