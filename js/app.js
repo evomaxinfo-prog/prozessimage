@@ -2612,9 +2612,23 @@ const STATE_ICONS = {
       + '<div class="adm-form-actions"><button class="btn" data-adm="form-cancel">Abbrechen</button><button class="btn primary" data-adm="pw-save">Setzen</button></div></div>';
   }
 
+  function groupSortVal(g, col) {
+    if (col === 'role') { const rank = { viewer: 0, editor: 1, werkadmin: 2, admin: 3 }; return rank[g.role] != null ? rank[g.role] : -1; }
+    if (col === 'werke') return g.allWerke ? '\uffff' : ((g.werke && g.werke.length) ? g.werke.map((w) => w.name).join(', ').toLowerCase() : '');
+    if (col === 'members') return g.userCount || 0;
+    return (g.name || '').toLowerCase();
+  }
   function renderAdminGroups(a) {
-    const rows = a.groups.length ? a.groups.map((g) =>
-      '<tr><td>' + esc(g.name) + '</td><td><span class="adm-role r-' + g.role + '">' + roleLabel(g.role) + '</span></td>'
+    const gs = a.groupSort || (a.groupSort = { col: 'name', dir: 'asc' });
+    const sorted = a.groups.slice().sort((x, y) => {
+      const vx = groupSortVal(x, gs.col), vy = groupSortVal(y, gs.col);
+      const c = (typeof vx === 'number') ? (vx - vy) : String(vx).localeCompare(String(vy), 'de');
+      return gs.dir === 'asc' ? c : -c;
+    });
+    const cols = [{ k: 'name', l: 'Name' }, { k: 'role', l: 'Rolle' }, { k: 'werke', l: 'Werke' }, { k: 'members', l: 'Mitglieder' }];
+    const heads = cols.map((c) => { const on = gs.col === c.k; const arr = on ? (gs.dir === 'asc' ? '▲' : '▼') : '↕'; return '<th class="adm-sort' + (on ? ' active' : '') + '" data-adm="sort-groups" data-col="' + c.k + '">' + c.l + '<span class="adm-arr">' + arr + '</span></th>'; }).join('') + '<th></th>';
+    const rows = sorted.length ? sorted.map((g) =>
+      '<tr><td>' + esc(g.name) + '</td><td><span class="adm-role r-' + esc(g.role) + '">' + esc(roleLabel(g.role)) + '</span></td>'
       + '<td>' + (g.allWerke ? '<i>alle Werke</i>' : (g.werke.length ? g.werke.map((w) => esc(w.name)).join(', ') : '—')) + '</td>'
       + '<td>' + g.userCount + '</td>'
       + '<td class="adm-actions">'
@@ -2622,7 +2636,7 @@ const STATE_ICONS = {
       + '<button class="del" data-adm="group-del" data-id="' + g.id + '" title="Löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
       + '</td></tr>').join('') : '<tr><td colspan="5" class="adm-empty">Noch keine Gruppen.</td></tr>';
     return '<div class="adm-toolbar"><button class="btn primary" data-adm="group-new">+ Gruppe hinzufügen</button></div>'
-      + '<table class="adm-table"><thead><tr><th>Name</th><th>Rolle</th><th>Werke</th><th>Mitglieder</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+      + '<table class="adm-table"><thead><tr>' + heads + '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function renderLayerForm(a) {
@@ -2681,6 +2695,7 @@ const STATE_ICONS = {
     else if (act === 'form-cancel') { a.userForm = a.groupForm = a.pwForm = a.layerForm = null; renderAdmin(); }
     else if (act === 'user-new') { a.userForm = { name: '', email: '', password: '', groupId: (a.groups[0] || {}).id || '' }; renderAdmin(); }
     else if (act === 'sort-users') { const col = el.getAttribute('data-col'); const us = a.userSort || (a.userSort = { col: 'name', dir: 'asc' }); if (us.col === col) { us.dir = us.dir === 'asc' ? 'desc' : 'asc'; } else { us.col = col; us.dir = 'asc'; } renderAdmin(); }
+    else if (act === 'sort-groups') { const col = el.getAttribute('data-col'); const gs = a.groupSort || (a.groupSort = { col: 'name', dir: 'asc' }); if (gs.col === col) { gs.dir = gs.dir === 'asc' ? 'desc' : 'asc'; } else { gs.col = col; gs.dir = 'asc'; } renderAdmin(); }
     else if (act === 'user-edit') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.userForm = { id: u.id, name: u.name, email: u.email, groupId: u.group ? u.group.id : '', active: u.active }; renderAdmin(); } }
     else if (act === 'user-save') { saveUser(); }
     else if (act === 'user-pw') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.pwForm = { id: u.id, name: u.name }; renderAdmin(); } }
