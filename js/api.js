@@ -7,11 +7,19 @@
   const API_BASE = 'https://api.prozessimage.de/api/v1';
   const TOKEN_KEY = 'promodx_token';
 
-  // Token pro Fenster im Speicher halten (aus localStorage nur EINMAL beim Start gelesen).
-  // So sind zwei Fenster desselben Browsers unabhängig: meldet sich eines ab, bleibt das
-  // andere angemeldet. localStorage dient nur der Persistenz über ein Neuladen hinweg.
+  // Token PRO TAB in sessionStorage halten (nicht über Tabs geteilt). So können in mehreren
+  // Tabs unterschiedliche Nutzer gleichzeitig angemeldet sein, ohne sich gegenseitig auszuloggen.
+  // Einmalige Migration aus der früheren (geteilten) localStorage-Ablage; danach wird der
+  // geteilte Slot entfernt, damit neue Tabs nicht denselben Token erben.
   let _token = null;
-  try { _token = localStorage.getItem(TOKEN_KEY); } catch (e) { _token = null; }
+  try {
+    _token = sessionStorage.getItem(TOKEN_KEY);
+    if (!_token) {
+      const legacy = localStorage.getItem(TOKEN_KEY);
+      if (legacy) { _token = legacy; sessionStorage.setItem(TOKEN_KEY, legacy); }
+    }
+    localStorage.removeItem(TOKEN_KEY);
+  } catch (e) { _token = null; }
 
   class ApiError extends Error {
     constructor(status, message, data) {
@@ -27,7 +35,7 @@
     get token() { return _token; },
     set token(v) {
       _token = v || null;
-      try { if (v) localStorage.setItem(TOKEN_KEY, v); else localStorage.removeItem(TOKEN_KEY); } catch (e) { /* ignore */ }
+      try { if (v) sessionStorage.setItem(TOKEN_KEY, v); else sessionStorage.removeItem(TOKEN_KEY); } catch (e) { /* ignore */ }
     },
     get isAuthenticated() { return !!_token; },
 
