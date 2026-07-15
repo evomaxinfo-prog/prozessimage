@@ -592,9 +592,8 @@
   async function gotoObject(nodeId, objId) {
     const n = findNode(nodeId); if (!n) return;
     state.selected = nodeId; state.confirmDelete = null;
-    await openAnlage(n);
-    if (!state.detail || !state.detail.objects) { renderTree(); return; }
-    const o = state.detail.objects.find((x) => x.id === objId);
+    try { if (!(await loadStationDetail(n))) { renderTree(); return; } } catch (e) { toast('Station konnte nicht geladen werden'); return; }
+    const o = (state.detail.objects || []).find((x) => x.id === objId);
     if (o && o.layerId) state.activeLayer = o.layerId;
     await openEditor();
     if (o) openTagModal(objId);
@@ -649,11 +648,8 @@
       $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">Für diese Anlage existiert keine Station.</div></div></div>';
       return;
     }
-    $('content').innerHTML = breadcrumb(node.id) + '<div class="pad" style="color:var(--muted)">Lädt …</div>';
     try {
-      const full = await Api.getStationFull(node.stationId);
-      if (!full.nodeId) full.nodeId = node.id;
-      state.detail = full; state.detailEdit = false; state.detailDraft = null;
+      if (!(await loadStationDetail(node))) return;
       await ensureLayoutBlob();
       renderDetail();
     } catch (e) {
