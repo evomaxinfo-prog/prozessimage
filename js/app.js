@@ -2557,17 +2557,19 @@ const STATE_ICONS = {
   }
 
   function renderAdminUsers(a) {
+    const llFmt = (v) => { if (!v) return null; const d = new Date(v); return isNaN(d) ? null : d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
     const rows = a.users.length ? a.users.map((u) =>
       '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td>'
       + '<td>' + (u.group ? esc(u.group.name) + ' <span class="adm-role r-' + u.group.role + '">' + roleLabel(u.group.role) + '</span>' : '—') + '</td>'
+      + '<td class="adm-logins"><b>' + (u.loginCount || 0) + '</b><span class="adm-ll">' + (llFmt(u.lastLoginAt) ? 'zuletzt ' + llFmt(u.lastLoginAt) : 'noch nie') + '</span></td>'
       + '<td>' + (u.active ? '<span class="adm-ok">aktiv</span>' : '<span class="adm-off">deaktiviert</span>') + '</td>'
       + '<td class="adm-actions">'
       + '<button data-adm="user-edit" data-id="' + u.id + '" title="Bearbeiten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
       + '<button data-adm="user-pw" data-id="' + u.id + '" title="Passwort zurücksetzen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l2 2M14 9l2 2"/></svg></button>'
       + '<button class="del" data-adm="user-del" data-id="' + u.id + '" title="Löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
-      + '</td></tr>').join('') : '<tr><td colspan="5" class="adm-empty">Noch keine Benutzer.</td></tr>';
+      + '</td></tr>').join('') : '<tr><td colspan="6" class="adm-empty">Noch keine Benutzer.</td></tr>';
     return '<div class="adm-toolbar"><button class="btn primary" data-adm="user-new">+ Benutzer hinzufügen</button></div>'
-      + '<table class="adm-table"><thead><tr><th>Name</th><th>E-Mail</th><th>Gruppe</th><th>Status</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+      + '<table class="adm-table"><thead><tr><th>Name</th><th>E-Mail</th><th>Gruppe</th><th>Anmeldungen</th><th>Status</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function renderUserForm(a) {
