@@ -147,6 +147,23 @@
       return data;
     },
 
+    // ---- Konfigurierbare Palette (eigene Symbole je Werk & Ebene) ----
+    getPaletteSymbols(werkId) { return this.request('/werke/' + werkId + '/palette'); },
+    async createPaletteSymbol(werkId, name, layerCode, file) {
+      const fd = new FormData();
+      fd.append('name', name); fd.append('layerCode', layerCode); fd.append('file', file);
+      const res = await fetch(API_BASE + '/werke/' + werkId + '/palette', {
+        method: 'POST',
+        headers: Object.assign({ 'Accept': 'application/json' }, this.token ? { 'Authorization': 'Bearer ' + this.token } : {}),
+        body: fd,
+      });
+      if (res.status === 401) { this.token = null; global.dispatchEvent(new CustomEvent('promodx:unauthorized')); throw new ApiError(401, 'Nicht angemeldet.'); }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new ApiError(res.status, (data && data.message) || 'Upload fehlgeschlagen.', data);
+      return data;
+    },
+    deletePaletteSymbol(id) { return this.request('/palette/' + id, { method: 'DELETE' }); },
+
     // ---- Benutzer- & Gruppenverwaltung (admin) ----
     getWerke() { return this.request('/werke'); },
     getGroups() { return this.request('/groups'); },

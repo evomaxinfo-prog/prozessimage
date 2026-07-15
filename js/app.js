@@ -457,6 +457,28 @@
   };
   const LAYER_ICON = { 'Materialfluss': 'xfer', 'Funktionsgruppen': 'cell', 'Steuerungstechnik': 'cab', 'Saferobot / Technologie': 'robot', 'Antriebstechnik / Ident': 'motor', 'Not-Halt': 'estop', 'Sicherheitslayout': 'door', 'Prozesstypen': 'box' };
   function layerIconSvg(nm, px) { return '<svg viewBox="0 0 24 24" width="' + px + '" height="' + px + '">' + (SYM[LAYER_ICON[nm]] || SYM.box) + '</svg>'; }
+  // ---- Konfigurierbare Palette: eigene Symbole je Werk & Ebene ----
+  function werkOf(node) { let p = node; while (p && p.type !== 'werk') p = p._parent; return p || null; }
+  function currentWerk() { const cur = state.byId[(state.detail && state.detail.nodeId) || state.selected]; return cur ? werkOf(cur) : null; }
+  async function loadCustomSyms(werkId) {
+    if (state.customWerkId === werkId && state.customSyms) return;
+    (state.customBlobs || []).forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } });
+    state.customBlobs = []; state.customSyms = {}; state.customWerkId = werkId || null;
+    if (!werkId) return;
+    let list; try { list = await Api.getPaletteSymbols(werkId); } catch (e) { return; }
+    const arr = Array.isArray(list) ? list : (list && Array.isArray(list.data) ? list.data : []);
+    await Promise.all(arr.map(async (s) => {
+      let url = '';
+      try { const res = await Api.raw('/palette/' + s.id + '/image'); if (res && res.ok) { url = URL.createObjectURL(await res.blob()); state.customBlobs.push(url); } } catch (e) { /* ohne Bild */ }
+      state.customSyms['custom:' + s.id] = { id: s.id, name: s.name, layerCode: s.layerCode, url: url };
+    }));
+  }
+  // Symbol-Inhalt: eigenes Bild (custom:) oder Standard-SVG.
+  function symInner(symbolType, px) {
+    const c = state.customSyms && state.customSyms[symbolType];
+    if (c) return c.url ? '<img class="sym-img" src="' + c.url + '" alt="" style="width:' + px + 'px;height:' + px + 'px">' : '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + SYM.box + '</svg>';
+    return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + (SYM[symbolType] || SYM.box) + '</svg>';
+  }
   // symbolType -> Anzeigename je Ebene (aus der Palette; Zonen/Förderwege/Prozesstypen gesondert).
   function symLabelsFor(nm) {
     const map = {};
@@ -844,6 +866,8 @@
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
     else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
+    else if (act === 'pal-add') { openSymUpload(); }
+    else if (act === 'pal-del') { e.stopPropagation(); deleteCustomSym(el.getAttribute('data-id')); }
     else if (act === 'pal-tab') {
       const t = el.getAttribute('data-ptab'); state.palTab = t;
       document.querySelectorAll('.palette .pal-tab').forEach((b) => b.classList.toggle('active', b.getAttribute('data-ptab') === t));
@@ -1136,6 +1160,7 @@ const STATE_ICONS = {
     if (state.sat == null) state.sat = 100;
     if (state.zoom == null) state.zoom = 1;
     await ensureLayoutBlob();
+    await loadCustomSyms((currentWerk() || {}).id);
     renderEditor();
     startCollab();
   }
@@ -1412,7 +1437,7 @@ const STATE_ICONS = {
       const chips = o.metatags.filter((m) => !isProc || (m.position || 0) <= 2).map((m) => m.value).filter(Boolean);
       return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
-        + '<span class="p-sym"><svg width="26" height="26" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg></span>'
+        + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
         + (chips.length ? '<div class="ptags">' + chips.map((t) => '<span class="ptag">' + esc(t) + '</span>').join('') + '</div>' : '')
         + '</div>';
     }).join('');
@@ -1585,9 +1610,19 @@ const STATE_ICONS = {
       const no = mm ? mm[1] : '';
       const label = mm ? mm[2] : name;
       return '<div class="pal-item" style="color:' + L.color + ';--lc:' + L.color + ';--lc-soft:' + meta.soft + '" draggable="true" data-sym="' + sym + '" data-name="' + esc(name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
-        + '<div class="sym"><svg width="24" height="24" viewBox="0 0 24 24">' + (SYM[sym] || SYM.box) + '</svg></div>'
+        + '<div class="sym">' + symInner(sym, 24) + '</div>'
         + '<div class="pal-cap">' + (no ? '<span class="pal-no">' + no + '</span>' : '') + '<span class="pal-nm">' + esc(label) + '</span></div>'
         + '</div>';
+    };
+    // Eigene (hochgeladene) Symbole der aktiven Ebene + „+"-Kachel
+    const customPalHtml = () => {
+      const items = Object.keys(state.customSyms || {}).map((st) => state.customSyms[st]).filter((c) => c.layerCode === L.code);
+      const tiles = items.map((c) => '<div class="pal-item custom" style="color:' + L.color + ';--lc:' + L.color + ';--lc-soft:' + meta.soft + '" draggable="true" data-sym="custom:' + c.id + '" data-name="' + esc(c.name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
+        + (canEdit() ? '<button class="pal-del" data-act="pal-del" data-id="' + c.id + '" title="Symbol löschen">×</button>' : '')
+        + '<div class="sym">' + symInner('custom:' + c.id, 24) + '</div>'
+        + '<div class="pal-cap"><span class="pal-nm">' + esc(c.name) + '</span></div></div>').join('');
+      const add = canEdit() ? '<div class="pal-item pal-add" data-act="pal-add" title="Eigenes Symbol hochladen"><div class="pal-add-plus">+</div><div class="pal-cap"><span class="pal-nm">Eigenes Symbol</span></div></div>' : '';
+      return (tiles || add) ? '<div class="pal-grid pal-custom">' + tiles + add + '</div>' : '';
     };
     let pal;
     if (meta === PROCESS_META) {
@@ -1601,9 +1636,9 @@ const STATE_ICONS = {
         const items = (meta.palette || []).filter(([name, sym]) => ptColorGroup(sym) === gr.key);
         return '<div class="pal-grid" data-ppanel="' + gr.key + '"' + (gr.key === activeTab ? '' : ' style="display:none"') + '>' + items.map(palItem).join('') + '</div>';
       }).join('');
-      pal = '<div class="pal-tabs">' + tabs + '</div>' + panels;
+      pal = '<div class="pal-tabs">' + tabs + '</div>' + panels + customPalHtml();
     } else {
-      pal = '<div class="pal-grid">' + (meta.palette || []).map(palItem).join('') + '</div>';
+      pal = '<div class="pal-grid">' + (meta.palette || []).map(palItem).join('') + '</div>' + customPalHtml();
     }
 
     const layerStack = (state.detail.layers || []).slice().reverse().filter((l) => layerAllowed(l.code)).map((l) => {
@@ -1748,6 +1783,10 @@ const STATE_ICONS = {
           if (fg) toast(name + ' → Funktionsgruppe „' + fg + '" zugeordnet');
           else toast(name + ' platziert');
         } catch (e2) { toast(name + ' platziert'); }
+      } else if (/^custom:/.test(sym)) {
+        const tags = [{ position: 1, label: 'Text 1', value: '' }, { position: 2, label: 'Text 2', value: '' }];
+        try { const upd = await Api.setMetatags(obj.id, tags); obj.metatags = (upd && upd.metatags) || tags; } catch (e2) { obj.metatags = tags; }
+        toast(name + ' platziert');
       } else { toast(name + ' platziert'); }
       state.detail.objects.push(obj); protectObj(obj.id);
       renderEditor();
@@ -1902,8 +1941,8 @@ const STATE_ICONS = {
       + list.map((o) => '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>').join('');
     return '<div class="m-field"><label>' + esc(label) + '</label><select id="' + id + '" data-label="' + esc(label) + '">' + options + '</select></div>';
   }
-  function tagFieldInput(id, label, val) {
-    return '<div class="m-field"><label>' + esc(label) + '</label><input id="' + id + '" data-label="" placeholder="frei belegbar …" value="' + esc(val) + '"></div>';
+  function tagFieldInput(id, label, val, dataLabel) {
+    return '<div class="m-field"><label>' + esc(label) + '</label><input id="' + id + '" data-label="' + esc(dataLabel || '') + '" placeholder="frei belegbar …" value="' + esc(val) + '"></div>';
   }
 
   function openTagModal(oid) {
@@ -1911,7 +1950,7 @@ const STATE_ICONS = {
     o.metatags = o.metatags || [];
     state.modalObjId = oid;
     const L = layerById(o.layerId);
-    const sym = $('mSym'); sym.style.color = o.color; sym.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24">' + (SYM[o.symbolType] || SYM.box) + '</svg>';
+    const sym = $('mSym'); sym.style.color = o.color; sym.innerHTML = symInner(o.symbolType, 24);
     $('mTitle').textContent = o.name;
     $('mSub').textContent = L ? (L.code + ' · ' + L.name) : '';
     const v1 = (o.metatags.find((m) => m.position === 1) || {}).value || '';
@@ -1956,6 +1995,10 @@ const STATE_ICONS = {
       });
     } else if (o.symbolType === 'robot') {
       $('mBody').innerHTML = tagFieldSelect('mTag1', 'Safe Funktion', ROBOT_RISK, v1) + tagFieldSelect('mTag2', 'Technologie', ROBOT_TECH, v2);
+    } else if (/^custom:/.test(o.symbolType)) {
+      const l1 = (o.metatags.find((m) => m.position === 1) || {}).label || 'Text 1';
+      const l2 = (o.metatags.find((m) => m.position === 2) || {}).label || 'Text 2';
+      $('mBody').innerHTML = tagFieldInput('mTag1', l1, v1, l1) + tagFieldInput('mTag2', l2, v2, l2);
     } else {
       $('mBody').innerHTML = tagFieldInput('mTag1', 'Metatag 1', v1) + tagFieldInput('mTag2', 'Metatag 2', v2);
     }
@@ -2002,6 +2045,49 @@ const STATE_ICONS = {
     toast('Objekt gelöscht'); renderEditor();
   }
   function closeTagModal() { $('tagModal').style.display = 'none'; state.modalObjId = null; }
+  // ---- Eigenes Palette-Symbol: Upload-Dialog ----
+  function openSymUpload() {
+    const w = currentWerk(); const L = layerById(state.activeLayer);
+    if (!w || !L) { toast('Kein Werk / keine Ebene aktiv'); return; }
+    let m = document.getElementById('symModal');
+    if (!m) { m = document.createElement('div'); m.id = 'symModal'; m.className = 'modal-backdrop'; document.body.appendChild(m); }
+    m.innerHTML = '<div class="modal sym-modal">'
+      + '<div class="m-head"><div><h3>Eigenes Symbol</h3><p class="m-sub">' + esc(L.code + ' · ' + L.name) + ' · ' + esc(w.name) + '</p></div></div>'
+      + '<div class="sym-body">'
+      + '<label class="sym-lbl">Name</label><input id="symName" class="sym-in" placeholder="z. B. Sondergreifer" maxlength="40">'
+      + '<label class="sym-lbl">Bild (PNG, JPG oder SVG)</label>'
+      + '<label class="sym-drop" for="symFile"><span id="symPrev">Bild wählen …</span></label>'
+      + '<input id="symFile" type="file" accept="image/png,image/jpeg,image/svg+xml" style="display:none">'
+      + '<div class="sym-msg" id="symMsg"></div></div>'
+      + '<div class="m-foot"><button class="btn" id="symCancel">Abbrechen</button><button class="btn primary" id="symSave">Hochladen</button></div></div>';
+    m.style.display = 'flex';
+    const f = document.getElementById('symFile');
+    f.addEventListener('change', () => { const file = f.files[0]; if (file) { const u = URL.createObjectURL(file); document.getElementById('symPrev').innerHTML = '<img src="' + u + '" alt="">'; } });
+    document.getElementById('symCancel').addEventListener('click', closeSymModal);
+    document.getElementById('symSave').addEventListener('click', saveSymUpload);
+    m.addEventListener('click', (e) => { if (e.target === m) closeSymModal(); });
+    setTimeout(() => { const n = document.getElementById('symName'); if (n) n.focus(); }, 40);
+  }
+  function closeSymModal() { const m = document.getElementById('symModal'); if (m) m.style.display = 'none'; }
+  async function saveSymUpload() {
+    const w = currentWerk(); const L = layerById(state.activeLayer);
+    const name = (document.getElementById('symName').value || '').trim();
+    const file = document.getElementById('symFile').files[0];
+    const msg = document.getElementById('symMsg');
+    if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
+    if (!file) { msg.textContent = 'Bitte ein Bild wählen.'; return; }
+    if (file.size > 2 * 1024 * 1024) { msg.textContent = 'Bild ist zu groß (max. 2 MB).'; return; }
+    msg.textContent = 'Wird hochgeladen …';
+    try {
+      await Api.createPaletteSymbol(w.id, name, L.code, file);
+      closeSymModal(); state.customWerkId = null; await loadCustomSyms(w.id); renderEditor(); toast('Symbol „' + name + '" hinzugefügt');
+    } catch (e) { msg.textContent = 'Fehler: ' + (e.message || 'Upload fehlgeschlagen'); }
+  }
+  async function deleteCustomSym(id) {
+    if (!window.confirm('Dieses eigene Symbol aus der Palette löschen?')) return;
+    try { await Api.deletePaletteSymbol(id); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
+    const w = currentWerk(); state.customWerkId = null; await loadCustomSyms(w ? w.id : null); renderEditor(); toast('Symbol gelöscht');
+  }
 
   function triggerUpload() { $('layoutFile').click(); }
   async function onLayoutFile(e) {
