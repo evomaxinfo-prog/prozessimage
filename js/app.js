@@ -2078,6 +2078,48 @@ const STATE_ICONS = {
     setTimeout(() => { const n = document.getElementById('symName'); if (n) { n.focus(); n.select(); } }, 40);
   }
   function closeSymModal() { const m = document.getElementById('symModal'); if (m) m.style.display = 'none'; state.symEdit = null; }
+  // ---- Profil & Passwort ändern ----
+  function openProfile() {
+    let m = document.getElementById('profileModal');
+    if (!m) { m = document.createElement('div'); m.id = 'profileModal'; m.className = 'modal-backdrop'; document.body.appendChild(m); }
+    const email = (state.user && state.user.email) || '';
+    const name = (state.user && (state.user.displayName || state.user.name)) || '';
+    const grp = state.group ? state.group.name : '–';
+    const tenant = $('tenantName').textContent || '–';
+    m.innerHTML = '<div class="modal sym-modal profile-modal">'
+      + '<div class="m-head"><div><h3>Profil</h3><p class="m-sub">Einstellungen & Passwort</p></div></div>'
+      + '<div class="sym-body">'
+      + '<div class="pf-info">'
+      + '<div class="pf-row"><span class="pf-k">Name</span><span class="pf-v">' + esc(name || '–') + '</span></div>'
+      + '<div class="pf-row"><span class="pf-k">E-Mail</span><span class="pf-v">' + esc(email) + '</span></div>'
+      + '<div class="pf-row"><span class="pf-k">Rolle</span><span class="pf-v">' + esc(roleLabel(state.role)) + '</span></div>'
+      + '<div class="pf-row"><span class="pf-k">Gruppe</span><span class="pf-v">' + esc(grp) + '</span></div>'
+      + '<div class="pf-row"><span class="pf-k">Mandant</span><span class="pf-v">' + esc(tenant) + '</span></div>'
+      + '</div>'
+      + '<div class="pf-sec">Passwort ändern</div>'
+      + '<label class="sym-lbl">Aktuelles Passwort</label><input id="pfOld" type="password" class="sym-in" autocomplete="current-password">'
+      + '<label class="sym-lbl">Neues Passwort</label><input id="pfNew" type="password" class="sym-in" autocomplete="new-password" placeholder="mind. 8 Zeichen">'
+      + '<label class="sym-lbl">Neues Passwort bestätigen</label><input id="pfNew2" type="password" class="sym-in" autocomplete="new-password">'
+      + '<div class="sym-msg" id="pfMsg"></div>'
+      + '</div>'
+      + '<div class="m-foot"><button class="btn" id="pfCancel">Schließen</button><button class="btn primary" id="pfSave">Passwort speichern</button></div></div>';
+    m.style.display = 'flex';
+    document.getElementById('pfCancel').addEventListener('click', closeProfile);
+    document.getElementById('pfSave').addEventListener('click', saveProfilePw);
+    m.addEventListener('click', (e) => { if (e.target === m) closeProfile(); });
+    setTimeout(() => { const o = document.getElementById('pfOld'); if (o) o.focus(); }, 40);
+  }
+  function closeProfile() { const m = document.getElementById('profileModal'); if (m) m.style.display = 'none'; }
+  async function saveProfilePw() {
+    const oldp = $('pfOld').value, np = $('pfNew').value, np2 = $('pfNew2').value; const msg = $('pfMsg');
+    if (!oldp) { msg.textContent = 'Bitte das aktuelle Passwort eingeben.'; return; }
+    if ((np || '').length < 8) { msg.textContent = 'Neues Passwort: mindestens 8 Zeichen.'; return; }
+    if (np === oldp) { msg.textContent = 'Neues Passwort muss sich vom aktuellen unterscheiden.'; return; }
+    if (np !== np2) { msg.textContent = 'Die neuen Passwörter stimmen nicht überein.'; return; }
+    msg.textContent = 'Wird gespeichert …';
+    try { await Api.changePassword(oldp, np); closeProfile(); toast('Passwort geändert'); }
+    catch (e) { msg.textContent = (e.data && e.data.message) || ('Fehler: ' + (e.message || 'Änderung fehlgeschlagen')); }
+  }
   async function saveSymUpload() {
     const w = currentWerk(); const L = layerById(state.activeLayer);
     const name = (document.getElementById('symName').value || '').trim();
@@ -2754,6 +2796,7 @@ const STATE_ICONS = {
     document.querySelectorAll('[data-panel]').forEach((b) => b.addEventListener('click', () => showPanel(b.getAttribute('data-panel'))));
 
     // Header
+    $('btnProfile').addEventListener('click', openProfile);
     $('btnLogout').addEventListener('click', async () => {
       stopCollab();
       try { await Api.logout(); } catch (e) { /* egal */ }
