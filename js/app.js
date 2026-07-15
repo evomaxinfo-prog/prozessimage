@@ -612,13 +612,21 @@
     if (idx < 0) return null;
     return { stations: stations, idx: idx, line: p };
   }
+  // Stationsdaten laden, ohne die Detail-Ansicht zu rendern (für direkten Editor-Wechsel ohne Flackern).
+  async function loadStationDetail(node) {
+    if (!node.stationId) return false;
+    const full = await Api.getStationFull(node.stationId);
+    if (!full.nodeId) full.nodeId = node.id;
+    state.detail = full; state.detailEdit = false; state.detailDraft = null;
+    return true;
+  }
   async function gotoStation(dir) {
     const s = lineSiblings(); if (!s) return;
     const ni = s.idx + dir;
     if (ni < 0 || ni >= s.stations.length) return;
     const target = s.stations[ni];
     state.selected = target.id;
-    await openAnlage(target);
+    try { if (!(await loadStationDetail(target))) return; } catch (e) { toast('Station konnte nicht geladen werden'); return; }
     await openEditor();
     renderTree();
   }
