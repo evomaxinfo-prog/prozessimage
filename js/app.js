@@ -136,6 +136,10 @@
   function showLogin() {
     const ls = $('loginScreen');
     ls.style.display = 'flex'; requestAnimationFrame(() => ls.classList.remove('hide'));
+    // Nutzer tippt gerade (oder Browser hat autovervollständigt)? Dann Eingaben & Fokus nicht anfassen.
+    const a = document.activeElement;
+    const busy = a && ['loginEmail', 'loginPass', 'chgEmail', 'chgOld', 'chgNew', 'chgNew2'].indexOf(a.id) >= 0;
+    if (busy) { $('panelLogin').style.display = 'block'; $('panelChange').style.display = 'none'; return; }
     $('loginPass').value = '';
     showPanel('login');
   }
@@ -147,7 +151,11 @@
       $('loginScreen').style.display = 'none';
       enterApp(res);
     } catch (e) {
-      showLogin();
+      // Abgelaufener/ungültiger Token: still auf den bereits sichtbaren Login-Screen zurückfallen,
+      // ohne Autofill/Eingaben zu löschen oder den Fokus zu stehlen.
+      Api.token = null;
+      const ls = $('loginScreen'); ls.style.display = 'flex'; ls.classList.remove('hide');
+      $('panelLogin').style.display = 'block'; $('panelChange').style.display = 'none';
     }
   }
 
