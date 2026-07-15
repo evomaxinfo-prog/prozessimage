@@ -111,6 +111,8 @@
   }
 
   function canEdit() { return state.role === 'editor' || state.role === 'admin'; }
+  // Eigene Palette-Symbole verwalten (anlegen/bearbeiten/löschen): nur Admin – sie gelten werksweit.
+  function canManagePalette() { return state.role === 'admin'; }
 
   function applyRoleUi() {
     $('btnAdmin').style.display = state.isAdmin ? '' : 'none';
@@ -867,6 +869,7 @@
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
     else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
     else if (act === 'pal-add') { openSymUpload(); }
+    else if (act === 'pal-edit') { e.stopPropagation(); const c = state.customSyms['custom:' + el.getAttribute('data-id')]; if (c) openSymUpload(c); }
     else if (act === 'pal-del') { e.stopPropagation(); deleteCustomSym(el.getAttribute('data-id')); }
     else if (act === 'pal-tab') {
       const t = el.getAttribute('data-ptab'); state.palTab = t;
@@ -1617,11 +1620,13 @@ const STATE_ICONS = {
     // Eigene (hochgeladene) Symbole der aktiven Ebene + „+"-Kachel
     const customPalHtml = () => {
       const items = Object.keys(state.customSyms || {}).map((st) => state.customSyms[st]).filter((c) => c.layerCode === L.code);
+      const manage = canManagePalette();
       const tiles = items.map((c) => '<div class="pal-item custom" style="color:' + L.color + ';--lc:' + L.color + ';--lc-soft:' + meta.soft + '" draggable="true" data-sym="custom:' + c.id + '" data-name="' + esc(c.name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
-        + (canEdit() ? '<button class="pal-del" data-act="pal-del" data-id="' + c.id + '" title="Symbol löschen">×</button>' : '')
+        + (manage ? '<button class="pal-edit" data-act="pal-edit" data-id="' + c.id + '" title="Symbol bearbeiten" draggable="false"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z"/></svg></button>'
+          + '<button class="pal-del" data-act="pal-del" data-id="' + c.id + '" title="Symbol löschen" draggable="false">×</button>' : '')
         + '<div class="sym">' + symInner('custom:' + c.id, 24) + '</div>'
         + '<div class="pal-cap"><span class="pal-nm">' + esc(c.name) + '</span></div></div>').join('');
-      const add = canEdit() ? '<div class="pal-item pal-add" data-act="pal-add" title="Eigenes Symbol hochladen"><div class="pal-add-plus">+</div><div class="pal-cap"><span class="pal-nm">Eigenes Symbol</span></div></div>' : '';
+      const add = manage ? '<div class="pal-item pal-add" data-act="pal-add" title="Eigenes Symbol hochladen"><div class="pal-add-plus">+</div><div class="pal-cap"><span class="pal-nm">Eigenes Symbol</span></div></div>' : '';
       return (tiles || add) ? '<div class="pal-grid pal-custom">' + tiles + add + '</div>' : '';
     };
     let pal;
@@ -2046,42 +2051,48 @@ const STATE_ICONS = {
   }
   function closeTagModal() { $('tagModal').style.display = 'none'; state.modalObjId = null; }
   // ---- Eigenes Palette-Symbol: Upload-Dialog ----
-  function openSymUpload() {
+  function openSymUpload(editSym) {
     const w = currentWerk(); const L = layerById(state.activeLayer);
     if (!w || !L) { toast('Kein Werk / keine Ebene aktiv'); return; }
+    state.symEdit = editSym || null;
+    const isEdit = !!editSym;
+    const prev = isEdit && editSym.url ? '<img src="' + editSym.url + '" alt="">' : 'Bild wählen …';
     let m = document.getElementById('symModal');
     if (!m) { m = document.createElement('div'); m.id = 'symModal'; m.className = 'modal-backdrop'; document.body.appendChild(m); }
     m.innerHTML = '<div class="modal sym-modal">'
-      + '<div class="m-head"><div><h3>Eigenes Symbol</h3><p class="m-sub">' + esc(L.code + ' · ' + L.name) + ' · ' + esc(w.name) + '</p></div></div>'
+      + '<div class="m-head"><div><h3>' + (isEdit ? 'Symbol bearbeiten' : 'Eigenes Symbol') + '</h3><p class="m-sub">' + esc(L.code + ' · ' + L.name) + ' · ' + esc(w.name) + '</p></div></div>'
       + '<div class="sym-body">'
-      + '<label class="sym-lbl">Name</label><input id="symName" class="sym-in" placeholder="z. B. Sondergreifer" maxlength="40">'
-      + '<label class="sym-lbl">Bild (PNG, JPG oder SVG)</label>'
-      + '<label class="sym-drop" for="symFile"><span id="symPrev">Bild wählen …</span></label>'
+      + '<label class="sym-lbl">Name</label><input id="symName" class="sym-in" placeholder="z. B. Sondergreifer" maxlength="40" value="' + (isEdit ? esc(editSym.name) : '') + '">'
+      + '<label class="sym-lbl">' + (isEdit ? 'Bild ersetzen (optional)' : 'Bild (PNG, JPG oder SVG)') + '</label>'
+      + '<label class="sym-drop" for="symFile"><span id="symPrev">' + prev + '</span></label>'
       + '<input id="symFile" type="file" accept="image/png,image/jpeg,image/svg+xml" style="display:none">'
       + '<div class="sym-msg" id="symMsg"></div></div>'
-      + '<div class="m-foot"><button class="btn" id="symCancel">Abbrechen</button><button class="btn primary" id="symSave">Hochladen</button></div></div>';
+      + '<div class="m-foot"><button class="btn" id="symCancel">Abbrechen</button><button class="btn primary" id="symSave">' + (isEdit ? 'Speichern' : 'Hochladen') + '</button></div></div>';
     m.style.display = 'flex';
     const f = document.getElementById('symFile');
     f.addEventListener('change', () => { const file = f.files[0]; if (file) { const u = URL.createObjectURL(file); document.getElementById('symPrev').innerHTML = '<img src="' + u + '" alt="">'; } });
     document.getElementById('symCancel').addEventListener('click', closeSymModal);
     document.getElementById('symSave').addEventListener('click', saveSymUpload);
     m.addEventListener('click', (e) => { if (e.target === m) closeSymModal(); });
-    setTimeout(() => { const n = document.getElementById('symName'); if (n) n.focus(); }, 40);
+    setTimeout(() => { const n = document.getElementById('symName'); if (n) { n.focus(); n.select(); } }, 40);
   }
-  function closeSymModal() { const m = document.getElementById('symModal'); if (m) m.style.display = 'none'; }
+  function closeSymModal() { const m = document.getElementById('symModal'); if (m) m.style.display = 'none'; state.symEdit = null; }
   async function saveSymUpload() {
     const w = currentWerk(); const L = layerById(state.activeLayer);
     const name = (document.getElementById('symName').value || '').trim();
     const file = document.getElementById('symFile').files[0];
     const msg = document.getElementById('symMsg');
+    const edit = state.symEdit;
     if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
-    if (!file) { msg.textContent = 'Bitte ein Bild wählen.'; return; }
-    if (file.size > 2 * 1024 * 1024) { msg.textContent = 'Bild ist zu groß (max. 2 MB).'; return; }
-    msg.textContent = 'Wird hochgeladen …';
+    if (!edit && !file) { msg.textContent = 'Bitte ein Bild wählen.'; return; }
+    if (file && file.size > 2 * 1024 * 1024) { msg.textContent = 'Bild ist zu groß (max. 2 MB).'; return; }
+    msg.textContent = edit ? 'Wird gespeichert …' : 'Wird hochgeladen …';
     try {
-      await Api.createPaletteSymbol(w.id, name, L.code, file);
-      closeSymModal(); state.customWerkId = null; await loadCustomSyms(w.id); renderEditor(); toast('Symbol „' + name + '" hinzugefügt');
-    } catch (e) { msg.textContent = 'Fehler: ' + (e.message || 'Upload fehlgeschlagen'); }
+      if (edit) { await Api.updatePaletteSymbol(edit.id, name, file || null); }
+      else { await Api.createPaletteSymbol(w.id, name, L.code, file); }
+      closeSymModal(); state.customWerkId = null; await loadCustomSyms(w.id); renderEditor();
+      toast(edit ? 'Symbol „' + name + '" aktualisiert' : 'Symbol „' + name + '" hinzugefügt');
+    } catch (e) { msg.textContent = 'Fehler: ' + (e.message || 'Speichern fehlgeschlagen'); }
   }
   async function deleteCustomSym(id) {
     if (!window.confirm('Dieses eigene Symbol aus der Palette löschen?')) return;

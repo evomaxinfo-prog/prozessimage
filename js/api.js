@@ -162,6 +162,20 @@
       if (!res.ok) throw new ApiError(res.status, (data && data.message) || 'Upload fehlgeschlagen.', data);
       return data;
     },
+    async updatePaletteSymbol(id, name, file) {
+      const fd = new FormData();
+      fd.append('name', name); fd.append('_method', 'PATCH'); // Method-Spoofing (Multipart bei PATCH)
+      if (file) fd.append('file', file);
+      const res = await fetch(API_BASE + '/palette/' + id, {
+        method: 'POST',
+        headers: Object.assign({ 'Accept': 'application/json' }, this.token ? { 'Authorization': 'Bearer ' + this.token } : {}),
+        body: fd,
+      });
+      if (res.status === 401) { this.token = null; global.dispatchEvent(new CustomEvent('promodx:unauthorized')); throw new ApiError(401, 'Nicht angemeldet.'); }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new ApiError(res.status, (data && data.message) || 'Speichern fehlgeschlagen.', data);
+      return data;
+    },
     deletePaletteSymbol(id) { return this.request('/palette/' + id, { method: 'DELETE' }); },
 
     // ---- Benutzer- & Gruppenverwaltung (admin) ----
