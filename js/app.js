@@ -1290,7 +1290,7 @@ const STATE_ICONS = {
     const names = FLOW_TYPES.map((t) => t.name).filter((n) => used[n]);
     if (!names.length) return '';
     if (!state.flowLegend) return '<button class="flow-legend-btn" data-act="flow-legend" title="Materialfluss-Legende einblenden"><span class="fl-dots"></span>Legende</button>';
-    const rows = names.map((n) => '<div class="fl-row"><span class="fl-dot" style="background:' + used[n] + '"></span>' + esc(n) + '</div>').join('');
+    const rows = names.map((n) => '<div class="fl-row"><span class="fl-dot" style="background:' + esc(used[n]) + '"></span>' + esc(n) + '</div>').join('');
     return '<div class="flow-legend"><div class="fl-head">Materialfluss<button data-act="flow-legend" title="Legende ausblenden">×</button></div>' + rows + '</div>';
   }
   const ROUTE_DASH = { 'Rollenbahn': '', 'Kettenförderer': '2.4 1.6', 'Band-/Gurtförderer': '', 'Hängeförderer': '4 2', 'FTS / AGV': '0.1 2.6', 'Stapler / manuell': '5 2 1 2', 'Manueller Transport': '5 2 1 2' };
@@ -1824,7 +1824,7 @@ const STATE_ICONS = {
       const mm = String(name).match(/^(\d+)\s+(.+)$/);
       const no = mm ? mm[1] : '';
       const label = mm ? mm[2] : name;
-      return '<div class="pal-item" style="color:' + L.color + ';--lc:' + L.color + ';--lc-soft:' + meta.soft + '" draggable="true" data-sym="' + sym + '" data-name="' + esc(name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
+      return '<div class="pal-item" style="color:' + esc(L.color) + ';--lc:' + esc(L.color) + ';--lc-soft:' + esc(meta.soft) + '" draggable="true" data-sym="' + sym + '" data-name="' + esc(name) + '" data-color="' + esc(L.color) + '" data-act="pal-hint" title="Auf das Layout ziehen">'
         + '<div class="sym">' + symInner(sym, 24) + '</div>'
         + '<div class="pal-cap">' + (no ? '<span class="pal-no">' + no + '</span>' : '') + '<span class="pal-nm">' + esc(label) + '</span></div>'
         + '</div>';
@@ -1833,7 +1833,7 @@ const STATE_ICONS = {
     const customPalHtml = () => {
       const items = Object.keys(state.customSyms || {}).map((st) => state.customSyms[st]).filter((c) => c.layerCode === L.code);
       const manage = canManagePalette();
-      const tiles = items.map((c) => '<div class="pal-item custom" style="color:' + L.color + ';--lc:' + L.color + ';--lc-soft:' + meta.soft + '" draggable="true" data-sym="custom:' + c.id + '" data-name="' + esc(c.name) + '" data-color="' + L.color + '" data-act="pal-hint" title="Auf das Layout ziehen">'
+      const tiles = items.map((c) => '<div class="pal-item custom" style="color:' + esc(L.color) + ';--lc:' + esc(L.color) + ';--lc-soft:' + esc(meta.soft) + '" draggable="true" data-sym="custom:' + esc(c.id) + '" data-name="' + esc(c.name) + '" data-color="' + esc(L.color) + '" data-act="pal-hint" title="Auf das Layout ziehen">'
         + (manage ? '<button class="pal-edit" data-act="pal-edit" data-id="' + c.id + '" title="Symbol bearbeiten" draggable="false"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z"/></svg></button>'
           + '<button class="pal-del" data-act="pal-del" data-id="' + c.id + '" title="Symbol löschen" draggable="false">×</button>' : '')
         + '<div class="sym">' + symInner('custom:' + c.id, 24) + '</div>'
@@ -1864,7 +1864,7 @@ const STATE_ICONS = {
         ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>'
         : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7c2 0 3.7.6 5.2 1.5M22 12s-3.5 7-10 7c-2 0-3.7-.6-5.2-1.5"/><path d="M4 4l16 16"/></svg>';
       const lmeta = paletteMetaFor(l);
-      return '<div class="layer ' + (act ? 'active' : '') + ' ' + (vis ? '' : 'hidden') + '" style="--lc:' + l.color + ';--lc-soft:' + lmeta.soft + '" data-act="layer-select" data-layer="' + l.id + '">'
+      return '<div class="layer ' + (act ? 'active' : '') + ' ' + (vis ? '' : 'hidden') + '" style="--lc:' + esc(l.color) + ';--lc-soft:' + esc(lmeta.soft) + '" data-act="layer-select" data-layer="' + l.id + '">'
         + '<div class="lbar"></div><div class="lmeta"><span class="lid">' + esc(l.code) + '</span><span class="lcount" title="Objekte auf dieser Ebene">' + (counts[l.id] || 0) + '</span><span class="lname">' + esc(t(l.name)) + '</span></div>'
         + '<button class="eye ' + (vis ? '' : 'off') + '" data-act="layer-eye" data-layer="' + l.id + '" title="Sichtbarkeit">' + eye + '</button></div>';
     }).join('');
@@ -1883,7 +1883,7 @@ const STATE_ICONS = {
 
     c.innerHTML = '<div class="editor-wrap"><div class="canvas-col">'
       + '<div class="editor-topbar"><div class="ttl">' + esc((state.detail.anlagenname || '').split(' · ')[0])
-      + '<span class="lyr-badge" style="background:' + L.color + '">' + esc(L.code) + ' ' + esc(t(L.name)) + '</span></div>'
+      + '<span class="lyr-badge" style="background:' + esc(L.color) + '">' + esc(L.code) + ' ' + esc(t(L.name)) + '</span></div>'
       + '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'
       + '<div id="collabBar">' + presenceHtml() + '</div>'
       + (canEdit() ? '<button class="up-btn" data-act="editor-upload">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? t('LAYOUT ERSETZEN') : t('LAYOUT HOCHLADEN')) + '</button>' : '')
@@ -1892,7 +1892,7 @@ const STATE_ICONS = {
       + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
-      + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + L.color + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal + '</div>' : '')
+      + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
       + stationNavHtml()
@@ -1925,7 +1925,7 @@ const STATE_ICONS = {
         + (routeActive ? t('ZEICHNEN AKTIV') : t('FÖRDERWEG')) + '</button>';
       // Farbige Materialfluss-Typen zur Auswahl -> bestimmt die Pfeilfarbe des nächsten Förderwegs
       extra = '<div class="flow-pick">' + FLOW_TYPES.map((ft, i) =>
-        '<button class="flow-chip ' + (state.flowType === i ? 'active' : '') + '" data-act="flow-type" data-flow="' + i + '" style="--fc:' + ft.color + '" title="' + esc(ft.name + ' – ' + ft.desc) + '">'
+        '<button class="flow-chip ' + (state.flowType === i ? 'active' : '') + '" data-act="flow-type" data-flow="' + i + '" style="--fc:' + esc(ft.color) + '" title="' + esc(ft.name + ' – ' + ft.desc) + '">'
         + '<span class="fc-dot"></span>' + esc(ft.name) + '</button>').join('') + '</div>';
       hint = routeActive
         ? 'Klicken setzt Wegpunkte · Klick auf den letzten Punkt oder <b>Enter</b> beendet · <b>Esc</b> bricht ab. Farbe = gewählter Materialfluss-Typ; Doppelklick öffnet Typ &amp; Förderart.'
@@ -2029,6 +2029,7 @@ const STATE_ICONS = {
     if (e.button !== undefined && e.button !== 0) return;
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
     const el = e.target.closest('.placed'); if (!el) return;
+    state._preDrag = snapObjects();
     dragMove = { oid, el, doc, sx: e.clientX, sy: e.clientY, moved: false, nx: null, ny: null };
     try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
   }
@@ -2640,10 +2641,9 @@ const STATE_ICONS = {
 
   function onContentPointerDown(e) {
     if (!canEdit()) return;
-    state._preDrag = snapObjects();
     // Technologie-Blase greifen
     const td = e.target.closest('[data-techdrag]');
-    if (td) { e.preventDefault(); state.techDrag = { id: td.getAttribute('data-techdrag'), moved: false }; try { td.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } return; }
+    if (td) { e.preventDefault(); state._preDrag = snapObjects(); state.techDrag = { id: td.getAttribute('data-techdrag'), moved: false }; try { td.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } return; }
     // Mittelpunkt-Handle: neuen Stützpunkt an der Kante einfügen (danach frei ziehbar)
     const mid = e.target.closest('.zone-midpoint');
     if (mid) {
@@ -2665,6 +2665,7 @@ const STATE_ICONS = {
     const v = e.target.closest('.zone-vertex');
     if (v) {
       e.preventDefault();
+      state._preDrag = snapObjects();
       state.zoneDrag = { type: 'vertex', id: v.getAttribute('data-zone'), idx: +v.getAttribute('data-vidx'), moved: false };
       try { v.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
       return;
@@ -2674,6 +2675,7 @@ const STATE_ICONS = {
     if (si) {
       e.preventDefault();
       const doc = e.target.closest('#canvasDoc');
+      state._preDrag = snapObjects();
       state.iconDrag = { oid: si.getAttribute('data-sicon-parent'), st: si.getAttribute('data-sicon-state'), el: si, moved: false, nx: null, ny: null };
       try { (doc || si).setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
       return;
@@ -2690,6 +2692,7 @@ const STATE_ICONS = {
         const z = zoneAt(x, y);
         if (z) {
           // Jedes Ziehen verschiebt direkt; ein reiner Klick (keine Bewegung) wählt nur aus.
+          state._preDrag = snapObjects();
           state.zoneDrag = { type: 'move', id: z.id, sx: x, sy: y, moved: false, orig: z.points.map((p) => ({ x: p.x, y: p.y })) };
           try { doc.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
           if (state.selectedObj) { state.selectedObj = null; renderEditor(); }
