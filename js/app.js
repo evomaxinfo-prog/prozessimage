@@ -83,7 +83,6 @@
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
     'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all',
-    'Objekt': 'Object', 'Löschen': 'Delete',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -109,6 +108,17 @@
     'Detail konnte nicht geladen werden.': 'Details could not be loaded.', 'Noch keine Einträge.': 'No entries yet.',
     'Gespeichert': 'Saved', 'Speichern fehlgeschlagen: ': 'Save failed: ', 'Export fehlgeschlagen': 'Export failed',
     'Umbenennen fehlgeschlagen': 'Rename failed', 'Löschen fehlgeschlagen': 'Delete failed', 'Gelöscht': 'Deleted',
+    // Fachterminologie – Ebenennamen (Anzeige; DB-Wert bleibt Schlüssel)
+    'Materialfluss': 'Material flow', 'Funktionsgruppen': 'Function groups', 'Steuerungstechnik': 'Control technology',
+    'Saferobot / Technologie': 'Safe robot / technology', 'Antriebstechnik / Ident': 'Drive technology / ident',
+    'Not-Halt': 'Emergency stop', 'Sicherheitslayout': 'Safety layout', 'Prozesstypen': 'Process types',
+    // Paletten-Farbgruppen / Metatag-Gruppen / Badges
+    'Aktiv': 'Active', 'Passiv': 'Passive', 'Weiß': 'White',
+    'Betriebszustände': 'Operating states', 'MPS-Meldungen': 'MPS messages', 'Informationen': 'Information',
+    'Pflicht': 'Required', 'Optional': 'Optional', 'Technologien': 'Technologies',
+    'Roboter · Safe & Technologie': 'Robots · Safe & Technology',
+    'Keine Objekte dieser Ebene auf dieser Linie.': 'No objects of this layer on this line.',
+    'Objekt': 'Object',
   };
   function t(s, params) {
     let out = (state.lang === 'en' && I18N_EN[s] != null) ? I18N_EN[s] : s;
@@ -644,7 +654,7 @@
         { val: byCol(['#16A34A']), label: 'kein Risiko', tone: 'ok' },
       ]);
       if (unbew) out.push({ val: unbew, label: 'ohne Safe-Funktion', tone: 'warn' });
-      out.push({ val: techs.size, label: 'Technologien' });
+      out.push({ val: techs.size, label: t('Technologien') });
       return out;
     }
     if (nm === 'Funktionsgruppen') {
@@ -678,7 +688,7 @@
     let detail = '';
     if (nm === 'Prozesstypen') detail = linieStatusHtml(ptkRows);
     else if (nm === 'Saferobot / Technologie') detail = linieRobotsHtml(roboRows);
-    return '<div class="lp-head" style="--lc:' + col + '"><span class="lp-ic" style="color:' + col + '">' + layerIconSvg(nm, 22) + '</span><b>' + esc(nm) + '</b>'
+    return '<div class="lp-head" style="--lc:' + col + '"><span class="lp-ic" style="color:' + col + '">' + layerIconSvg(nm, 22) + '</span><b>' + esc(t(nm)) + '</b>'
       + (a.code ? '<span class="lay-code">' + esc(a.code) + '</span>' : '')
       + '<span class="lf-meta">' + a.objects + ' Objekt' + (a.objects !== 1 ? 'e' : '') + ' · ' + ns + ' Station' + (ns !== 1 ? 'en' : '') + '</span></div>'
       + (chips ? '<div class="lk-chips">' + chips + '</div>' : '<div class="lk-empty">Keine Objekte auf dieser Ebene.</div>') + detail;
@@ -693,7 +703,7 @@
       const a = agg[nm]; const active = nm === state.linieActiveLayer; const col = a.color || '#8FA3B0';
       return '<button class="lay-tab ' + (active ? 'active' : '') + (a.objects ? '' : ' empty') + '" data-act="pick-layer" data-layer="' + esc(nm) + '" style="--lc:' + col + '">'
         + '<span class="lt-ic" style="color:' + col + '">' + layerIconSvg(nm, 16) + '</span>'
-        + '<span class="lt-name">' + esc(nm) + '</span>'
+        + '<span class="lt-name">' + esc(t(nm)) + '</span>'
         + '<span class="lt-n">' + a.objects + '</span></button>';
     }).join('');
     host.innerHTML = '<div class="lay-tabs">' + tabs + '</div><div class="lay-panel">' + panelHtml(state.linieActiveLayer, agg[state.linieActiveLayer], d.ptkRows, d.roboRows) + '</div>';
@@ -720,7 +730,7 @@
   // Übersicht der Objekte der Ebene „Saferobot / Technologie".
   function linieRobotsHtml(rows) {
     const LBL = { robot: 'Roboter', ctrl: 'Techno-Steuerung', grip: 'Greifer', cell: 'Zelle' };
-    if (!rows.length) return '<div class="ls-head">Roboter · Safe &amp; Technologie</div><div class="ls-empty">Keine Objekte der Ebene „Saferobot / Technologie" auf dieser Linie.</div>';
+    if (!rows.length) return '<div class="ls-head">' + t('Roboter · Safe & Technologie') + '</div><div class="ls-empty">' + t('Keine Objekte dieser Ebene auf dieser Linie.') + '</div>';
     rows.sort((a, b) => String(a.st).localeCompare(String(b.st)) || String(a.type).localeCompare(String(b.type)));
     const cnt = {}; rows.forEach((r) => { cnt[r.type] = (cnt[r.type] || 0) + 1; });
     const summary = Object.keys(LBL).filter((k) => cnt[k]).map((k) => '<span class="ls-chip"><svg viewBox="0 0 24 24" width="14" height="14">' + (SYM[k] || SYM.box) + '</svg>' + cnt[k] + '× ' + LBL[k] + '</span>').join('');
@@ -734,7 +744,7 @@
         + '<td>' + esc(LBL[r.type] || r.type) + '</td><td class="ls-pt">' + esc(r.name) + '</td>'
         + '<td>' + safeCell + '</td><td class="ls-tech">' + techCell + '</td></tr>';
     }).join('');
-    return '<div class="ls-head">Roboter · Safe &amp; Technologie <span class="ls-sub">' + rows.length + ' Objekt' + (rows.length !== 1 ? 'e' : '') + '</span></div>'
+    return '<div class="ls-head">' + t('Roboter · Safe & Technologie') + ' <span class="ls-sub">' + rows.length + ' ' + (rows.length !== 1 ? t('Objekte') : t('Objekt')) + '</span></div>'
       + (summary ? '<div class="ls-chips">' + summary + '</div>' : '')
       + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Icon</th><th>Typ</th><th>Bezeichnung</th><th>Safe-Funktion</th><th>Technologie</th></tr></thead><tbody>' + body + '</tbody></table></div>';
   }
@@ -1754,7 +1764,7 @@ const STATE_ICONS = {
       const tabs = PT_COLOR_GROUPS.map((gr) => {
         const n = (meta.palette || []).filter(([name, sym]) => ptColorGroup(sym) === gr.key).length;
         return '<button class="pal-tab' + (gr.key === activeTab ? ' active' : '') + '" data-act="pal-tab" data-ptab="' + gr.key + '">'
-          + '<span class="pal-sw' + (gr.key === 's' ? ' ring' : '') + '" style="background:' + gr.swatch + '"></span>' + gr.label + '<span class="pal-gc">' + n + '</span></button>';
+          + '<span class="pal-sw' + (gr.key === 's' ? ' ring' : '') + '" style="background:' + gr.swatch + '"></span>' + t(gr.label) + '<span class="pal-gc">' + n + '</span></button>';
       }).join('');
       const panels = PT_COLOR_GROUPS.map((gr) => {
         const items = (meta.palette || []).filter(([name, sym]) => ptColorGroup(sym) === gr.key);
@@ -1772,7 +1782,7 @@ const STATE_ICONS = {
         : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7c2 0 3.7.6 5.2 1.5M22 12s-3.5 7-10 7c-2 0-3.7-.6-5.2-1.5"/><path d="M4 4l16 16"/></svg>';
       const lmeta = paletteMetaFor(l);
       return '<div class="layer ' + (act ? 'active' : '') + ' ' + (vis ? '' : 'hidden') + '" style="--lc:' + l.color + ';--lc-soft:' + lmeta.soft + '" data-act="layer-select" data-layer="' + l.id + '">'
-        + '<div class="lbar"></div><div class="lmeta"><span class="lid">' + esc(l.code) + '</span><span class="lcount" title="Objekte auf dieser Ebene">' + (counts[l.id] || 0) + '</span><span class="lname">' + esc(l.name) + '</span></div>'
+        + '<div class="lbar"></div><div class="lmeta"><span class="lid">' + esc(l.code) + '</span><span class="lcount" title="Objekte auf dieser Ebene">' + (counts[l.id] || 0) + '</span><span class="lname">' + esc(t(l.name)) + '</span></div>'
         + '<button class="eye ' + (vis ? '' : 'off') + '" data-act="layer-eye" data-layer="' + l.id + '" title="Sichtbarkeit">' + eye + '</button></div>';
     }).join('');
 
@@ -1790,14 +1800,14 @@ const STATE_ICONS = {
 
     c.innerHTML = '<div class="editor-wrap"><div class="canvas-col">'
       + '<div class="editor-topbar"><div class="ttl">' + esc((state.detail.anlagenname || '').split(' · ')[0])
-      + '<span class="lyr-badge" style="background:' + L.color + '">' + esc(L.code) + ' ' + esc(L.name) + '</span></div>'
+      + '<span class="lyr-badge" style="background:' + L.color + '">' + esc(L.code) + ' ' + esc(t(L.name)) + '</span></div>'
       + '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'
       + '<div id="collabBar">' + presenceHtml() + '</div>'
       + (canEdit() ? '<button class="up-btn" data-act="editor-upload">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? t('LAYOUT ERSETZEN') : t('LAYOUT HOCHLADEN')) + '</button>' : '')
       + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
-      + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + L.color + '"></span><span class="pal-ttl">' + esc(L.name) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal + '</div>' : '')
+      + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + L.color + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
       + stationNavHtml()
@@ -2089,14 +2099,14 @@ const STATE_ICONS = {
       const fieldFor = (kind, name) => {
         const key = kind + ' – ' + name;
         const ic = STATE_ICONS[name] ? '<img class="pt-ic" src="' + STATE_ICONS[name] + '" alt="">' : '<span class="pt-ic pt-ic-none"></span>';
-        return '<div class="m-field pt-state"><label>' + ic + '<span class="pt-nm">' + esc(name) + '</span><span class="pt-kind ' + (kind === 'Pflicht' ? 'req' : 'opt') + '">' + kind + '</span></label>'
+        return '<div class="m-field pt-state"><label>' + ic + '<span class="pt-nm">' + esc(name) + '</span><span class="pt-kind ' + (kind === 'Pflicht' ? 'req' : 'opt') + '">' + t(kind) + '</span></label>'
           + '<input data-state="' + esc(key) + '" placeholder="Wann tritt das ein? …" value="' + esc(desc(key)) + '"></div>';
       };
       const groups = ptStateGroups(pt);
       const sectionFor = (g, withHeader) => {
         const items = g.muss.map((n) => fieldFor('Pflicht', n)).concat(g.opt.map((n) => fieldFor('Optional', n)));
         if (!items.length) return '';
-        return (withHeader ? '<div class="pt-sec">' + esc(g.group) + '</div>' : '') + items.join('');
+        return (withHeader ? '<div class="pt-sec">' + esc(t(g.group)) + '</div>' : '') + items.join('');
       };
       const panelZ = sectionFor(groups[0], false) || '<div class="pt-empty">Keine Betriebszustände für diesen Prozesstyp.</div>';
       const panelM = (sectionFor(groups[1], true) + sectionFor(groups[2], true)) || '<div class="pt-empty">Keine Meldungen/Betriebsdaten für diesen Prozesstyp.</div>';
@@ -2864,7 +2874,7 @@ const STATE_ICONS = {
     const layers = (a.layers || []).slice().sort((x, y) => (y.sortOrder || 0) - (x.sortOrder || 0)); // oben = höchste sort_order
     const rows = layers.length ? layers.map((l, i) =>
       '<tr><td><span class="adm-lswatch" style="background:' + esc(l.color) + '"></span><span class="adm-lcode">' + esc(l.code) + '</span></td>'
-      + '<td>' + esc(l.name) + '</td>'
+      + '<td>' + esc(t(l.name)) + '</td>'
       + '<td>' + ((l.categories && l.categories.length) ? l.categories.map((c) => esc(c.name)).join(', ') : '—') + '</td>'
       + '<td class="adm-actions">'
       + '<button data-adm="layer-up" data-id="' + l.id + '" title="Nach oben"' + (i === 0 ? ' disabled' : '') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>'
@@ -2881,7 +2891,7 @@ const STATE_ICONS = {
     const roleOpts = ['viewer', 'editor', 'werkadmin', 'admin'].map((r) => '<option value="' + r + '"' + (f.role === r ? ' selected' : '') + '>' + roleLabel(r) + '</option>').join('');
     const werkChecks = a.werke.length ? a.werke.map((w) => '<label class="adm-werk"><input type="checkbox" class="admWerk" value="' + w.id + '"' + (f.werkIds.has(w.id) ? ' checked' : '') + (f.allWerke ? ' disabled' : '') + '> ' + esc(w.name) + '</label>').join('') : '<div class="adm-empty">Keine Werke vorhanden.</div>';
     const layers = a.layers || [];
-    const layerChecks = layers.length ? layers.map((l) => '<label class="adm-werk"><input type="checkbox" class="admLayer" value="' + esc(l.code) + '"' + (f.layerCodes.has(l.code) ? ' checked' : '') + (f.allLayers ? ' disabled' : '') + '> <span class="adm-lcode">' + esc(l.code) + '</span> ' + esc(l.name) + '</label>').join('') : '<div class="adm-empty">Keine Ebenen vorhanden.</div>';
+    const layerChecks = layers.length ? layers.map((l) => '<label class="adm-werk"><input type="checkbox" class="admLayer" value="' + esc(l.code) + '"' + (f.layerCodes.has(l.code) ? ' checked' : '') + (f.allLayers ? ' disabled' : '') + '> <span class="adm-lcode">' + esc(l.code) + '</span> ' + esc(t(l.name)) + '</label>').join('') : '<div class="adm-empty">Keine Ebenen vorhanden.</div>';
     return '<div class="adm-form"><h3>' + (isNew ? 'Neue Gruppe' : 'Gruppe bearbeiten') + '</h3>'
       + '<label>Name</label><input id="admGName" value="' + esc(f.name || '') + '">'
       + '<label>Rolle</label><select id="admGRole">' + roleOpts + '</select>'
