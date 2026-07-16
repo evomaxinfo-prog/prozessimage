@@ -2290,6 +2290,9 @@ const STATE_ICONS = {
         if (val || label) metatags.push(label ? { position: i + 1, label: label, value: val } : { position: i + 1, value: val });
       });
     } else {
+      const e1 = $('mTag1'), e2 = $('mTag2');
+      const t1 = e1 ? e1.value.trim() : '';
+      const t2 = e2 ? e2.value.trim() : '';
       const lb1 = $('mTag1_lbl'), lb2 = $('mTag2_lbl');
       const l1 = lb1 ? lb1.value.trim() : (e1 ? (e1.getAttribute('data-label') || '') : '');
       const l2 = lb2 ? lb2.value.trim() : (e2 ? (e2.getAttribute('data-label') || '') : '');
