@@ -20,6 +20,10 @@
     linie: '<circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h10"/><rect x="10" y="9" width="4" height="6" rx="1"/>',
     anlage: '<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M8 9V6a4 4 0 0 1 8 0v3M9 14h6"/>',
   };
+  // Dezente Pastellfarben je Knotentyp; Linie wird hervorgehoben (siehe CSS .n-icon.linie)
+  const NODE_ICON_COLOR = {
+    werk: '#5E8FCB', center: '#3FA9A0', abteilung: '#D79A55', kst: '#9A7BC8', linie: '#E8663F', anlage: '#5DA97C',
+  };
 
   const state = {
     tree: [], byId: {}, expanded: new Set(),
@@ -316,7 +320,7 @@
     return '<div class="node ' + (open ? 'open' : '') + '" data-id="' + n.id + '">'
       + '<div class="row ' + (active ? 'active' : '') + '" data-act="select" data-id="' + n.id + '">'
       + '<div class="toggle ' + (hasKids ? '' : 'leaf') + '" data-act="toggle" data-id="' + n.id + '"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg></div>'
-      + '<div class="n-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">' + (ICONS[n.type] || '') + '</svg></div>'
+      + '<div class="n-icon' + (n.type === 'linie' ? ' linie' : '') + '"' + (NODE_ICON_COLOR[n.type] ? ' style="color:' + NODE_ICON_COLOR[n.type] + '"' : '') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">' + (ICONS[n.type] || '') + '</svg></div>'
       + (editing ? '' : '<div class="n-name">' + esc(n.name) + '</div>')
       + right
       + '</div>'
