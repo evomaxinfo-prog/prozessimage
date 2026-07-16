@@ -23,11 +23,67 @@
 
   const state = {
     tree: [], byId: {}, expanded: new Set(),
-    selected: null, editingNodeId: null, confirmDelete: null, user: null,
+    selected: null, editingNodeId: null, confirmDelete: null, user: null, lang: 'de',
     drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, selectedObj: null, zoneDrag: null, flowType: 0, flowLegend: true,
     collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false, protect: {} },
     geomPending: {},
   };
+
+  /* ---------------- i18n (Mehrsprachigkeit) ----------------
+     Quell-Sprache ist Deutsch (= Schlüssel). Fehlt eine EN-Übersetzung,
+     wird automatisch der deutsche Text angezeigt (graceful fallback). */
+  const I18N_EN = {
+    // Profil
+    'Profil': 'Profile', 'Einstellungen & Passwort': 'Settings & password',
+    'Name': 'Name', 'E-Mail': 'E-mail', 'Rolle': 'Role', 'Gruppe': 'Group', 'Mandant': 'Tenant',
+    'Sprache': 'Language', 'Deutsch': 'German', 'Englisch': 'English',
+    'Passwort ändern': 'Change password', 'Aktuelles Passwort': 'Current password',
+    'Neues Passwort': 'New password', 'Neues Passwort bestätigen': 'Confirm new password',
+    'Passwort speichern': 'Save password', 'Schließen': 'Close', 'Abbrechen': 'Cancel',
+    'Bitte das aktuelle Passwort eingeben.': 'Please enter your current password.',
+    'Neues Passwort: mindestens 8 Zeichen.': 'New password: at least 8 characters.',
+    'Neues Passwort muss sich vom aktuellen unterscheiden.': 'New password must differ from the current one.',
+    'Die neuen Passwörter stimmen nicht überein.': 'The new passwords do not match.',
+    'Wird gespeichert …': 'Saving …', 'Passwort geändert': 'Password changed',
+    // Rollen / Status
+    'Administrator': 'Administrator', 'Werk-Admin': 'Plant admin', 'Editor': 'Editor', 'Betrachter': 'Viewer',
+    'aktiv': 'active', 'deaktiviert': 'disabled',
+    // Admin-Panel
+    'Verwaltung': 'Administration', 'Benutzer': 'Users', 'Gruppen': 'Groups', 'Ebenen': 'Layers',
+    'Anmeldungen': 'Logins', 'Status': 'Status', 'Werke': 'Plants', 'Mitglieder': 'Members',
+    '+ Benutzer hinzufügen': '+ Add user', '+ Gruppe hinzufügen': '+ Add group',
+    'Noch keine Benutzer.': 'No users yet.', 'Noch keine Gruppen.': 'No groups yet.',
+    'zuletzt': 'last', 'noch nie': 'never', 'alle Werke': 'all plants',
+    'Bearbeiten': 'Edit', 'Löschen': 'Delete', 'Passwort zurücksetzen': 'Reset password',
+    // Palette / eigenes Symbol
+    'Eigenes Symbol': 'Custom symbol', 'Symbol bearbeiten': 'Edit symbol',
+    'Bild (PNG, JPG oder SVG)': 'Image (PNG, JPG or SVG)', 'Bild ersetzen (optional)': 'Replace image (optional)',
+    'Bild wählen …': 'Choose image …', 'Metatag-Felder': 'Metatag fields', '+ Feld': '+ Field',
+    'Feld entfernen': 'Remove field', 'Überschrift': 'Heading', 'Text': 'Text', 'Auswahl': 'Selection', 'Mehrfachauswahl': 'Multiple choice',
+    'Optionen, mit Komma getrennt': 'Options, comma-separated', 'Hochladen': 'Upload', 'Speichern': 'Save',
+    'Bitte einen Namen eingeben.': 'Please enter a name.', 'Bitte ein Bild wählen.': 'Please choose an image.',
+    'Bild ist zu groß (max. 2 MB).': 'Image too large (max. 2 MB).',
+    'Kein Werk / keine Ebene aktiv': 'No plant / layer active',
+    'Dieses eigene Symbol aus der Palette löschen?': 'Delete this custom symbol from the palette?',
+    'Symbol gelöscht': 'Symbol deleted', 'Eigenes Symbol hochladen': 'Upload custom symbol',
+    // Metatag-Fenster
+    '– bitte wählen –': '– please select –', 'Keine Optionen konfiguriert': 'No options configured',
+    'frei belegbar …': 'free text …', 'Metatags gespeichert': 'Metatags saved', 'Metatags nicht gespeichert': 'Metatags not saved',
+    // häufige Toasts
+    'platziert': 'placed', 'Position nicht gespeichert': 'Position not saved',
+    'mind. 8 Zeichen': 'min. 8 characters', 'Fehler': 'Error',
+  };
+  function t(s, params) {
+    let out = (state.lang === 'en' && I18N_EN[s] != null) ? I18N_EN[s] : s;
+    if (params) Object.keys(params).forEach((k) => { out = out.split('{' + k + '}').join(params[k]); });
+    return out;
+  }
+  function applyLang() {
+    try { document.documentElement.lang = state.lang; } catch (e) { /* noop */ }
+    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.getAttribute('data-i18n')); });
+    document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph'))); });
+    document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.setAttribute('title', t(el.getAttribute('data-i18n-title'))); });
+  }
 
   /* ---------------- Toast ---------------- */
   let toastTimer;
@@ -122,6 +178,8 @@
   function enterApp(ctx) {
     state.user = ctx.user;
     state.role = ctx.role || 'viewer';
+    state.lang = (ctx.lang === 'en') ? 'en' : 'de';
+    applyLang();
     state.isAdmin = !!ctx.isAdmin;
     state.group = ctx.group || null;
     state.visibleWerke = ctx.visibleWerke || null;
@@ -2183,35 +2241,47 @@ const STATE_ICONS = {
     const tenant = $('tenantName').textContent || '–';
     m.innerHTML = '<div class="modal sym-modal profile-modal">'
       + '<div class="m-head pf-head"><div class="pf-avatar">' + esc(initials(email || name || '?')) + '</div>'
-      + '<div class="pf-id"><h3>' + esc(name || email || 'Profil') + '</h3><p class="m-sub">' + esc(email) + '</p></div></div>'
+      + '<div class="pf-id"><h3>' + esc(name || email || t('Profil')) + '</h3><p class="m-sub">' + esc(email) + '</p></div></div>'
       + '<div class="sym-body">'
       + '<div class="pf-info">'
-      + '<div class="pf-row"><span class="pf-k">Rolle</span><span class="pf-v"><span class="pf-badge">' + esc(roleLabel(state.role)) + '</span></span></div>'
-      + '<div class="pf-row"><span class="pf-k">Gruppe</span><span class="pf-v">' + esc(grp) + '</span></div>'
-      + '<div class="pf-row"><span class="pf-k">Mandant</span><span class="pf-v">' + esc(tenant) + '</span></div>'
+      + '<div class="pf-row"><span class="pf-k">' + t('Rolle') + '</span><span class="pf-v"><span class="pf-badge">' + esc(roleLabel(state.role)) + '</span></span></div>'
+      + '<div class="pf-row"><span class="pf-k">' + t('Gruppe') + '</span><span class="pf-v">' + esc(grp) + '</span></div>'
+      + '<div class="pf-row"><span class="pf-k">' + t('Mandant') + '</span><span class="pf-v">' + esc(tenant) + '</span></div>'
       + '</div>'
-      + '<div class="pf-sec">Passwort ändern</div>'
-      + '<label class="sym-lbl">Aktuelles Passwort</label><input id="pfOld" type="password" class="sym-in" autocomplete="current-password">'
-      + '<label class="sym-lbl">Neues Passwort</label><input id="pfNew" type="password" class="sym-in" autocomplete="new-password" placeholder="mind. 8 Zeichen">'
-      + '<label class="sym-lbl">Neues Passwort bestätigen</label><input id="pfNew2" type="password" class="sym-in" autocomplete="new-password">'
+      + '<div class="pf-sec">' + t('Sprache') + '</div>'
+      + '<div class="pf-lang">'
+      + '<button class="pf-lang-btn' + (state.lang === 'de' ? ' active' : '') + '" data-lang="de">Deutsch</button>'
+      + '<button class="pf-lang-btn' + (state.lang === 'en' ? ' active' : '') + '" data-lang="en">English</button>'
+      + '</div>'
+      + '<div class="pf-sec">' + t('Passwort ändern') + '</div>'
+      + '<label class="sym-lbl">' + t('Aktuelles Passwort') + '</label><input id="pfOld" type="password" class="sym-in" autocomplete="current-password">'
+      + '<label class="sym-lbl">' + t('Neues Passwort') + '</label><input id="pfNew" type="password" class="sym-in" autocomplete="new-password" placeholder="' + t('mind. 8 Zeichen') + '">'
+      + '<label class="sym-lbl">' + t('Neues Passwort bestätigen') + '</label><input id="pfNew2" type="password" class="sym-in" autocomplete="new-password">'
       + '<div class="sym-msg" id="pfMsg"></div>'
       + '</div>'
-      + '<div class="m-foot"><button class="btn" id="pfCancel">Schließen</button><button class="btn primary" id="pfSave">Passwort speichern</button></div></div>';
+      + '<div class="m-foot"><button class="btn" id="pfCancel">' + t('Schließen') + '</button><button class="btn primary" id="pfSave">' + t('Passwort speichern') + '</button></div></div>';
     m.style.display = 'flex';
     document.getElementById('pfCancel').addEventListener('click', closeProfile);
     document.getElementById('pfSave').addEventListener('click', saveProfilePw);
+    m.querySelectorAll('.pf-lang-btn').forEach((b) => b.addEventListener('click', () => setLang(b.getAttribute('data-lang'))));
     m.addEventListener('click', (e) => { if (e.target === m) closeProfile(); });
     setTimeout(() => { const o = document.getElementById('pfOld'); if (o) o.focus(); }, 40);
+  }
+  async function setLang(lang) {
+    if (lang === state.lang) return;
+    const msg = document.getElementById('pfMsg'); if (msg) msg.textContent = t('Wird gespeichert …');
+    try { await Api.setLanguage(lang); } catch (e) { if (msg) msg.textContent = (e.data && e.data.message) || 'Fehler'; return; }
+    location.reload();
   }
   function closeProfile() { const m = document.getElementById('profileModal'); if (m) m.style.display = 'none'; }
   async function saveProfilePw() {
     const oldp = $('pfOld').value, np = $('pfNew').value, np2 = $('pfNew2').value; const msg = $('pfMsg');
-    if (!oldp) { msg.textContent = 'Bitte das aktuelle Passwort eingeben.'; return; }
-    if ((np || '').length < 8) { msg.textContent = 'Neues Passwort: mindestens 8 Zeichen.'; return; }
-    if (np === oldp) { msg.textContent = 'Neues Passwort muss sich vom aktuellen unterscheiden.'; return; }
-    if (np !== np2) { msg.textContent = 'Die neuen Passwörter stimmen nicht überein.'; return; }
-    msg.textContent = 'Wird gespeichert …';
-    try { await Api.changePassword(oldp, np); closeProfile(); toast('Passwort geändert'); }
+    if (!oldp) { msg.textContent = t('Bitte das aktuelle Passwort eingeben.'); return; }
+    if ((np || '').length < 8) { msg.textContent = t('Neues Passwort: mindestens 8 Zeichen.'); return; }
+    if (np === oldp) { msg.textContent = t('Neues Passwort muss sich vom aktuellen unterscheiden.'); return; }
+    if (np !== np2) { msg.textContent = t('Die neuen Passwörter stimmen nicht überein.'); return; }
+    msg.textContent = t('Wird gespeichert …');
+    try { await Api.changePassword(oldp, np); closeProfile(); toast(t('Passwort geändert')); }
     catch (e) { msg.textContent = (e.data && e.data.message) || ('Fehler: ' + (e.message || 'Änderung fehlgeschlagen')); }
   }
   async function saveSymUpload() {
@@ -2613,7 +2683,7 @@ const STATE_ICONS = {
 
   /* ================= Benutzerverwaltung (admin) ================= */
   const ROLE_LABEL = { admin: 'Administrator', werkadmin: 'Werk-Admin', editor: 'Editor', viewer: 'Betrachter' };
-  function roleLabel(r) { return ROLE_LABEL[r] || r; }
+  function roleLabel(r) { return t(ROLE_LABEL[r] || r); }
 
   const DEFAULT_LAYERS = [
     { code: 'L0.0', name: 'Funktionsgruppen' }, { code: 'L1.0', name: 'Materialfluss' },
@@ -2647,9 +2717,9 @@ const STATE_ICONS = {
     else if (a.tab === 'layers') body = a.layerForm ? renderLayerForm(a) : renderAdminLayers(a);
     else body = a.groupForm ? renderGroupForm(a) : renderAdminGroups(a);
     $('adminOverlay').innerHTML = '<div class="adm-backdrop" id="admBackdrop"><div class="adm-card">'
-      + '<div class="adm-head"><div class="adm-title">Verwaltung</div>'
-      + '<div class="adm-tabs">' + tabBtn('users', 'Benutzer') + tabBtn('groups', 'Gruppen') + tabBtn('layers', 'Ebenen') + '</div>'
-      + '<button class="adm-x" data-adm="close" title="Schließen">×</button></div>'
+      + '<div class="adm-head"><div class="adm-title">' + t('Verwaltung') + '</div>'
+      + '<div class="adm-tabs">' + tabBtn('users', t('Benutzer')) + tabBtn('groups', t('Gruppen')) + tabBtn('layers', t('Ebenen')) + '</div>'
+      + '<button class="adm-x" data-adm="close" title="' + t('Schließen') + '">×</button></div>'
       + '<div class="adm-body">' + body + '</div></div></div>';
   }
 
@@ -2672,19 +2742,19 @@ const STATE_ICONS = {
     const heads = cols.map((c) => {
       const on = us.col === c.k;
       const arr = on ? (us.dir === 'asc' ? '▲' : '▼') : '↕';
-      return '<th class="adm-sort' + (on ? ' active' : '') + '" data-adm="sort-users" data-col="' + c.k + '">' + c.l + '<span class="adm-arr">' + arr + '</span></th>';
+      return '<th class="adm-sort' + (on ? ' active' : '') + '" data-adm="sort-users" data-col="' + c.k + '">' + t(c.l) + '<span class="adm-arr">' + arr + '</span></th>';
     }).join('') + '<th></th>';
     const rows = sorted.length ? sorted.map((u) =>
       '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td>'
       + '<td>' + (u.group ? '<span class="adm-gname">' + esc(u.group.name) + '</span><span class="adm-role r-' + esc(u.group.role) + '">' + esc(roleLabel(u.group.role)) + '</span>' : '—') + '</td>'
-      + '<td class="adm-logins"><b>' + (u.loginCount || 0) + '</b><span class="adm-ll">' + (llFmt(u.lastLoginAt) ? 'zuletzt ' + llFmt(u.lastLoginAt) : 'noch nie') + '</span>' + (u.lastLoginIp ? '<span class="adm-ip" title="IP der letzten Anmeldung">' + esc(u.lastLoginIp) + '</span>' : '') + '</td>'
-      + '<td>' + (u.active ? '<span class="adm-ok">aktiv</span>' : '<span class="adm-off">deaktiviert</span>') + '</td>'
+      + '<td class="adm-logins"><b>' + (u.loginCount || 0) + '</b><span class="adm-ll">' + (llFmt(u.lastLoginAt) ? t('zuletzt') + ' ' + llFmt(u.lastLoginAt) : t('noch nie')) + '</span>' + (u.lastLoginIp ? '<span class="adm-ip" title="IP der letzten Anmeldung">' + esc(u.lastLoginIp) + '</span>' : '') + '</td>'
+      + '<td>' + (u.active ? '<span class="adm-ok">' + t('aktiv') + '</span>' : '<span class="adm-off">' + t('deaktiviert') + '</span>') + '</td>'
       + '<td class="adm-actions">'
       + '<button data-adm="user-edit" data-id="' + u.id + '" title="Bearbeiten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
       + '<button data-adm="user-pw" data-id="' + u.id + '" title="Passwort zurücksetzen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l2 2M14 9l2 2"/></svg></button>'
       + '<button class="del" data-adm="user-del" data-id="' + u.id + '" title="Löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
-      + '</td></tr>').join('') : '<tr><td colspan="6" class="adm-empty">Noch keine Benutzer.</td></tr>';
-    return '<div class="adm-toolbar"><button class="btn primary" data-adm="user-new">+ Benutzer hinzufügen</button></div>'
+      + '</td></tr>').join('') : '<tr><td colspan="6" class="adm-empty">' + t('Noch keine Benutzer.') + '</td></tr>';
+    return '<div class="adm-toolbar"><button class="btn primary" data-adm="user-new">'+ t('+ Benutzer hinzufügen') +'</button></div>'
       + '<table class="adm-table"><thead><tr>' + heads + '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
@@ -2723,16 +2793,16 @@ const STATE_ICONS = {
       return gs.dir === 'asc' ? c : -c;
     });
     const cols = [{ k: 'name', l: 'Name' }, { k: 'role', l: 'Rolle' }, { k: 'werke', l: 'Werke' }, { k: 'members', l: 'Mitglieder' }];
-    const heads = cols.map((c) => { const on = gs.col === c.k; const arr = on ? (gs.dir === 'asc' ? '▲' : '▼') : '↕'; return '<th class="adm-sort' + (on ? ' active' : '') + '" data-adm="sort-groups" data-col="' + c.k + '">' + c.l + '<span class="adm-arr">' + arr + '</span></th>'; }).join('') + '<th></th>';
+    const heads = cols.map((c) => { const on = gs.col === c.k; const arr = on ? (gs.dir === 'asc' ? '▲' : '▼') : '↕'; return '<th class="adm-sort' + (on ? ' active' : '') + '" data-adm="sort-groups" data-col="' + c.k + '">' + t(c.l) + '<span class="adm-arr">' + arr + '</span></th>'; }).join('') + '<th></th>';
     const rows = sorted.length ? sorted.map((g) =>
       '<tr><td>' + esc(g.name) + '</td><td><span class="adm-role r-' + esc(g.role) + '">' + esc(roleLabel(g.role)) + '</span></td>'
-      + '<td>' + (g.allWerke ? '<i>alle Werke</i>' : (g.werke.length ? g.werke.map((w) => esc(w.name)).join(', ') : '—')) + '</td>'
+      + '<td>' + (g.allWerke ? '<i>' + t('alle Werke') + '</i>' : (g.werke.length ? g.werke.map((w) => esc(w.name)).join(', ') : '—')) + '</td>'
       + '<td>' + g.userCount + '</td>'
       + '<td class="adm-actions">'
       + '<button data-adm="group-edit" data-id="' + g.id + '" title="Bearbeiten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
       + '<button class="del" data-adm="group-del" data-id="' + g.id + '" title="Löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
-      + '</td></tr>').join('') : '<tr><td colspan="5" class="adm-empty">Noch keine Gruppen.</td></tr>';
-    return '<div class="adm-toolbar"><button class="btn primary" data-adm="group-new">+ Gruppe hinzufügen</button></div>'
+      + '</td></tr>').join('') : '<tr><td colspan="5" class="adm-empty">' + t('Noch keine Gruppen.') + '</td></tr>';
+    return '<div class="adm-toolbar"><button class="btn primary" data-adm="group-new">' + t('+ Gruppe hinzufügen') + '</button></div>'
       + '<table class="adm-table"><thead><tr>' + heads + '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 

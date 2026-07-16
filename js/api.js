@@ -100,6 +100,9 @@
     changePassword(currentPassword, newPassword) {
       return this.request('/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } });
     },
+    setLanguage(lang) {
+      return this.request('/auth/language', { method: 'POST', body: { lang } });
+    },
 
     // ---- Baum ----
     getTree() { return this.request('/tree'); },
