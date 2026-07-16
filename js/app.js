@@ -88,6 +88,27 @@
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
     'Journaleinträge': 'journal entries', 'Ohne Kategorie': 'No category', 'Journaleintrag fehlgeschlagen': 'Journal entry failed',
+    // Detail-Ansicht
+    'MODELLIEREN': 'MODEL', 'Stammdaten': 'Master data', 'Bearbeitung': 'Editing',
+    'Anlagenname': 'System name', 'Bereich': 'Area', 'Anlagenversion': 'System version',
+    'Erstellt am': 'Created on', 'Letzte Änderung': 'Last change', 'Beschreibung': 'Description',
+    'SPS-Konfiguration': 'PLC configuration', 'Steuerungen': 'controllers',
+    'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
+    'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
+    'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
+    'Vorherige: ': 'Previous: ', 'Erste Station': 'First station', 'Nächste: ': 'Next: ', 'Letzte Station': 'Last station',
+    'Layout ersetzen': 'Replace layout', 'Layout hochladen': 'Upload layout',
+    'eigenes Layout': 'custom layout', 'Schema-Layout · L1–L5': 'Schematic layout · L1–L5', 'Schema-Layout': 'Schematic layout',
+    // Linien-/Übersicht
+    'Anlage auswählen': 'Select system', 'Gesamtübersicht': 'Overview', 'Linien-Dashboard': 'Line dashboard',
+    'Anlagen': 'Systems', 'Center': 'Centers', 'SPS gesamt': 'PLCs total', 'Dokumentiert': 'Documented',
+    'Stationen': 'Stations', 'Objekte': 'Objects',
+    // Baum-Aktionen / Toasts
+    'Neues Werk': 'New plant', 'Neue ': 'New ', 'Anlegen fehlgeschlagen: ': 'Creation failed: ',
+    'Station konnte nicht geladen werden': 'Station could not be loaded',
+    'Detail konnte nicht geladen werden.': 'Details could not be loaded.', 'Noch keine Einträge.': 'No entries yet.',
+    'Gespeichert': 'Saved', 'Speichern fehlgeschlagen: ': 'Save failed: ', 'Export fehlgeschlagen': 'Export failed',
+    'Umbenennen fehlgeschlagen': 'Rename failed', 'Löschen fehlgeschlagen': 'Delete failed', 'Gelöscht': 'Deleted',
   };
   function t(s, params) {
     let out = (state.lang === 'en' && I18N_EN[s] != null) ? I18N_EN[s] : s;
@@ -345,18 +366,18 @@
 
   async function addWerk() {
     try {
-      const node = await Api.createNode(null, 'werk', 'Neues Werk');
+      const node = await Api.createNode(null, 'werk', t('Neues Werk'));
       state.editingNodeId = node.id;
       await loadTree(); focusEdit(node.id);
-    } catch (e) { toast('Anlegen fehlgeschlagen: ' + e.message); }
+    } catch (e) { toast(t('Anlegen fehlgeschlagen: ') + e.message); }
   }
   async function addChild(parentId) {
     const p = findNode(parentId); const ct = childType(p.type); if (!ct) return;
     try {
-      const node = await Api.createNode(parentId, ct, 'Neue ' + TYPE_LABEL[ct]);
+      const node = await Api.createNode(parentId, ct, t('Neue ') + TYPE_LABEL[ct]);
       state.expanded.add(parentId); state.editingNodeId = node.id;
       await loadTree(); focusEdit(node.id);
-    } catch (e) { toast('Anlegen fehlgeschlagen: ' + e.message); }
+    } catch (e) { toast(t('Anlegen fehlgeschlagen: ') + e.message); }
   }
   function startRename(id) { state.editingNodeId = id; state.confirmDelete = null; renderTree(); focusEdit(id); }
   async function commitRename(id, val) {
@@ -364,16 +385,16 @@
     state.editingNodeId = null;
     const n = findNode(id); const v = (val || '').trim();
     if (n && v && v !== n.name) {
-      try { await Api.updateNode(id, { name: v }); } catch (e) { toast('Umbenennen fehlgeschlagen'); }
+      try { await Api.updateNode(id, { name: v }); } catch (e) { toast(t('Umbenennen fehlgeschlagen')); }
       await loadTree();
     } else { renderTree(); }
   }
   async function doDelete(id) {
     state.confirmDelete = null;
-    try { await Api.deleteNode(id); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
+    try { await Api.deleteNode(id); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     if (state.selected === id) { state.selected = null; renderWelcome(); }
     await loadTree();
-    toast('Gelöscht');
+    toast(t('Gelöscht'));
   }
 
   /* ---------------- Inhalt ---------------- */
@@ -391,26 +412,26 @@
     $('content').innerHTML = '<div class="welcome"><div class="welcome-inner">'
       + '<svg class="glyph" width="60" height="60" viewBox="0 0 60 60" fill="none">'
       + '<path d="M30 6 L52 17 L30 28 L8 17 Z" fill="#0065A5"/><path d="M30 22 L52 33 L30 44 L8 33 Z" fill="#3d8bc0"/><path d="M30 38 L52 49 L30 60 L8 49 Z" fill="#939598"/></svg>'
-      + '<h2>Anlage auswählen</h2>'
+      + '<h2>' + t('Anlage auswählen') + '</h2>'
       + '<p>Navigiere links durch die Struktur. Neue Knoten legst du mit dem +-Symbol an. Detailansicht und Editor folgen in den nächsten Schritten.</p>'
       + '</div></div>';
   }
 
   async function renderWerk(node) {
     $('content').innerHTML = breadcrumb(node.id) + '<div class="werk-wrap"><div class="werk-head"><div>'
-      + '<h1>' + esc(node.name) + '</h1><p>Gesamtübersicht</p></div></div>'
+      + '<h1>' + esc(node.name) + '</h1><p>' + t('Gesamtübersicht') + '</p></div></div>'
       + '<div class="zone-stats" id="werkStats">'
-      + '<div class="stat b"><div class="k">…</div><div class="l">Anlagen</div></div>'
-      + '<div class="stat"><div class="k">…</div><div class="l">Center</div></div>'
-      + '<div class="stat"><div class="k">…</div><div class="l">SPS gesamt</div></div>'
-      + '<div class="stat"><div class="k">…</div><div class="l">Dokumentiert</div></div></div></div>';
+      + '<div class="stat b"><div class="k">…</div><div class="l">' + t('Anlagen') + '</div></div>'
+      + '<div class="stat"><div class="k">…</div><div class="l">' + t('Center') + '</div></div>'
+      + '<div class="stat"><div class="k">…</div><div class="l">' + t('SPS gesamt') + '</div></div>'
+      + '<div class="stat"><div class="k">…</div><div class="l">' + t('Dokumentiert') + '</div></div></div></div>';
     try {
       const o = await Api.getWerkOverview(node.id);
       $('werkStats').innerHTML =
-        '<div class="stat b"><div class="k">' + o.anlagen + '</div><div class="l">Anlagen</div></div>'
-        + '<div class="stat"><div class="k">' + o.center + '</div><div class="l">Center</div></div>'
-        + '<div class="stat"><div class="k">' + o.sps + '</div><div class="l">SPS gesamt</div></div>'
-        + '<div class="stat"><div class="k">' + o.dokumentiertPercent + '%</div><div class="l">Dokumentiert</div></div>';
+        '<div class="stat b"><div class="k">' + o.anlagen + '</div><div class="l">' + t('Anlagen') + '</div></div>'
+        + '<div class="stat"><div class="k">' + o.center + '</div><div class="l">' + t('Center') + '</div></div>'
+        + '<div class="stat"><div class="k">' + o.sps + '</div><div class="l">' + t('SPS gesamt') + '</div></div>'
+        + '<div class="stat"><div class="k">' + o.dokumentiertPercent + '%</div><div class="l">' + t('Dokumentiert') + '</div></div>';
     } catch (e) { /* leer lassen */ }
   }
 
@@ -450,12 +471,12 @@
       + '<div class="lc-meta" id="lcm-' + n.id + '"><span class="lc-load">lädt …</span></div>'
       + '<div class="lc-open">Station öffnen ›</div></div></div>';
     $('content').innerHTML = breadcrumb(node.id)
-      + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1><p>Linien-Dashboard</p></div></div>'
+      + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1><p>' + t('Linien-Dashboard') + '</p></div></div>'
       + '<div class="ls-section-title">Übersicht <span>allgemeine Themen</span></div>'
       + '<div class="zone-stats rich" id="linieStats">'
-      + '<div class="stat b"><span class="stat-ic">' + KPI_ICONS.stations + '</span><span class="stat-txt"><span class="k">' + stations.length + '</span><span class="l">Stationen</span></span></div>'
+      + '<div class="stat b"><span class="stat-ic">' + KPI_ICONS.stations + '</span><span class="stat-txt"><span class="k">' + stations.length + '</span><span class="l">' + t('Stationen') + '</span></span></div>'
       + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.sps + '</span><span class="stat-txt"><span class="k">…</span><span class="l">SPS gesamt</span></span></div>'
-      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.objects + '</span><span class="stat-txt"><span class="k">…</span><span class="l">Objekte</span></span></div>'
+      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.objects + '</span><span class="stat-txt"><span class="k">…</span><span class="l">' + t('Objekte') + '</span></span></div>'
       + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.doc + '</span><span class="stat-txt"><span class="k">…</span><span class="l">Dokumentiert</span></span></div></div>'
       + (stations.length ? '<div class="line-grid">' + stations.map(skel).join('') + '</div>'
         : '<div class="pad" style="color:var(--muted)">Keine Stationen unter dieser Linie.</div>')
@@ -514,9 +535,9 @@
       }
     }));
     const st = $('linieStats');
-    if (st) st.innerHTML = '<div class="stat b"><span class="stat-ic">' + KPI_ICONS.stations + '</span><span class="stat-txt"><span class="k">' + stations.length + '</span><span class="l">Stationen</span></span></div>'
+    if (st) st.innerHTML = '<div class="stat b"><span class="stat-ic">' + KPI_ICONS.stations + '</span><span class="stat-txt"><span class="k">' + stations.length + '</span><span class="l">' + t('Stationen') + '</span></span></div>'
       + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.sps + '</span><span class="stat-txt"><span class="k">' + sps + '</span><span class="l">SPS gesamt</span></span></div>'
-      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.objects + '</span><span class="stat-txt"><span class="k">' + objs + '</span><span class="l">Objekte</span></span></div>'
+      + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.objects + '</span><span class="stat-txt"><span class="k">' + objs + '</span><span class="l">' + t('Objekte') + '</span></span></div>'
       + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.doc + '</span><span class="stat-txt"><span class="k">' + Math.round(100 * docn / stations.length) + '%</span><span class="l">Dokumentiert</span></span></div>';
     // Ebenen als horizontale Ordner (Tabs): Daten merken, aktive Ebene wählen
     const names = Object.keys(layerAgg);
@@ -722,7 +743,7 @@
   async function gotoObject(nodeId, objId) {
     const n = findNode(nodeId); if (!n) return;
     state.selected = nodeId; state.confirmDelete = null;
-    try { if (!(await loadStationDetail(n))) { renderTree(); return; } } catch (e) { toast('Station konnte nicht geladen werden'); return; }
+    try { if (!(await loadStationDetail(n))) { renderTree(); return; } } catch (e) { toast(t('Station konnte nicht geladen werden')); return; }
     const o = (state.detail.objects || []).find((x) => x.id === objId);
     if (o && o.layerId) state.activeLayer = o.layerId;
     await openEditor();
@@ -755,7 +776,7 @@
     if (ni < 0 || ni >= s.stations.length) return;
     const target = s.stations[ni];
     state.selected = target.id;
-    try { if (!(await loadStationDetail(target))) return; } catch (e) { toast('Station konnte nicht geladen werden'); return; }
+    try { if (!(await loadStationDetail(target))) return; } catch (e) { toast(t('Station konnte nicht geladen werden')); return; }
     await openEditor();
     renderTree();
   }
@@ -764,8 +785,8 @@
     const s = lineSiblings();
     if (!s || s.stations.length < 2) return '';
     const prevD = s.idx <= 0 ? ' disabled' : '', nextD = s.idx >= s.stations.length - 1 ? ' disabled' : '';
-    const prevT = s.idx > 0 ? 'Vorherige: ' + esc(s.stations[s.idx - 1].name) : 'Erste Station';
-    const nextT = s.idx < s.stations.length - 1 ? 'Nächste: ' + esc(s.stations[s.idx + 1].name) : 'Letzte Station';
+    const prevT = s.idx > 0 ? t('Vorherige: ') + esc(s.stations[s.idx - 1].name) : t('Erste Station');
+    const nextT = s.idx < s.stations.length - 1 ? t('Nächste: ') + esc(s.stations[s.idx + 1].name) : t('Letzte Station');
     const curName = esc(s.stations[s.idx].name);
     return '<div class="nav-ctl" title="Station innerhalb der Linie wechseln (' + curName + ')">'
       + '<button class="nav-arrow" data-act="station-prev"' + prevD + ' title="' + prevT + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>'
@@ -783,7 +804,7 @@
       await ensureLayoutBlob();
       renderDetail();
     } catch (e) {
-      $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">Detail konnte nicht geladen werden.</div></div></div>';
+      $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">' + t('Detail konnte nicht geladen werden.') + '</div></div></div>';
     }
   }
 
@@ -825,14 +846,14 @@
     const journal = (s.journal || []);
     const jlist = journal.length
       ? journal.map((j) => '<div class="j-item"><div class="j-dot"></div><div class="j-body"><div class="j-text">' + esc(j.text) + '</div><div class="j-meta">' + esc(j.author || '–') + ' · ' + fmtDateTime(j.createdAt) + '</div></div></div>').join('')
-      : '<div style="color:var(--muted);font-size:13px;padding:6px 2px">Noch keine Einträge.</div>';
+      : '<div style="color:var(--muted);font-size:13px;padding:6px 2px">' + t('Noch keine Einträge.') + '</div>';
 
     const html = '<div class="pad">'
       + '<div class="detail-top">'
       + '<div class="preview">'
       + ((s.hasLayout && state.layoutBlobUrl) ? '<img src="' + state.layoutBlobUrl + '" alt="Layout" style="width:100%;height:100%;object-fit:cover;display:block">' : schemaThumb())
-      + '<button class="preview-upload" data-act="detail-upload" title="Layout hochladen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (s.hasLayout ? 'Layout ersetzen' : 'Layout hochladen') + '</button>'
-      + '<div class="tag">' + (s.hasLayout ? 'eigenes Layout' : 'Schema-Layout · L1–L5') + '</div>'
+      + '<button class="preview-upload" data-act="detail-upload" title="' + t('Layout hochladen') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (s.hasLayout ? t('Layout ersetzen') : t('Layout hochladen')) + '</button>'
+      + '<div class="tag">' + (s.hasLayout ? t('eigenes Layout') : t('Schema-Layout · L1–L5')) + '</div>'
       + '<div class="open-hint" data-act="open-editor">MODELLIEREN ›</div></div>'
       + '<div><div class="detail-title"><h1>' + esc(name) + '</h1><div class="sub">' + esc(s.bereich || '–') + ' · OEM ' + esc(s.oem || '–') + '</div></div>'
       + '<div class="chips">'
@@ -842,31 +863,31 @@
       + '<div class="chip">Zuletzt: ' + fmtDate(s.letzteAenderung) + '</div></div>'
       + '<div class="action-bar" style="margin-top:16px;margin-bottom:0">'
       + (canEdit() ? '<button class="btn ' + (ed ? 'primary' : '') + '" data-act="toggle-edit">' + (ed ? t('SPEICHERN') : t('EDITIEREN')) + '</button>' : '')
-      + '<button class="btn solid-dark" data-act="open-editor">MODELLIEREN</button>'
+      + '<button class="btn solid-dark" data-act="open-editor">' + t('MODELLIEREN') + '</button>'
       + '</div></div></div>'
 
-      + '<div class="card"><div class="card-head"><h3>Stammdaten</h3>' + (ed ? '<span class="badge" style="color:#0065A5;border-color:#0065A5">Bearbeitung</span>' : '') + '</div>'
+      + '<div class="card"><div class="card-head"><h3>' + t('Stammdaten') + '</h3>' + (ed ? '<span class="badge" style="color:#0065A5;border-color:#0065A5">' + t('Bearbeitung') + '</span>' : '') + '</div>'
       + '<div class="card-body"><div class="form-grid">'
-      + fld('Anlagenname', name, 'name')
-      + fld('Bereich', ed ? d.bereich : s.bereich, 'bereich')
-      + fld('OEM', ed ? d.oem : s.oem, 'oem')
-      + fld('Anlagenversion', ed ? d.anlagenversion : s.anlagenversion, 'anlagenversion')
-      + fld('Erstellt am', fmtDate(s.erstelltAm), 'ea', true)
-      + fld('Letzte Änderung', fmtDate(s.letzteAenderung), 'la', true)
-      + '<div class="fld wide ' + (ed ? 'editing' : '') + '"><label>Beschreibung</label>'
+      + fld(t('Anlagenname'), name, 'name')
+      + fld(t('Bereich'), ed ? d.bereich : s.bereich, 'bereich')
+      + fld(t('OEM'), ed ? d.oem : s.oem, 'oem')
+      + fld(t('Anlagenversion'), ed ? d.anlagenversion : s.anlagenversion, 'anlagenversion')
+      + fld(t('Erstellt am'), fmtDate(s.erstelltAm), 'ea', true)
+      + fld(t('Letzte Änderung'), fmtDate(s.letzteAenderung), 'la', true)
+      + '<div class="fld wide ' + (ed ? 'editing' : '') + '"><label>' + t('Beschreibung') + '</label>'
       + (ed ? '<textarea data-field="beschreibung" rows="2" style="width:100%;resize:vertical">' + esc(d.beschreibung || '') + '</textarea>' : '<div class="val">' + esc(s.beschreibung || '–') + '</div>') + '</div>'
       + '</div></div></div>'
 
-      + '<div class="card"><div class="card-head"><h3>SPS-Konfiguration</h3><span class="badge">' + plcs.length + ' Steuerungen</span></div>'
-      + '<div class="card-body"><table><thead><tr><th>Name</th><th class="num">Zykluszeit [ms]</th><th class="num">Remanenz [Byte]</th><th class="num">Code-AS [kByte]</th>' + (ed ? '<th></th>' : '') + '</tr></thead><tbody>'
-      + (plcs.length ? plcs.map(plcRow).join('') : '<tr><td colspan="' + (ed ? 5 : 4) + '" style="color:var(--muted)">Keine SPS erfasst.</td></tr>')
+      + '<div class="card"><div class="card-head"><h3>' + t('SPS-Konfiguration') + '</h3><span class="badge">' + plcs.length + ' ' + t('Steuerungen') + '</span></div>'
+      + '<div class="card-body"><table><thead><tr><th>' + t('Name') + '</th><th class="num">' + t('Zykluszeit [ms]') + '</th><th class="num">' + t('Remanenz [Byte]') + '</th><th class="num">' + t('Code-AS [kByte]') + '</th>' + (ed ? '<th></th>' : '') + '</tr></thead><tbody>'
+      + (plcs.length ? plcs.map(plcRow).join('') : '<tr><td colspan="' + (ed ? 5 : 4) + '" style="color:var(--muted)">' + t('Keine SPS erfasst.') + '</td></tr>')
       + '</tbody></table>'
-      + (ed ? '<button class="add-row-btn" data-act="plc-add"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> SPS HINZUFÜGEN</button>' : '')
+      + (ed ? '<button class="add-row-btn" data-act="plc-add"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> ' + t('SPS HINZUFÜGEN') + '</button>' : '')
       + '</div></div>'
 
-      + '<div class="card"><div class="card-head"><h3>Änderungsjournal</h3><span class="badge">append-only</span></div>'
+      + '<div class="card"><div class="card-head"><h3>' + t('Änderungsjournal') + '</h3><span class="badge">append-only</span></div>'
       + '<div class="card-body"><div class="journal-list">' + jlist + '</div>'
-      + (canEdit() ? '<div class="j-add"><input id="jInput" placeholder="Neuer Eintrag …"><button data-act="journal-add"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' : '')
+      + (canEdit() ? '<div class="j-add"><input id="jInput" placeholder="' + t('Neuer Eintrag …') + '"><button data-act="journal-add"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' : '')
       + '</div></div>'
       + '</div>';
 
@@ -903,8 +924,8 @@
           }
         }
       }
-      toast('Gespeichert');
-    } catch (e) { toast('Speichern fehlgeschlagen: ' + e.message); }
+      toast(t('Gespeichert'));
+    } catch (e) { toast(t('Speichern fehlgeschlagen: ') + e.message); }
     state.detailEdit = false; state.detailDraft = null;
     try { const full = await Api.getStationFull(sid); full.nodeId = s.nodeId; state.detail = full; } catch (e) { /* ignore */ }
     await loadTree();
@@ -1529,7 +1550,7 @@ const STATE_ICONS = {
         + '<pattern id="bp2" width="130" height="130" patternUnits="userSpaceOnUse"><path d="M130 0H0V130" fill="none" stroke="#B9C7D1" stroke-width="1.3"/></pattern></defs>'
         + '<rect width="760" height="520" fill="#F7FAFC"/><rect width="760" height="520" fill="url(#bp)"/><rect width="760" height="520" fill="url(#bp2)"/>'
         + '<rect x="40" y="40" width="680" height="440" fill="none" stroke="#8FA3B0" stroke-width="2.5"/></svg>';
-    const badge = state.layoutBlobUrl ? '<div class="layout-badge">eigenes Layout</div>' : '<div class="layout-badge muted">Schema-Layout</div>';
+    const badge = state.layoutBlobUrl ? '<div class="layout-badge">' + t('eigenes Layout') + '</div>' : '<div class="layout-badge muted">' + t('Schema-Layout') + '</div>';
 
     const visible = visibleMap();
     const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
@@ -2175,12 +2196,12 @@ const STATE_ICONS = {
   async function deletePlaced() {
     const oid = state.modalObjId; const o = (state.detail.objects || []).find((x) => x.id === oid);
     closeTagModal(); if (!o) return;
-    try { await Api.deleteObject(oid); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
+    try { await Api.deleteObject(oid); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     state.detail.objects = state.detail.objects.filter((x) => x.id !== oid);
     toast('Objekt gelöscht'); renderEditor();
   }
   async function deleteObjectById(oid) {
-    try { await Api.deleteObject(oid); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
+    try { await Api.deleteObject(oid); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     state.detail.objects = state.detail.objects.filter((x) => x.id !== oid);
     toast('Objekt gelöscht'); renderEditor();
   }
@@ -2325,7 +2346,7 @@ const STATE_ICONS = {
   }
   async function deleteCustomSym(id) {
     if (!window.confirm('Dieses eigene Symbol aus der Palette löschen?')) return;
-    try { await Api.deletePaletteSymbol(id); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
+    try { await Api.deletePaletteSymbol(id); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     const w = currentWerk(); await loadCustomSyms(w ? w.id : null, { force: true }); renderEditor(); toast(t('Symbol gelöscht'));
   }
 
@@ -2350,12 +2371,12 @@ const STATE_ICONS = {
   async function exportFile(kind) {
     try {
       const res = await Api.raw('/stations/' + state.detail.id + '/export.' + kind);
-      if (!res.ok) { toast('Export fehlgeschlagen'); return; }
+      if (!res.ok) { toast(t('Export fehlgeschlagen')); return; }
       const url = URL.createObjectURL(await res.blob());
       if (kind === 'pdf') { window.open(url, '_blank'); }
       else { const a = document.createElement('a'); a.href = url; a.download = (state.detail.anlagenname || 'anlage').replace(/[^A-Za-z0-9_\-]+/g, '_') + '.csv'; document.body.appendChild(a); a.click(); a.remove(); }
       setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } catch (e) { toast('Export fehlgeschlagen'); }
+    } catch (e) { toast(t('Export fehlgeschlagen')); }
   }
 
   // Editor-spezifische Content-Handler (Drag & Drop, Move, Doppelklick)
@@ -2641,7 +2662,7 @@ const STATE_ICONS = {
     if (!z) return;
     const isRoute = z.symbolType === 'mf_route';
     state.selectedZone = null;
-    try { await Api.deleteObject(id); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
+    try { await Api.deleteObject(id); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     state.detail.objects = state.detail.objects.filter((o) => o.id !== id);
     toast(isRoute ? 'Förderweg gelöscht' : 'Schutzbereich gelöscht'); renderEditor();
   }
