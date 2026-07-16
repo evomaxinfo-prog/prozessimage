@@ -100,6 +100,8 @@
     changePassword(currentPassword, newPassword) {
       return this.request('/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } });
     },
+    forgotPassword(email) { return this.request('/auth/forgot-password', { method: 'POST', body: { email } }); },
+    resetPassword(email, token, newPassword) { return this.request('/auth/reset-password', { method: 'POST', body: { email, token, newPassword } }); },
     setLanguage(lang) {
       return this.request('/auth/language', { method: 'POST', body: { lang } });
     },

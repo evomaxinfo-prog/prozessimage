@@ -48,6 +48,11 @@
     'Name': 'Name', 'E-Mail': 'E-mail', 'Rolle': 'Role', 'Gruppe': 'Group', 'Mandant': 'Tenant',
     'Sprache': 'Language', 'Deutsch': 'German', 'Englisch': 'English',
     'Passwort ändern': 'Change password', 'Aktuelles Passwort': 'Current password',
+    'Passwort vergessen?': 'Forgot password?',
+    'Reset anfordern Hinweis': 'Enter your email address. If an account exists, we will send you a link to reset it.',
+    'RESET-LINK ANFORDERN': 'REQUEST RESET LINK',
+    'Neues Passwort setzen': 'Set new password',
+    'Neues Passwort waehlen Hinweis': 'Choose a new password for your account.',
     'Neues Passwort': 'New password', 'Neues Passwort bestätigen': 'Confirm new password',
     'Passwort speichern': 'Save password', 'Schließen': 'Close', 'Abbrechen': 'Cancel',
     'Bitte das aktuelle Passwort eingeben.': 'Please enter your current password.',
@@ -154,12 +159,20 @@
   function showPanel(which) {
     $('panelLogin').style.display = which === 'login' ? 'block' : 'none';
     $('panelChange').style.display = which === 'change' ? 'block' : 'none';
+    const pf = $('panelForgot'); if (pf) pf.style.display = which === 'forgot' ? 'block' : 'none';
+    const pr = $('panelReset'); if (pr) pr.style.display = which === 'reset' ? 'block' : 'none';
     $('loginMsg').textContent = '';
-    const cm = $('chgMsg'); cm.textContent = ''; cm.classList.remove('ok');
+    const cm = $('chgMsg'); if (cm) { cm.textContent = ''; cm.classList.remove('ok'); }
+    const fm = $('fgMsg'); if (fm) { fm.textContent = ''; fm.classList.remove('ok'); }
+    const rm = $('rsMsg'); if (rm) { rm.textContent = ''; rm.classList.remove('ok'); }
     if (which === 'change') { if (!$('chgEmail').value) $('chgEmail').value = $('loginEmail').value.trim(); }
     else if (which === 'login') { if ($('chgEmail').value) $('loginEmail').value = $('chgEmail').value.trim(); }
+    else if (which === 'forgot') { if (!$('fgEmail').value) $('fgEmail').value = $('loginEmail').value.trim(); }
     setTimeout(() => {
-      const el = which === 'change' ? ($('chgEmail').value ? $('chgOld') : $('chgEmail')) : $('loginEmail');
+      const el = which === 'change' ? ($('chgEmail').value ? $('chgOld') : $('chgEmail'))
+        : which === 'forgot' ? $('fgEmail')
+        : which === 'reset' ? $('rsNew')
+        : $('loginEmail');
       if (el) el.focus();
     }, 50);
   }
@@ -167,9 +180,13 @@
   function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
   function pwScore(v) { let s = 0; if (v.length >= 8) s++; if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++; if (/\d/.test(v)) s++; if (/[^A-Za-z0-9]/.test(v)) s++; return Math.min(s, 4); }
   function updateStrength() {
-    const s = pwScore($('chgNew').value);
-    const col = ['', '#C0392B', '#D9822B', '#0E8A6E', '#0E8A6E'][s];
-    document.querySelectorAll('#pwBars i').forEach((b, i) => { b.style.background = i < s ? col : 'var(--panel-2)'; });
+    const bars = (val, sel) => {
+      const s = pwScore(val || '');
+      const col = ['', '#C0392B', '#D9822B', '#0E8A6E', '#0E8A6E'][s];
+      document.querySelectorAll(sel + ' i').forEach((b, i) => { b.style.background = i < s ? col : 'var(--panel-2)'; });
+    };
+    if ($('chgNew')) bars($('chgNew').value, '#pwBars');
+    if ($('rsNew')) bars($('rsNew').value, '#rsBars');
   }
 
   async function doLogin() {
@@ -218,6 +235,38 @@
     }
   }
 
+  // Passwort vergessen: Reset-Link anfordern. Antwort immer generisch (keine Konto-Enumeration).
+  async function doForgot() {
+    const email = $('fgEmail').value.trim();
+    const msg = $('fgMsg'); msg.classList.remove('ok');
+    if (!isEmail(email)) { msg.textContent = 'Bitte eine gültige E-Mail-Adresse eingeben.'; return; }
+    msg.textContent = 'Wird gesendet …';
+    try { await Api.forgotPassword(email); } catch (e) { /* generisch bleiben */ }
+    msg.classList.add('ok');
+    msg.textContent = 'Falls ein Konto zu dieser E-Mail existiert, haben wir einen Link zum Zurücksetzen versandt. Bitte prüfe dein Postfach (auch den Spam-Ordner).';
+  }
+
+  // Neues Passwort per Reset-Token setzen.
+  async function doReset() {
+    const np = $('rsNew').value, np2 = $('rsNew2').value;
+    const msg = $('rsMsg'); msg.classList.remove('ok');
+    if ((np || '').length < 8) { msg.textContent = 'Das neue Passwort muss mindestens 8 Zeichen haben.'; return; }
+    if (np !== np2) { msg.textContent = 'Die neuen Passwörter stimmen nicht überein.'; return; }
+    if (!state.resetToken) { msg.textContent = 'Der Reset-Link ist ungültig. Bitte fordere einen neuen an.'; return; }
+    msg.textContent = 'Passwort wird gesetzt …';
+    try {
+      await Api.resetPassword(state.resetEmail || '', state.resetToken, np);
+      msg.classList.add('ok'); msg.textContent = 'Passwort geändert. Bitte neu anmelden.';
+      state.resetToken = null; state.resetEmail = null;
+      try { history.replaceState(null, '', location.pathname); } catch (e) { /* noop */ }
+      if ($('loginEmail') && state.resetEmailForLogin) $('loginEmail').value = state.resetEmailForLogin;
+      ['rsNew', 'rsNew2'].forEach((id) => { if ($(id)) $(id).value = ''; });
+      setTimeout(() => showPanel('login'), 1400);
+    } catch (e) {
+      msg.textContent = e.status === 422 || e.status === 400 ? 'Der Reset-Link ist ungültig oder abgelaufen. Bitte fordere einen neuen an.' : ('Fehler: ' + e.message);
+    }
+  }
+
   function initials(email) {
     return (email.split('@')[0].split(/[.\-_]/).filter(Boolean).slice(0, 2)
       .map((s) => s[0].toUpperCase()).join('')) || 'U';
@@ -262,9 +311,25 @@
     showPanel('login');
   }
 
+  function parseResetParams() {
+    try {
+      const q = new URLSearchParams(location.search);
+      const token = q.get('token') || q.get('reset');
+      if (token) return { token: token, email: q.get('email') || '' };
+    } catch (e) { /* noop */ }
+    return null;
+  }
+
   async function boot() {
     try { state.lang = (localStorage.getItem('promodx_lang') === 'en') ? 'en' : 'de'; } catch (e) { /* noop */ }
     applyLang();
+    // Reset-Link (?token=…&email=…) erkannt -> direkt "Neues Passwort setzen" anzeigen
+    const rp = parseResetParams();
+    if (rp) {
+      Api.token = null; state.resetToken = rp.token; state.resetEmail = rp.email; state.resetEmailForLogin = rp.email;
+      showLogin(); showPanel('reset');
+      return;
+    }
     if (!Api.isAuthenticated) { showLogin(); return; }
     try {
       const res = await Api.me();
@@ -3389,6 +3454,12 @@ const STATE_ICONS = {
     $('loginForm').addEventListener('submit', (e) => { e.preventDefault(); doLogin(); });
     $('btnChange').addEventListener('click', doChange);
     $('chgNew').addEventListener('input', updateStrength);
+    if ($('btnForgot')) $('btnForgot').addEventListener('click', doForgot);
+    if ($('fgEmail')) $('fgEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') doForgot(); });
+    if ($('btnReset')) $('btnReset').addEventListener('click', doReset);
+    if ($('rsNew')) $('rsNew').addEventListener('input', updateStrength);
+    if ($('rsNew')) $('rsNew').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('rsNew2').focus(); });
+    if ($('rsNew2')) $('rsNew2').addEventListener('keydown', (e) => { if (e.key === 'Enter') doReset(); });
     $('chgEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('chgOld').focus(); });
     $('chgOld').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('chgNew').focus(); });
     $('chgNew2').addEventListener('keydown', (e) => { if (e.key === 'Enter') doChange(); });

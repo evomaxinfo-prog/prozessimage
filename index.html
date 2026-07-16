@@ -9,16 +9,16 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://api.prozessimage.de; connect-src 'self' https://api.prozessimage.de; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>ProModXgOEM2</title>
-<link rel="stylesheet" href="css/app.css?v=0.25.28">
-<script defer src="js/api.js?v=0.25.28"></script>
-<script defer src="js/app.js?v=0.25.28"></script>
+<link rel="stylesheet" href="css/app.css?v=0.25.29">
+<script defer src="js/api.js?v=0.25.29"></script>
+<script defer src="js/app.js?v=0.25.29"></script>
 </head>
 <body>
 
 <!-- Geteilte SVG-Maske: Roboter-Icon wird über die Maske mit currentColor (Ebenenfarbe) eingefärbt -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <mask id="robotMask" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-    <image href="img/robot-mask.png?v=0.25.28" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>
+    <image href="img/robot-mask.png?v=0.25.29" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>
   </mask>
 </defs></svg>
 
@@ -27,9 +27,9 @@
   <div class="login-bg"></div>
   <div class="login-card">
     <div class="login-brand">
-      <img class="lb-logo" src="img/logo.png?v=0.25.28" alt="ProModXgOEM2">
+      <img class="lb-logo" src="img/logo.png?v=0.25.29" alt="ProModXgOEM2">
       <div>
-        <div class="lb-sub">Anlagendokumentation · <span class="ver">v0.25.28</span></div>
+        <div class="lb-sub">Anlagendokumentation · <span class="ver">v0.25.29</span></div>
       </div>
     </div>
     <div class="login-tenant"><span class="dot"></span>UMGEBUNG: TEST</div>
@@ -55,6 +55,7 @@
       <button class="login-btn" id="btnLogin" type="submit" data-i18n="ANMELDEN">ANMELDEN</button>
       </form>
       <div class="login-links">
+        <button class="link" data-panel="forgot" data-i18n="Passwort vergessen?">Passwort vergessen?</button>
         <button class="link" data-panel="change" data-i18n="Passwort ändern">Passwort ändern</button>
       </div>
     </div>
@@ -100,6 +101,51 @@
         <button class="link" data-panel="login">‹ Zurück zur Anmeldung</button>
       </div>
     </div>
+
+    <!-- Panel: Passwort vergessen -->
+    <div id="panelForgot" style="display:none">
+      <h1 class="login-h" data-i18n="Passwort vergessen?">Passwort vergessen?</h1>
+      <p class="login-sub" data-i18n="Reset anfordern Hinweis">Gib deine E-Mail-Adresse ein. Falls ein Konto existiert, senden wir dir einen Link zum Zurücksetzen.</p>
+      <div class="login-field">
+        <label data-i18n="Benutzer · E-Mail">Benutzer · E-Mail</label>
+        <input id="fgEmail" type="email" placeholder="name@evomax.de" autocomplete="username">
+      </div>
+      <div class="login-msg" id="fgMsg"></div>
+      <button class="login-btn" id="btnForgot" data-i18n="RESET-LINK ANFORDERN">RESET-LINK ANFORDERN</button>
+      <div class="login-links">
+        <button class="link" data-panel="login">‹ Zurück zur Anmeldung</button>
+      </div>
+    </div>
+
+    <!-- Panel: Neues Passwort setzen (per Reset-Link) -->
+    <div id="panelReset" style="display:none">
+      <h1 class="login-h" data-i18n="Neues Passwort setzen">Neues Passwort setzen</h1>
+      <p class="login-sub" data-i18n="Neues Passwort waehlen Hinweis">Wähle ein neues Passwort für dein Konto.</p>
+      <div class="login-field">
+        <label data-i18n="Neues Passwort">Neues Passwort</label>
+        <div class="pw-wrap">
+          <input id="rsNew" type="password" placeholder="mind. 8 Zeichen" data-i18n-ph="mind. 8 Zeichen" autocomplete="new-password">
+          <button class="pw-eye" data-toggle="rsNew" title="Passwort anzeigen" data-i18n-title="Passwort anzeigen">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="pw-strength" id="rsBars"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="login-field">
+        <label data-i18n="Neues Passwort bestätigen">Neues Passwort bestätigen</label>
+        <div class="pw-wrap">
+          <input id="rsNew2" type="password" placeholder="••••••••" autocomplete="new-password">
+          <button class="pw-eye" data-toggle="rsNew2" title="Passwort anzeigen" data-i18n-title="Passwort anzeigen">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="login-msg" id="rsMsg"></div>
+      <button class="login-btn" id="btnReset" data-i18n="PASSWORT SPEICHERN">PASSWORT SPEICHERN</button>
+      <div class="login-links">
+        <button class="link" data-panel="login">‹ Zurück zur Anmeldung</button>
+      </div>
+    </div>
   </div>
   <div class="login-foot">evomax GmbH · evolution and a maximum of efficiency for our clients</div>
 </div>
@@ -107,8 +153,8 @@
 <!-- ================= HEADER ================= -->
 <header>
   <div class="brand">
-    <img class="brand-logo" src="img/logo.png?v=0.25.28" alt="ProModXgOEM2">
-    <span class="ver">v0.25.28</span>
+    <img class="brand-logo" src="img/logo.png?v=0.25.29" alt="ProModXgOEM2">
+    <span class="ver">v0.25.29</span>
   </div>
   <div class="tenant"><span class="dot"></span><span id="tenantName">TEST</span></div>
   <div class="head-right">
