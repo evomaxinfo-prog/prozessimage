@@ -472,7 +472,7 @@
     await Promise.all(arr.map(async (s) => {
       let url = '';
       try { const res = await Api.raw('/palette/' + s.id + '/image'); if (res && res.ok) { url = URL.createObjectURL(await res.blob()); state.customBlobs.push(url); } } catch (e) { /* ohne Bild */ }
-      state.customSyms['custom:' + s.id] = { id: s.id, name: s.name, layerCode: s.layerCode, url: url };
+      state.customSyms['custom:' + s.id] = { id: s.id, name: s.name, layerCode: s.layerCode, url: url, fields: Array.isArray(s.fields) ? s.fields : [] };
     }));
   }
   // Symbol-Inhalt: eigenes Bild (custom:) oder Standard-SVG.
@@ -480,6 +480,12 @@
     const c = state.customSyms && state.customSyms[symbolType];
     if (c) return c.url ? '<img class="sym-img" src="' + c.url + '" alt="" style="width:' + px + 'px;height:' + px + 'px">' : '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + SYM.box + '</svg>';
     return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + (SYM[symbolType] || SYM.box) + '</svg>';
+  }
+  // Feld-Konfiguration eines eigenen Symbols (Überschrift + Typ text/select + Optionen).
+  function defaultCustomFields() { return [{ label: 'Text 1', type: 'text', options: [] }, { label: 'Text 2', type: 'text', options: [] }]; }
+  function symFields(symbolType) {
+    const c = state.customSyms && state.customSyms[symbolType];
+    return (c && c.fields && c.fields.length) ? c.fields : defaultCustomFields();
   }
   // symbolType -> Anzeigename je Ebene (aus der Palette; Zonen/Förderwege/Prozesstypen gesondert).
   function symLabelsFor(nm) {
@@ -1789,7 +1795,7 @@ const STATE_ICONS = {
           else toast(name + ' platziert');
         } catch (e2) { toast(name + ' platziert'); }
       } else if (/^custom:/.test(sym)) {
-        const tags = [{ position: 1, label: 'Text 1', value: '' }, { position: 2, label: 'Text 2', value: '' }];
+        const tags = symFields(sym).map((f, i) => ({ position: i + 1, label: f.label, value: '' }));
         try { const upd = await Api.setMetatags(obj.id, tags); obj.metatags = (upd && upd.metatags) || tags; } catch (e2) { obj.metatags = tags; }
         toast(name + ' platziert');
       } else { toast(name + ' platziert'); }
@@ -2005,9 +2011,23 @@ const STATE_ICONS = {
     } else if (o.symbolType === 'robot') {
       $('mBody').innerHTML = tagFieldSelect('mTag1', 'Safe Funktion', ROBOT_RISK, v1) + tagFieldSelect('mTag2', 'Technologie', ROBOT_TECH, v2);
     } else if (/^custom:/.test(o.symbolType)) {
-      const l1 = (o.metatags.find((m) => m.position === 1) || {}).label || 'Text 1';
-      const l2 = (o.metatags.find((m) => m.position === 2) || {}).label || 'Text 2';
-      $('mBody').innerHTML = tagFieldInput('mTag1', l1, v1, l1, canManagePalette()) + tagFieldInput('mTag2', l2, v2, l2, canManagePalette());
+      const fields = symFields(o.symbolType);
+      const edit = canManagePalette();
+      $('mBody').innerHTML = fields.map((f, i) => {
+        const mt = o.metatags.find((m) => m.position === i + 1) || {};
+        const label = mt.label || f.label || ('Feld ' + (i + 1));
+        const val = mt.value || '';
+        const head = edit ? '<input class="m-lbl-edit" id="mTagF' + i + '_lbl" value="' + esc(label) + '" placeholder="Überschrift">' : '<label>' + esc(label) + '</label>';
+        let inp;
+        if (f.type === 'select') {
+          const opts = f.options || [];
+          const extra = (val && opts.indexOf(val) < 0) ? '<option value="' + esc(val) + '" selected>' + esc(val) + '</option>' : '';
+          inp = '<select id="mTagF' + i + '" class="m-select"><option value="">– bitte wählen –</option>' + opts.map((op) => '<option value="' + esc(op) + '"' + (op === val ? ' selected' : '') + '>' + esc(op) + '</option>').join('') + extra + '</select>';
+        } else {
+          inp = '<input id="mTagF' + i + '" placeholder="frei belegbar …" value="' + esc(val) + '">';
+        }
+        return '<div class="m-field">' + head + inp + '</div>';
+      }).join('');
     } else {
       const gl1 = (o.metatags.find((m) => m.position === 1) || {}).label || 'Metatag 1';
       const gl2 = (o.metatags.find((m) => m.position === 2) || {}).label || 'Metatag 2';
@@ -2032,9 +2052,16 @@ const STATE_ICONS = {
       $('mBody').querySelectorAll('input[data-state]').forEach((inp) => {
         metatags.push({ position: pos++, label: inp.getAttribute('data-state'), value: inp.value.trim() });
       });
+    } else if (/^custom:/.test(o.symbolType)) {
+      metatags = [];
+      symFields(o.symbolType).forEach((f, i) => {
+        const el = $('mTagF' + i); if (!el) return;
+        const val = (el.value || '').trim();
+        const lblEl = $('mTagF' + i + '_lbl');
+        const label = lblEl ? lblEl.value.trim() : ((o.metatags.find((m) => m.position === i + 1) || {}).label || f.label || '');
+        if (val || label) metatags.push(label ? { position: i + 1, label: label, value: val } : { position: i + 1, value: val });
+      });
     } else {
-      const e1 = $('mTag1'), e2 = $('mTag2');
-      const t1 = (e1 ? e1.value : '').trim(), t2 = (e2 ? e2.value : '').trim();
       const lb1 = $('mTag1_lbl'), lb2 = $('mTag2_lbl');
       const l1 = lb1 ? lb1.value.trim() : (e1 ? (e1.getAttribute('data-label') || '') : '');
       const l2 = lb2 ? lb2.value.trim() : (e2 ? (e2.getAttribute('data-label') || '') : '');
@@ -2064,6 +2091,9 @@ const STATE_ICONS = {
     if (!w || !L) { toast('Kein Werk / keine Ebene aktiv'); return; }
     state.symEdit = editSym || null;
     const isEdit = !!editSym;
+    state.symFieldsDraft = (isEdit && editSym.fields && editSym.fields.length)
+      ? editSym.fields.map((f) => ({ label: f.label || '', type: f.type === 'select' ? 'select' : 'text', options: (f.options || []).slice() }))
+      : defaultCustomFields();
     const prev = isEdit && editSym.url ? '<img src="' + editSym.url + '" alt="">' : 'Bild wählen …';
     let m = document.getElementById('symModal');
     if (!m) { m = document.createElement('div'); m.id = 'symModal'; m.className = 'modal-backdrop'; document.body.appendChild(m); }
@@ -2074,17 +2104,52 @@ const STATE_ICONS = {
       + '<label class="sym-lbl">' + (isEdit ? 'Bild ersetzen (optional)' : 'Bild (PNG, JPG oder SVG)') + '</label>'
       + '<label class="sym-drop" for="symFile"><span id="symPrev">' + prev + '</span></label>'
       + '<input id="symFile" type="file" accept="image/png,image/jpeg,image/svg+xml" style="display:none">'
+      + '<label class="sym-lbl">Metatag-Felder</label><div id="symFields" class="sf-list"></div>'
       + '<div class="sym-msg" id="symMsg"></div></div>'
       + '<div class="m-foot"><button class="btn" id="symCancel">Abbrechen</button><button class="btn primary" id="symSave">' + (isEdit ? 'Speichern' : 'Hochladen') + '</button></div></div>';
     m.style.display = 'flex';
     const f = document.getElementById('symFile');
     f.addEventListener('change', () => { const file = f.files[0]; if (file) { const u = URL.createObjectURL(file); document.getElementById('symPrev').innerHTML = '<img src="' + u + '" alt="">'; } });
+    const fc = document.getElementById('symFields');
+    renderSymFieldsInto(fc);
+    fc.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-symact]'); if (!btn) return;
+      syncSymFields(fc);
+      const act = btn.getAttribute('data-symact');
+      if (act === 'field-add') state.symFieldsDraft.push({ label: '', type: 'text', options: [] });
+      else if (act === 'field-del') state.symFieldsDraft.splice(+btn.getAttribute('data-i'), 1);
+      renderSymFieldsInto(fc);
+    });
+    fc.addEventListener('change', (e) => { if (e.target.classList.contains('sf-type')) { syncSymFields(fc); renderSymFieldsInto(fc); } });
     document.getElementById('symCancel').addEventListener('click', closeSymModal);
     document.getElementById('symSave').addEventListener('click', saveSymUpload);
     m.addEventListener('click', (e) => { if (e.target === m) closeSymModal(); });
     setTimeout(() => { const n = document.getElementById('symName'); if (n) { n.focus(); n.select(); } }, 40);
   }
   function closeSymModal() { const m = document.getElementById('symModal'); if (m) m.style.display = 'none'; state.symEdit = null; }
+  // Feldeditor im Symbol-Dialog
+  function renderSymFieldsInto(container) {
+    const draft = state.symFieldsDraft || [];
+    container.innerHTML = draft.map((f, i) =>
+      '<div class="sf-row" data-i="' + i + '">'
+      + '<input class="sf-label" placeholder="Überschrift" value="' + esc(f.label || '') + '">'
+      + '<select class="sf-type"><option value="text"' + (f.type !== 'select' ? ' selected' : '') + '>Text</option><option value="select"' + (f.type === 'select' ? ' selected' : '') + '>Auswahl</option></select>'
+      + '<input class="sf-opts" placeholder="Optionen, mit Komma getrennt" value="' + esc((f.options || []).join(', ')) + '"' + (f.type === 'select' ? '' : ' style="display:none"') + '>'
+      + '<button type="button" class="sf-del" data-symact="field-del" data-i="' + i + '" title="Feld entfernen">×</button>'
+      + '</div>').join('')
+      + '<button type="button" class="sf-add" data-symact="field-add">+ Feld</button>';
+  }
+  function syncSymFields(container) {
+    const draft = [];
+    container.querySelectorAll('.sf-row').forEach((r) => {
+      draft.push({
+        label: r.querySelector('.sf-label').value.trim(),
+        type: r.querySelector('.sf-type').value,
+        options: r.querySelector('.sf-opts').value.split(',').map((s) => s.trim()).filter(Boolean),
+      });
+    });
+    state.symFieldsDraft = draft;
+  }
   // ---- Profil & Passwort ändern ----
   function openProfile() {
     let m = document.getElementById('profileModal');
@@ -2136,9 +2201,11 @@ const STATE_ICONS = {
     if (!edit && !file) { msg.textContent = 'Bitte ein Bild wählen.'; return; }
     if (file && file.size > 2 * 1024 * 1024) { msg.textContent = 'Bild ist zu groß (max. 2 MB).'; return; }
     msg.textContent = edit ? 'Wird gespeichert …' : 'Wird hochgeladen …';
+    const fc = document.getElementById('symFields'); if (fc) syncSymFields(fc);
+    const fields = (state.symFieldsDraft || []).filter((f) => f.label).map((f) => ({ label: f.label, type: f.type === 'select' ? 'select' : 'text', options: f.type === 'select' ? (f.options || []) : [] }));
     try {
-      if (edit) { await Api.updatePaletteSymbol(edit.id, name, file || null); }
-      else { await Api.createPaletteSymbol(w.id, name, L.code, file); }
+      if (edit) { await Api.updatePaletteSymbol(edit.id, name, file || null, fields); }
+      else { await Api.createPaletteSymbol(w.id, name, L.code, file, fields); }
       closeSymModal(); state.customWerkId = null; await loadCustomSyms(w.id); renderEditor();
       toast(edit ? 'Symbol „' + name + '" aktualisiert' : 'Symbol „' + name + '" hinzugefügt');
     } catch (e) { msg.textContent = 'Fehler: ' + (e.message || 'Speichern fehlgeschlagen'); }

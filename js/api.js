@@ -149,9 +149,10 @@
 
     // ---- Konfigurierbare Palette (eigene Symbole je Werk & Ebene) ----
     getPaletteSymbols(werkId) { return this.request('/werke/' + werkId + '/palette'); },
-    async createPaletteSymbol(werkId, name, layerCode, file) {
+    async createPaletteSymbol(werkId, name, layerCode, file, fields) {
       const fd = new FormData();
       fd.append('name', name); fd.append('layerCode', layerCode); fd.append('file', file);
+      if (fields) fd.append('fields', JSON.stringify(fields));
       const res = await fetch(API_BASE + '/werke/' + werkId + '/palette', {
         method: 'POST',
         headers: Object.assign({ 'Accept': 'application/json' }, this.token ? { 'Authorization': 'Bearer ' + this.token } : {}),
@@ -162,10 +163,11 @@
       if (!res.ok) throw new ApiError(res.status, (data && data.message) || 'Upload fehlgeschlagen.', data);
       return data;
     },
-    async updatePaletteSymbol(id, name, file) {
+    async updatePaletteSymbol(id, name, file, fields) {
       const fd = new FormData();
       fd.append('name', name); fd.append('_method', 'PATCH'); // Method-Spoofing (Multipart bei PATCH)
       if (file) fd.append('file', file);
+      if (fields) fd.append('fields', JSON.stringify(fields));
       const res = await fetch(API_BASE + '/palette/' + id, {
         method: 'POST',
         headers: Object.assign({ 'Accept': 'application/json' }, this.token ? { 'Authorization': 'Bearer ' + this.token } : {}),
