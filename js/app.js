@@ -1632,7 +1632,7 @@ const STATE_ICONS = {
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + (state.drawZone ? '<div class="draw-grid"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
   }
 
   // Frei platzierbare Zustands-Icons mit Verbindungslinie zum Prozesstyp
@@ -1735,8 +1735,19 @@ const STATE_ICONS = {
     if (state.drawZone || !state.selectedZone) return '';
     const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && isShape(o) && o.points);
     if (!z) return '';
-    return '<div class="zone-handle-layer">' + z.points.map((p, i) =>
-      '<div class="zone-vertex" data-zone="' + z.id + '" data-vidx="' + i + '" style="left:' + (p.x * 100) + '%;top:' + (p.y * 100) + '%"></div>').join('') + '</div>';
+    const isRoute = z.symbolType === 'mf_route';
+    const n = z.points.length;
+    const verts = z.points.map((p, i) =>
+      '<div class="zone-vertex" data-zone="' + z.id + '" data-vidx="' + i + '" title="Ziehen · Rechtsklick entfernt" style="left:' + (p.x * 100) + '%;top:' + (p.y * 100) + '%"></div>').join('');
+    const edgeCount = isRoute ? n - 1 : n;
+    let mids = '';
+    for (let i = 0; i < edgeCount; i++) {
+      const p = z.points[i], q = z.points[(i + 1) % n];
+      mids += '<div class="zone-midpoint" data-zone="' + z.id + '" data-eidx="' + i + '" title="Stützpunkt einfügen" style="left:' + ((p.x + q.x) / 2 * 100) + '%;top:' + ((p.y + q.y) / 2 * 100) + '%">+</div>';
+    }
+    const m = polyMetrics(z.points);
+    const measure = m ? '<div class="zone-measure" style="left:' + (m.minx * 100) + '%;top:' + (m.miny * 100) + '%">' + fmtMetrics(m, !isRoute) + '</div>' : '';
+    return '<div class="zone-handle-layer">' + mids + verts + measure + '</div>';
   }
 
   const TECH_CODE = {
@@ -2609,6 +2620,22 @@ const STATE_ICONS = {
     // Technologie-Blase greifen
     const td = e.target.closest('[data-techdrag]');
     if (td) { e.preventDefault(); state.techDrag = { id: td.getAttribute('data-techdrag'), moved: false }; try { td.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } return; }
+    // Mittelpunkt-Handle: neuen Stützpunkt an der Kante einfügen (danach frei ziehbar)
+    const mid = e.target.closest('.zone-midpoint');
+    if (mid) {
+      e.preventDefault();
+      const zid = mid.getAttribute('data-zone'), eidx = +mid.getAttribute('data-eidx');
+      const z = (state.detail.objects || []).find((o) => o.id === zid);
+      if (z && z.points) {
+        const p = z.points[eidx], q = z.points[(eidx + 1) % z.points.length];
+        z.points.splice(eidx + 1, 0, { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 });
+        protectObj(z.id);
+        state.geomPending[z.id] = { points: z.points.map(function (pp) { return { x: pp.x, y: pp.y }; }), ts: Date.now() };
+        Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { /* ignore */ });
+        renderEditor();
+      }
+      return;
+    }
     // Stützpunkt eines Schutzbereichs greifen
     const v = e.target.closest('.zone-vertex');
     if (v) {
@@ -2701,6 +2728,21 @@ const STATE_ICONS = {
     return z ? z.id : null;
   }
   function zoneCentroid(z) { const n = z.points.length; return { x: z.points.reduce((s, p) => s + p.x, 0) / n, y: z.points.reduce((s, p) => s + p.y, 0) / n }; }
+  // Bounding-Box + Flaeche (Prozent der Layoutflaeche) eines Polygons/Drafts.
+  function polyMetrics(pts) {
+    if (!pts || pts.length < 2) return null;
+    let minx = 1, miny = 1, maxx = 0, maxy = 0, a = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i], q = pts[(i + 1) % pts.length];
+      if (p.x < minx) minx = p.x; if (p.x > maxx) maxx = p.x;
+      if (p.y < miny) miny = p.y; if (p.y > maxy) maxy = p.y;
+      a += p.x * q.y - q.x * p.y;
+    }
+    return { w: maxx - minx, h: maxy - miny, area: Math.abs(a) / 2, minx: minx, miny: miny, maxx: maxx, maxy: maxy };
+  }
+  function fmtMetrics(m, withArea) {
+    return 'B ' + Math.round(m.w * 100) + '% × H ' + Math.round(m.h * 100) + '%' + (withArea && m.area > 0.0004 ? ' · A ' + (m.area * 100).toFixed(1) + '%' : '');
+  }
   // SPS-Bereich (sps_zone), der den Punkt enthaelt – oberster, sonst null.
   function spsZoneAt(x, y) {
     const visible = visibleMap();
@@ -2820,6 +2862,15 @@ const STATE_ICONS = {
         lbl.style.left = (cx * 100) + '%'; lbl.style.top = (cy * 100) + '%';
       }
     }
+    // Mittelpunkt-Handles + Maß-Badge live nachziehen
+    const zn = z.points.length, isRoute = z.symbolType === 'mf_route', ec = isRoute ? zn - 1 : zn;
+    for (let i = 0; i < ec; i++) {
+      const p = z.points[i], q = z.points[(i + 1) % zn];
+      const mh = document.querySelector('.zone-midpoint[data-zone="' + z.id + '"][data-eidx="' + i + '"]');
+      if (mh) { mh.style.left = ((p.x + q.x) / 2 * 100) + '%'; mh.style.top = ((p.y + q.y) / 2 * 100) + '%'; }
+    }
+    const mm = document.querySelector('.zone-handle-layer .zone-measure');
+    if (mm) { const met = polyMetrics(z.points); if (met) { mm.style.left = (met.minx * 100) + '%'; mm.style.top = (met.miny * 100) + '%'; mm.textContent = fmtMetrics(met, !isRoute); } }
   }
   // Cursor/Stützpunkt an vorhandene Draft-Punkte ausrichten (gleiche x/y) -> gerade Kanten.
   function snapCursor(cx, cy) {
@@ -2835,6 +2886,17 @@ const STATE_ICONS = {
     const gv = document.getElementById('guide-v'), gh = document.getElementById('guide-h');
     if (gv && cur) { gv.setAttribute('x1', cur.x * 100); gv.setAttribute('x2', cur.x * 100); gv.setAttribute('stroke', al.x ? '#E8663F' : '#0065A5'); }
     if (gh && cur) { gh.setAttribute('y1', cur.y * 100); gh.setAttribute('y2', cur.y * 100); gh.setAttribute('stroke', al.y ? '#E8663F' : '#0065A5'); }
+    const meas = document.getElementById('draw-measure');
+    if (meas) {
+      const pts = cur ? state.zoneDraft.concat([cur]) : state.zoneDraft;
+      const m = polyMetrics(pts);
+      if (m && cur) {
+        meas.textContent = state.drawShape === 'route'
+          ? ('B ' + Math.round(m.w * 100) + '% × H ' + Math.round(m.h * 100) + '% · ' + pts.length + ' Pkt')
+          : fmtMetrics(m, true);
+        meas.style.left = (cur.x * 100) + '%'; meas.style.top = (cur.y * 100) + '%'; meas.style.display = 'block';
+      } else { meas.style.display = 'none'; }
+    }
     const el = document.getElementById('zone-draft'); if (!el) return;
     if (state.drawShape === 'route') {
       const dpull = state.zoneCursor ? state.zoneDraft.concat([state.zoneCursor]) : state.zoneDraft;
@@ -2846,6 +2908,28 @@ const STATE_ICONS = {
     }
   }
 
+  let _nudgeTimer = null;
+  function nudgeZonePersist(z) {
+    protectObj(z.id);
+    state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
+    if (_nudgeTimer) clearTimeout(_nudgeTimer);
+    _nudgeTimer = setTimeout(function () { Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { /* ignore */ }); }, 400);
+  }
+  // Rechtsklick auf einen Stützpunkt entfernt ihn (Polygon bleibt >=3, Weg >=2 Punkte).
+  function onContentContextMenu(e) {
+    if (state.view !== 'editor' || !canEdit()) return;
+    const v = e.target.closest('.zone-vertex'); if (!v) return;
+    e.preventDefault();
+    const zid = v.getAttribute('data-zone'), idx = +v.getAttribute('data-vidx');
+    const z = (state.detail.objects || []).find((o) => o.id === zid); if (!z || !z.points) return;
+    const minPts = z.symbolType === 'mf_route' ? 2 : 3;
+    if (z.points.length <= minPts) { toast('Mindestens ' + minPts + ' Stützpunkte nötig'); return; }
+    z.points.splice(idx, 1);
+    protectObj(z.id);
+    state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
+    Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { /* ignore */ });
+    renderEditor();
+  }
   function onEditorKey(e) {
     if (state.view !== 'editor' || !canEdit()) return;
     const t = document.activeElement;
@@ -2859,6 +2943,18 @@ const STATE_ICONS = {
     if ((e.key === 'r' || e.key === 'R') && state.selectedZone && !inField) {
       const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone);
       if (z && z.symbolType === 'mf_route') { e.preventDefault(); reverseRoute(z.id); return; }
+    }
+    if (state.selectedZone && !inField && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) {
+      const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && o.points);
+      if (z) {
+        e.preventDefault();
+        const step = e.shiftKey ? 0.02 : 0.004;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        z.points = z.points.map((p) => ({ x: clamp01(p.x + dx), y: clamp01(p.y + dy) }));
+        updateZoneDom(z); nudgeZonePersist(z);
+        return;
+      }
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedZone && !inField) {
       e.preventDefault(); deleteSelectedZone();
@@ -3211,6 +3307,7 @@ const STATE_ICONS = {
     c.addEventListener('drop', onContentDrop);
     c.addEventListener('dblclick', onContentDblClick);
     c.addEventListener('pointerdown', onContentPointerDown);
+    c.addEventListener('contextmenu', onContentContextMenu);
     c.addEventListener('wheel', onWheelZoom, { passive: false });
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', endMove);
