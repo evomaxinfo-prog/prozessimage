@@ -2023,6 +2023,12 @@ const STATE_ICONS = {
           const opts = f.options || [];
           const extra = (val && opts.indexOf(val) < 0) ? '<option value="' + esc(val) + '" selected>' + esc(val) + '</option>' : '';
           inp = '<select id="mTagF' + i + '" class="m-select"><option value="">– bitte wählen –</option>' + opts.map((op) => '<option value="' + esc(op) + '"' + (op === val ? ' selected' : '') + '>' + esc(op) + '</option>').join('') + extra + '</select>';
+        } else if (f.type === 'multiselect') {
+          const opts = f.options || [];
+          const sel = val ? val.split(',').map((s) => s.trim()).filter(Boolean) : [];
+          inp = '<div class="m-checks" id="mTagF' + i + '">' + (opts.length
+            ? opts.map((op) => '<label class="m-check"><input type="checkbox" value="' + esc(op) + '"' + (sel.indexOf(op) >= 0 ? ' checked' : '') + '>' + esc(op) + '</label>').join('')
+            : '<span class="m-empty">Keine Optionen konfiguriert</span>') + '</div>';
         } else {
           inp = '<input id="mTagF' + i + '" placeholder="frei belegbar …" value="' + esc(val) + '">';
         }
@@ -2056,7 +2062,9 @@ const STATE_ICONS = {
       metatags = [];
       symFields(o.symbolType).forEach((f, i) => {
         const el = $('mTagF' + i); if (!el) return;
-        const val = (el.value || '').trim();
+        const val = (el.tagName === 'DIV')
+          ? Array.prototype.slice.call(el.querySelectorAll('input:checked')).map((c) => c.value).join(', ')
+          : (el.value || '').trim();
         const lblEl = $('mTagF' + i + '_lbl');
         const label = lblEl ? lblEl.value.trim() : ((o.metatags.find((m) => m.position === i + 1) || {}).label || f.label || '');
         if (val || label) metatags.push(label ? { position: i + 1, label: label, value: val } : { position: i + 1, value: val });
@@ -2092,7 +2100,7 @@ const STATE_ICONS = {
     state.symEdit = editSym || null;
     const isEdit = !!editSym;
     state.symFieldsDraft = (isEdit && editSym.fields && editSym.fields.length)
-      ? editSym.fields.map((f) => ({ label: f.label || '', type: f.type === 'select' ? 'select' : 'text', options: (f.options || []).slice() }))
+      ? editSym.fields.map((f) => ({ label: f.label || '', type: (f.type === 'select' || f.type === 'multiselect') ? f.type : 'text', options: (f.options || []).slice() }))
       : defaultCustomFields();
     const prev = isEdit && editSym.url ? '<img src="' + editSym.url + '" alt="">' : 'Bild wählen …';
     let m = document.getElementById('symModal');
@@ -2133,8 +2141,8 @@ const STATE_ICONS = {
     container.innerHTML = draft.map((f, i) =>
       '<div class="sf-row" data-i="' + i + '">'
       + '<input class="sf-label" placeholder="Überschrift" value="' + esc(f.label || '') + '">'
-      + '<select class="sf-type"><option value="text"' + (f.type !== 'select' ? ' selected' : '') + '>Text</option><option value="select"' + (f.type === 'select' ? ' selected' : '') + '>Auswahl</option></select>'
-      + '<input class="sf-opts" placeholder="Optionen, mit Komma getrennt" value="' + esc((f.options || []).join(', ')) + '"' + (f.type === 'select' ? '' : ' style="display:none"') + '>'
+      + '<select class="sf-type"><option value="text"' + (f.type === 'text' || !f.type ? ' selected' : '') + '>Text</option><option value="select"' + (f.type === 'select' ? ' selected' : '') + '>Auswahl</option><option value="multiselect"' + (f.type === 'multiselect' ? ' selected' : '') + '>Mehrfachauswahl</option></select>'
+      + '<input class="sf-opts" placeholder="Optionen, mit Komma getrennt" value="' + esc((f.options || []).join(', ')) + '"' + (f.type === 'select' || f.type === 'multiselect' ? '' : ' style="display:none"') + '>'
       + '<button type="button" class="sf-del" data-symact="field-del" data-i="' + i + '" title="Feld entfernen">×</button>'
       + '</div>').join('')
       + '<button type="button" class="sf-add" data-symact="field-add">+ Feld</button>';
@@ -2202,7 +2210,7 @@ const STATE_ICONS = {
     if (file && file.size > 2 * 1024 * 1024) { msg.textContent = 'Bild ist zu groß (max. 2 MB).'; return; }
     msg.textContent = edit ? 'Wird gespeichert …' : 'Wird hochgeladen …';
     const fc = document.getElementById('symFields'); if (fc) syncSymFields(fc);
-    const fields = (state.symFieldsDraft || []).filter((f) => f.label).map((f) => ({ label: f.label, type: f.type === 'select' ? 'select' : 'text', options: f.type === 'select' ? (f.options || []) : [] }));
+    const fields = (state.symFieldsDraft || []).filter((f) => f.label).map((f) => ({ label: f.label, type: (f.type === 'select' || f.type === 'multiselect') ? f.type : 'text', options: (f.type === 'select' || f.type === 'multiselect') ? (f.options || []) : [] }));
     try {
       if (edit) { await Api.updatePaletteSymbol(edit.id, name, file || null, fields); }
       else { await Api.createPaletteSymbol(w.id, name, L.code, file, fields); }
