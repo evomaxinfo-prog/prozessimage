@@ -7,6 +7,12 @@
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
   const clamp01 = (v) => Math.min(1, Math.max(0, v));
   const PLC_COLORS = ['#0065A5', '#C0392B', '#0E8A6E', '#D9822B', '#7A3FA8', '#2C82C9', '#16A085', '#E67E22'];
+  // Naechster freier SPS-Name: SPS1, SPS2, ... (hoechste vorhandene SPS<n>-Nummer + 1)
+  function nextSpsName(plcs) {
+    let max = 0;
+    (plcs || []).forEach((p) => { const m = /^SPS\s*0*(\d+)$/i.exec(String(p.name || '').trim()); if (m) { const n = +m[1]; if (n > max) max = n; } });
+    return 'SPS' + (max + 1);
+  }
 
   const TYPE_ORDER = ['werk', 'center', 'abteilung', 'kst', 'linie', 'anlage'];
   const TYPE_LABEL = { werk: 'Werk', center: 'Center', abteilung: 'Abteilung', kst: 'KST', linie: 'Linie', anlage: 'Anlage' };
@@ -1021,7 +1027,7 @@
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.getAttribute('data-act');
     if (act === 'toggle-edit') { state.detailEdit ? saveDetail() : enterEdit(); }
-    else if (act === 'plc-add') { state.detailDraft.plcs.push({ id: null, name: 'Neue SPS', cycleTimeMs: 0, retentiveBytes: 0, codeMemoryKb: 0, color: PLC_COLORS[state.detailDraft.plcs.length % PLC_COLORS.length] }); renderDetail(); }
+    else if (act === 'plc-add') { state.detailDraft.plcs.push({ id: null, name: nextSpsName(state.detailDraft.plcs), cycleTimeMs: 0, retentiveBytes: 0, codeMemoryKb: 0, color: PLC_COLORS[state.detailDraft.plcs.length % PLC_COLORS.length] }); renderDetail(); }
     else if (act === 'plc-del') { const i = +el.getAttribute('data-idx'); const p = state.detailDraft.plcs[i]; if (p && p.id) state.detailDraft._deleted.push(p.id); state.detailDraft.plcs.splice(i, 1); renderDetail(); }
     else if (act === 'journal-add') { addJournalEntry(); }
     else if (act === 'open-editor') { openEditor(); }
