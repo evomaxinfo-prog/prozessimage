@@ -462,18 +462,33 @@
   // ---- Konfigurierbare Palette: eigene Symbole je Werk & Ebene ----
   function werkOf(node) { let p = node; while (p && p.type !== 'werk') p = p._parent; return p || null; }
   function currentWerk() { const cur = state.byId[(state.detail && state.detail.nodeId) || state.selected]; return cur ? werkOf(cur) : null; }
-  async function loadCustomSyms(werkId) {
-    if (state.customWerkId === werkId && state.customSyms) return;
-    (state.customBlobs || []).forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } });
-    state.customBlobs = []; state.customSyms = {}; state.customWerkId = werkId || null;
-    if (!werkId) return;
+  async function loadCustomSyms(werkId, opts) {
+    opts = opts || {};
+    if (!opts.force && state.customWerkId === werkId && state.customSyms) return;
+    if (!werkId) {
+      (state.customBlobs || []).forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } });
+      state.customBlobs = []; state.customSyms = {}; state.customWerkId = null; return;
+    }
+    const prev = (state.customWerkId === werkId && state.customSyms) ? state.customSyms : {};
+    const refetch = opts.refetch || {};
     let list; try { list = await Api.getPaletteSymbols(werkId); } catch (e) { return; }
     const arr = Array.isArray(list) ? list : (list && Array.isArray(list.data) ? list.data : []);
+    const next = {}; const used = [];
     await Promise.all(arr.map(async (s) => {
+      const key = 'custom:' + s.id;
+      const cached = prev[key];
       let url = '';
-      try { const res = await Api.raw('/palette/' + s.id + '/image'); if (res && res.ok) { url = URL.createObjectURL(await res.blob()); state.customBlobs.push(url); } } catch (e) { /* ohne Bild */ }
-      state.customSyms['custom:' + s.id] = { id: s.id, name: s.name, layerCode: s.layerCode, url: url, fields: Array.isArray(s.fields) ? s.fields : [] };
+      if (cached && cached.url && !refetch[s.id]) {
+        url = cached.url; // vorhandenen Blob wiederverwenden (kein erneuter Download)
+      } else {
+        try { const res = await Api.raw('/palette/' + s.id + '/image'); if (res && res.ok) { url = URL.createObjectURL(await res.blob()); } } catch (e) { /* ohne Bild */ }
+      }
+      if (url) used.push(url);
+      next[key] = { id: s.id, name: s.name, layerCode: s.layerCode, url: url, fields: Array.isArray(s.fields) ? s.fields : [] };
     }));
+    // Nicht mehr verwendete Blobs (gelöschte / ersetzte Symbole) freigeben
+    (state.customBlobs || []).forEach((u) => { if (used.indexOf(u) < 0) { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } } });
+    state.customBlobs = used; state.customSyms = next; state.customWerkId = werkId;
   }
   // Symbol-Inhalt: eigenes Bild (custom:) oder Standard-SVG.
   function symInner(symbolType, px) {
@@ -2214,14 +2229,14 @@ const STATE_ICONS = {
     try {
       if (edit) { await Api.updatePaletteSymbol(edit.id, name, file || null, fields); }
       else { await Api.createPaletteSymbol(w.id, name, L.code, file, fields); }
-      closeSymModal(); state.customWerkId = null; await loadCustomSyms(w.id); renderEditor();
+      closeSymModal(); await loadCustomSyms(w.id, edit ? { force: true, refetch: (file ? { [edit.id]: true } : {}) } : { force: true }); renderEditor();
       toast(edit ? 'Symbol „' + name + '" aktualisiert' : 'Symbol „' + name + '" hinzugefügt');
     } catch (e) { msg.textContent = 'Fehler: ' + (e.message || 'Speichern fehlgeschlagen'); }
   }
   async function deleteCustomSym(id) {
     if (!window.confirm('Dieses eigene Symbol aus der Palette löschen?')) return;
     try { await Api.deletePaletteSymbol(id); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
-    const w = currentWerk(); state.customWerkId = null; await loadCustomSyms(w ? w.id : null); renderEditor(); toast('Symbol gelöscht');
+    const w = currentWerk(); await loadCustomSyms(w ? w.id : null, { force: true }); renderEditor(); toast('Symbol gelöscht');
   }
 
   function triggerUpload() { $('layoutFile').click(); }
