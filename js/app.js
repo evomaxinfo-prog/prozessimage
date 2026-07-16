@@ -776,10 +776,13 @@
     return { stations: stations, idx: idx, line: p };
   }
   // Stationsdaten laden, ohne die Detail-Ansicht zu rendern (für direkten Editor-Wechsel ohne Flackern).
+  function cacheStation(sid, full) { if (!state.stationCache) state.stationCache = {}; state.stationCache[sid] = full; }
+
   async function loadStationDetail(node) {
     if (!node.stationId) return false;
     const full = await Api.getStationFull(node.stationId);
     if (!full.nodeId) full.nodeId = node.id;
+    cacheStation(node.stationId, full);
     state.detail = full; state.detailEdit = false; state.detailDraft = null;
     return true;
   }
@@ -807,16 +810,55 @@
       + '<button class="nav-arrow" data-act="station-next"' + nextD + ' title="' + nextT + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button></div>';
   }
 
-  /* -------- Detailansicht (Schritt 2) -------- */  async function openAnlage(node) {
+  /* -------- Detailansicht (Schritt 2) -------- */
+  function detailSkeleton() {
+    return '<div class="pad"><div class="detail-skel">'
+      + '<div class="sk-top"><div class="sk-box sk-prev"></div><div class="sk-head"><div class="sk-line w50"></div><div class="sk-line w30"></div><div class="sk-chips"></div><div class="sk-btns"></div></div></div>'
+      + '<div class="sk-card"></div><div class="sk-card sk-card-sm"></div>'
+      + '</div></div>';
+  }
+  // Frisch laden und – falls diese Station noch aktiv ist und sich etwas geaendert hat – neu rendern.
+  async function revalidateStation(node, seq) {
+    const prevJson = JSON.stringify(state.detail);
+    try {
+      const fresh = await Api.getStationFull(node.stationId);
+      if (!fresh.nodeId) fresh.nodeId = node.id;
+      cacheStation(node.stationId, fresh);
+      if (seq === state.navSeq && !state.detailEdit && JSON.stringify(fresh) !== prevJson) {
+        state.detail = fresh; renderDetail();
+        if (fresh.hasLayout) ensureLayoutBlob().then(() => { if (seq === state.navSeq) renderDetail(); });
+      }
+    } catch (e) { /* Cache bleibt gueltig */ }
+  }
+  async function openAnlage(node) {
     if (!node.stationId) {
       $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">Für diese Anlage existiert keine Station.</div></div></div>';
       return;
     }
+    const seq = (state.navSeq = (state.navSeq || 0) + 1);
+    const sid = node.stationId;
+    const cached = state.stationCache && state.stationCache[sid];
+    // Layout-Grafik liegt NICHT im kritischen Pfad: Detail sofort zeigen, Vorschau laedt nach.
+    const showLayoutAfter = () => { ensureLayoutBlob().then(() => { if (seq === state.navSeq && state.detail && state.detail.hasLayout) renderDetail(); }); };
+    if (cached) {
+      // Sofort aus dem Cache – kein Warten auf das Netzwerk
+      if (!cached.nodeId) cached.nodeId = node.id;
+      state.detail = cached; state.detailEdit = false; state.detailDraft = null;
+      renderDetail(); showLayoutAfter();
+      revalidateStation(node, seq); // im Hintergrund auf Aktualitaet pruefen
+      return;
+    }
+    // Kein Cache: sofort ein leichtes Platzhalter-Geruest zeigen, damit der Klick unmittelbar reagiert
+    $('content').innerHTML = breadcrumb(node.id) + detailSkeleton();
     try {
-      if (!(await loadStationDetail(node))) return;
-      await ensureLayoutBlob();
-      renderDetail();
+      const full = await Api.getStationFull(sid);
+      if (seq !== state.navSeq) return;            // Auswahl hat sich zwischenzeitlich geaendert -> verwerfen
+      if (!full.nodeId) full.nodeId = node.id;
+      cacheStation(sid, full);
+      state.detail = full; state.detailEdit = false; state.detailDraft = null;
+      renderDetail(); showLayoutAfter();
     } catch (e) {
+      if (seq !== state.navSeq) return;
       $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">' + t('Detail konnte nicht geladen werden.') + '</div></div></div>';
     }
   }
@@ -940,7 +982,7 @@
       toast(t('Gespeichert'));
     } catch (e) { toast(t('Speichern fehlgeschlagen: ') + e.message); }
     state.detailEdit = false; state.detailDraft = null;
-    try { const full = await Api.getStationFull(sid); full.nodeId = s.nodeId; state.detail = full; } catch (e) { /* ignore */ }
+    try { const full = await Api.getStationFull(sid); full.nodeId = s.nodeId; state.detail = full; cacheStation(sid, full); } catch (e) { /* ignore */ }
     await loadTree();
     renderDetail();
   }
@@ -950,7 +992,7 @@
     const text = inp.value.trim(); if (!text) return;
     inp.value = '';
     try { await Api.addJournal(state.detail.id, text); } catch (e) { toast(t('Journaleintrag fehlgeschlagen')); return; }
-    try { const full = await Api.getStationFull(state.detail.id); full.nodeId = state.detail.nodeId; state.detail = full; } catch (e) { /* ignore */ }
+    try { const sid2 = state.detail.id; const full = await Api.getStationFull(sid2); full.nodeId = state.detail.nodeId; state.detail = full; cacheStation(sid2, full); } catch (e) { /* ignore */ }
     renderDetail();
   }
 

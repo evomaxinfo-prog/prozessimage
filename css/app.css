@@ -1,11 +1,11 @@
 /* Selbst gehostete Schriften (kein Google-Fonts-CDN) – Enterprise-Security: keine Drittanbieter-Verbindung */
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.25.18') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.25.18') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.25.18') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.25.18') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.25.18') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.25.18') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.25.18') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.25.18') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.25.18') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.25.18') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.25.18') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.25.18') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.25.18') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.25.18') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.25.19') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.25.19') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.25.19') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.25.19') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.25.19') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.25.19') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.25.19') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.25.19') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.25.19') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.25.19') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.25.19') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.25.19') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.25.19') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.25.19') format('woff')}
 :root{
     --brand-blue:#0065A5;
     --brand-blue-dark:#004E80;
@@ -1031,3 +1031,18 @@ header{padding:0 22px}
   .eye{width:32px;height:32px}
 }
 
+
+  /* Lade-Skelett beim Wechsel zwischen Anlagen */
+  .detail-skel{padding:2px}
+  .detail-skel .sk-top{display:flex;gap:22px;margin-bottom:22px}
+  .sk-box,.sk-line,.sk-card,.sk-chips,.sk-btns{background:linear-gradient(100deg,#eceff3 30%,#e2e8ee 50%,#eceff3 70%);background-size:300% 100%;animation:skl 1.15s ease-in-out infinite;border-radius:8px}
+  @keyframes skl{0%{background-position:100% 0}100%{background-position:-100% 0}}
+  .sk-prev{width:200px;height:150px;flex-shrink:0;border-radius:12px}
+  .sk-head{flex:1;padding-top:8px}
+  .sk-line{height:16px;margin-bottom:14px}
+  .sk-line.w50{width:46%;height:26px}
+  .sk-line.w30{width:28%}
+  .sk-chips{height:22px;width:52%;margin-top:6px}
+  .sk-btns{height:36px;width:34%;margin-top:20px}
+  .sk-card{height:150px;margin-bottom:18px;border-radius:14px}
+  .sk-card-sm{height:96px}
