@@ -1,4 +1,4 @@
-/* ProModXgOEM – API-Client
+/* ProModXgOEM2 – API-Client
  * Kapselt Basis-URL, Token-Verwaltung (localStorage) und alle Endpunkt-Aufrufe.
  */
 (function (global) {

@@ -1,4 +1,4 @@
-/* ProModXgOEM – Frontend-Logik (Schritt 1: Login + Baum) */
+/* ProModXgOEM2 – Frontend-Logik (Schritt 1: Login + Baum) */
 (function () {
   'use strict';
 
