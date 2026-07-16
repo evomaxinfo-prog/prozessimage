@@ -2997,6 +2997,7 @@ const STATE_ICONS = {
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
+    let didCreate = false;
     for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { /* ignore */ } } }
     for (const o of to) {
       if (!fromById[o.id]) {
@@ -3006,7 +3007,7 @@ const STATE_ICONS = {
           if (newId) {
             if (o.plcConfigId) { try { await Api.updateObject(newId, { plcConfigId: o.plcConfigId, color: o.color }); } catch (e) { /* ignore */ } }
             if (o.metatags && o.metatags.length) { try { await Api.setMetatags(newId, o.metatags); } catch (e) { /* ignore */ } }
-            remapId(o.id, newId);
+            remapId(o.id, newId); didCreate = true;
           }
         } catch (e) { /* ignore */ }
       }
@@ -3020,7 +3021,8 @@ const STATE_ICONS = {
         if (JSON.stringify(f.metatags || []) !== JSON.stringify(o.metatags || [])) { try { await Api.setMetatags(o.id, o.metatags || []); } catch (e) { /* ignore */ } }
       }
     }
-    renderEditor(); updateUndoBtns();
+    // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
+    if (didCreate) renderEditor(); else updateUndoBtns();
   }
   async function doUndo() {
     if (!(state.undoStack && state.undoStack.length)) return;
