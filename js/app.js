@@ -69,9 +69,25 @@
     // Metatag-Fenster
     '– bitte wählen –': '– please select –', 'Keine Optionen konfiguriert': 'No options configured',
     'frei belegbar …': 'free text …', 'Metatags gespeichert': 'Metatags saved', 'Metatags nicht gespeichert': 'Metatags not saved',
+    '— bitte wählen —': '— please select —',
     // häufige Toasts
     'platziert': 'placed', 'Position nicht gespeichert': 'Position not saved',
     'mind. 8 Zeichen': 'min. 8 characters', 'Fehler': 'Error',
+    'z. B. Sondergreifer': 'e.g. custom gripper', 'Wird hochgeladen …': 'Uploading …',
+    'Verwaltung konnte nicht geladen werden': 'Administration could not be loaded',
+    'Benutzer „{n}“ wirklich löschen?': 'Really delete user “{n}”?',
+    'Gruppe „{n}“ wirklich löschen?': 'Really delete group “{n}”?',
+    'Ebene „{n}“ wirklich löschen?': 'Really delete layer “{n}”?',
+    // Login / Header / Baum
+    'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
+    'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
+    'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all',
+    'Objekt': 'Object', 'Löschen': 'Delete',
+    // Editor-Toolbar
+    'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
+    'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
+    'Journaleinträge': 'journal entries', 'Ohne Kategorie': 'No category', 'Journaleintrag fehlgeschlagen': 'Journal entry failed',
   };
   function t(s, params) {
     let out = (state.lang === 'en' && I18N_EN[s] != null) ? I18N_EN[s] : s;
@@ -179,6 +195,7 @@
     state.user = ctx.user;
     state.role = ctx.role || 'viewer';
     state.lang = (ctx.lang === 'en') ? 'en' : 'de';
+    try { localStorage.setItem('promodx_lang', state.lang); } catch (e) { /* noop */ }
     applyLang();
     state.isAdmin = !!ctx.isAdmin;
     state.group = ctx.group || null;
@@ -205,6 +222,8 @@
   }
 
   async function boot() {
+    try { state.lang = (localStorage.getItem('promodx_lang') === 'en') ? 'en' : 'de'; } catch (e) { /* noop */ }
+    applyLang();
     if (!Api.isAuthenticated) { showLogin(); return; }
     try {
       const res = await Api.me();
@@ -819,10 +838,10 @@
       + '<div class="chips">'
       + '<div class="chip blue"><span class="mono">v' + esc(s.anlagenversion || '–') + '</span></div>'
       + '<div class="chip"><span class="mono">' + plcs.length + ' SPS</span></div>'
-      + '<div class="chip">' + journal.length + ' Journaleinträge</div>'
+      + '<div class="chip">' + journal.length + ' ' + t('Journaleinträge') + '</div>'
       + '<div class="chip">Zuletzt: ' + fmtDate(s.letzteAenderung) + '</div></div>'
       + '<div class="action-bar" style="margin-top:16px;margin-bottom:0">'
-      + (canEdit() ? '<button class="btn ' + (ed ? 'primary' : '') + '" data-act="toggle-edit">' + (ed ? 'SPEICHERN' : 'EDITIEREN') + '</button>' : '')
+      + (canEdit() ? '<button class="btn ' + (ed ? 'primary' : '') + '" data-act="toggle-edit">' + (ed ? t('SPEICHERN') : t('EDITIEREN')) + '</button>' : '')
       + '<button class="btn solid-dark" data-act="open-editor">MODELLIEREN</button>'
       + '</div></div></div>'
 
@@ -896,7 +915,7 @@
     const inp = document.getElementById('jInput'); if (!inp) return;
     const text = inp.value.trim(); if (!text) return;
     inp.value = '';
-    try { await Api.addJournal(state.detail.id, text); } catch (e) { toast('Journaleintrag fehlgeschlagen'); return; }
+    try { await Api.addJournal(state.detail.id, text); } catch (e) { toast(t('Journaleintrag fehlgeschlagen')); return; }
     try { const full = await Api.getStationFull(state.detail.id); full.nodeId = state.detail.nodeId; state.detail = full; } catch (e) { /* ignore */ }
     renderDetail();
   }
@@ -1745,7 +1764,7 @@ const STATE_ICONS = {
       const list = byCat[cat.id] || [];
       catBlocks.push(objCatBlock(cat.name, list, L.color));
     });
-    if (byCat['_'] && byCat['_'].length) catBlocks.push(objCatBlock('Ohne Kategorie', byCat['_'], L.color));
+    if (byCat['_'] && byCat['_'].length) catBlocks.push(objCatBlock(t('Ohne Kategorie'), byCat['_'], L.color));
     const objlist = catBlocks.length ? catBlocks.join('') : '<div style="color:var(--muted);font-size:13px;padding:4px 2px">Noch keine Objekte auf dieser Ebene.</div>';
 
     c.innerHTML = '<div class="editor-wrap"><div class="canvas-col">'
@@ -1753,7 +1772,7 @@ const STATE_ICONS = {
       + '<span class="lyr-badge" style="background:' + L.color + '">' + esc(L.code) + ' ' + esc(L.name) + '</span></div>'
       + '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'
       + '<div id="collabBar">' + presenceHtml() + '</div>'
-      + (canEdit() ? '<button class="up-btn" data-act="editor-upload">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? 'LAYOUT ERSETZEN' : 'LAYOUT HOCHLADEN') + '</button>' : '')
+      + (canEdit() ? '<button class="up-btn" data-act="editor-upload">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? t('LAYOUT ERSETZEN') : t('LAYOUT HOCHLADEN')) + '</button>' : '')
       + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
@@ -1763,7 +1782,7 @@ const STATE_ICONS = {
       + stationNavHtml()
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
       + '<button class="btn" data-act="export-csv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>'
-      + '<button class="btn" data-act="editor-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ZURÜCK</button>'
+      + '<button class="btn" data-act="editor-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ' + t('ZURÜCK') + '</button>'
       + '</div></div></div>'
       + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'
       + '<div class="layer-stack">' + layerStack + '</div>'
@@ -1787,7 +1806,7 @@ const STATE_ICONS = {
     if (isL0) {
       btn = '<button class="btn zone-btn ' + (routeActive ? 'active' : '') + '" data-act="toggle-route" style="width:100%;justify-content:center">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h13M13 8l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg> '
-        + (routeActive ? 'ZEICHNEN AKTIV' : 'FÖRDERWEG') + '</button>';
+        + (routeActive ? t('ZEICHNEN AKTIV') : t('FÖRDERWEG')) + '</button>';
       // Farbige Materialfluss-Typen zur Auswahl -> bestimmt die Pfeilfarbe des nächsten Förderwegs
       extra = '<div class="flow-pick">' + FLOW_TYPES.map((ft, i) =>
         '<button class="flow-chip ' + (state.flowType === i ? 'active' : '') + '" data-act="flow-type" data-flow="' + i + '" style="--fc:' + ft.color + '" title="' + esc(ft.name + ' – ' + ft.desc) + '">'
@@ -1865,13 +1884,13 @@ const STATE_ICONS = {
           const upd = await Api.setMetatags(obj.id, tags);
           obj.metatags = (upd && upd.metatags) || obj.metatags;
           if (fg) toast(name + ' → Funktionsgruppe „' + fg + '" zugeordnet');
-          else toast(name + ' platziert');
-        } catch (e2) { toast(name + ' platziert'); }
+          else toast(name + ' ' + t('platziert'));
+        } catch (e2) { toast(name + ' ' + t('platziert')); }
       } else if (/^custom:/.test(sym)) {
         const tags = symFields(sym).map((f, i) => ({ position: i + 1, label: f.label, value: '' }));
         try { const upd = await Api.setMetatags(obj.id, tags); obj.metatags = (upd && upd.metatags) || tags; } catch (e2) { obj.metatags = tags; }
-        toast(name + ' platziert');
-      } else { toast(name + ' platziert'); }
+        toast(name + ' ' + t('platziert'));
+      } else { toast(name + ' ' + t('platziert')); }
       state.detail.objects.push(obj); protectObj(obj.id);
       renderEditor();
     } catch (e) { toast('Platzieren fehlgeschlagen: ' + e.message); }
@@ -2022,7 +2041,7 @@ const STATE_ICONS = {
 
   function tagFieldSelect(id, label, opts, val) {
     const list = (val && !opts.includes(val)) ? [val].concat(opts) : opts;
-    const options = '<option value="">— bitte wählen —</option>'
+    const options = '<option value="">' + t('— bitte wählen —') + '</option>'
       + list.map((o) => '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>').join('');
     return '<div class="m-field"><label>' + esc(label) + '</label><select id="' + id + '" data-label="' + esc(label) + '">' + options + '</select></div>';
   }
@@ -2030,7 +2049,7 @@ const STATE_ICONS = {
     const head = editLabel
       ? '<input class="m-lbl-edit" id="' + id + '_lbl" value="' + esc(label) + '" placeholder="Überschrift" title="Überschrift bearbeiten">'
       : '<label>' + esc(label) + '</label>';
-    return '<div class="m-field">' + head + '<input id="' + id + '" data-label="' + esc(dataLabel || '') + '" placeholder="frei belegbar …" value="' + esc(val) + '"></div>';
+    return '<div class="m-field">' + head + '<input id="' + id + '" data-label="' + esc(dataLabel || '') + '" placeholder="' + t('frei belegbar …') + '" value="' + esc(val) + '"></div>';
   }
 
   function openTagModal(oid) {
@@ -2095,15 +2114,15 @@ const STATE_ICONS = {
         if (f.type === 'select') {
           const opts = f.options || [];
           const extra = (val && opts.indexOf(val) < 0) ? '<option value="' + esc(val) + '" selected>' + esc(val) + '</option>' : '';
-          inp = '<select id="mTagF' + i + '" class="m-select"><option value="">– bitte wählen –</option>' + opts.map((op) => '<option value="' + esc(op) + '"' + (op === val ? ' selected' : '') + '>' + esc(op) + '</option>').join('') + extra + '</select>';
+          inp = '<select id="mTagF' + i + '" class="m-select"><option value="">' + t('– bitte wählen –') + '</option>' + opts.map((op) => '<option value="' + esc(op) + '"' + (op === val ? ' selected' : '') + '>' + esc(op) + '</option>').join('') + extra + '</select>';
         } else if (f.type === 'multiselect') {
           const opts = f.options || [];
           const sel = val ? val.split(',').map((s) => s.trim()).filter(Boolean) : [];
           inp = '<div class="m-checks" id="mTagF' + i + '">' + (opts.length
             ? opts.map((op) => '<label class="m-check"><input type="checkbox" value="' + esc(op) + '"' + (sel.indexOf(op) >= 0 ? ' checked' : '') + '>' + esc(op) + '</label>').join('')
-            : '<span class="m-empty">Keine Optionen konfiguriert</span>') + '</div>';
+            : '<span class="m-empty">' + t('Keine Optionen konfiguriert') + '</span>') + '</div>';
         } else {
-          inp = '<input id="mTagF' + i + '" placeholder="frei belegbar …" value="' + esc(val) + '">';
+          inp = '<input id="mTagF' + i + '" placeholder="' + t('frei belegbar …') + '" value="' + esc(val) + '">';
         }
         return '<div class="m-field">' + head + inp + '</div>';
       }).join('');
@@ -2150,8 +2169,8 @@ const STATE_ICONS = {
       if (t1 || l1) metatags.push(l1 ? { position: 1, label: l1, value: t1 } : { position: 1, value: t1 });
       if (t2 || l2) metatags.push(l2 ? { position: 2, label: l2, value: t2 } : { position: 2, value: t2 });
     }
-    protectObj(o.id); try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast('Metatags nicht gespeichert'); }
-    closeTagModal(); toast('Metatags gespeichert'); renderEditor();
+    protectObj(o.id); try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast(t('Metatags nicht gespeichert')); }
+    closeTagModal(); toast(t('Metatags gespeichert')); renderEditor();
   }
   async function deletePlaced() {
     const oid = state.modalObjId; const o = (state.detail.objects || []).find((x) => x.id === oid);
@@ -2169,25 +2188,25 @@ const STATE_ICONS = {
   // ---- Eigenes Palette-Symbol: Upload-Dialog ----
   function openSymUpload(editSym) {
     const w = currentWerk(); const L = layerById(state.activeLayer);
-    if (!w || !L) { toast('Kein Werk / keine Ebene aktiv'); return; }
+    if (!w || !L) { toast(t('Kein Werk / keine Ebene aktiv')); return; }
     state.symEdit = editSym || null;
     const isEdit = !!editSym;
     state.symFieldsDraft = (isEdit && editSym.fields && editSym.fields.length)
       ? editSym.fields.map((f) => ({ label: f.label || '', type: (f.type === 'select' || f.type === 'multiselect') ? f.type : 'text', options: (f.options || []).slice() }))
       : defaultCustomFields();
-    const prev = isEdit && editSym.url ? '<img src="' + editSym.url + '" alt="">' : 'Bild wählen …';
+    const prev = isEdit && editSym.url ? '<img src="' + editSym.url + '" alt="">' : t('Bild wählen …');
     let m = document.getElementById('symModal');
     if (!m) { m = document.createElement('div'); m.id = 'symModal'; m.className = 'modal-backdrop'; document.body.appendChild(m); }
     m.innerHTML = '<div class="modal sym-modal">'
-      + '<div class="m-head"><div><h3>' + (isEdit ? 'Symbol bearbeiten' : 'Eigenes Symbol') + '</h3><p class="m-sub">' + esc(L.code + ' · ' + L.name) + ' · ' + esc(w.name) + '</p></div></div>'
+      + '<div class="m-head"><div><h3>' + (isEdit ? t('Symbol bearbeiten') : t('Eigenes Symbol')) + '</h3><p class="m-sub">' + esc(L.code + ' · ' + L.name) + ' · ' + esc(w.name) + '</p></div></div>'
       + '<div class="sym-body">'
-      + '<label class="sym-lbl">Name</label><input id="symName" class="sym-in" placeholder="z. B. Sondergreifer" maxlength="40" value="' + (isEdit ? esc(editSym.name) : '') + '">'
-      + '<label class="sym-lbl">' + (isEdit ? 'Bild ersetzen (optional)' : 'Bild (PNG, JPG oder SVG)') + '</label>'
+      + '<label class="sym-lbl">' + t('Name') + '</label><input id="symName" class="sym-in" placeholder="' + t('z. B. Sondergreifer') + '" maxlength="40" value="' + (isEdit ? esc(editSym.name) : '') + '">'
+      + '<label class="sym-lbl">' + (isEdit ? t('Bild ersetzen (optional)') : t('Bild (PNG, JPG oder SVG)')) + '</label>'
       + '<label class="sym-drop" for="symFile"><span id="symPrev">' + prev + '</span></label>'
       + '<input id="symFile" type="file" accept="image/png,image/jpeg,image/svg+xml" style="display:none">'
-      + '<label class="sym-lbl">Metatag-Felder</label><div id="symFields" class="sf-list"></div>'
+      + '<label class="sym-lbl">' + t('Metatag-Felder') + '</label><div id="symFields" class="sf-list"></div>'
       + '<div class="sym-msg" id="symMsg"></div></div>'
-      + '<div class="m-foot"><button class="btn" id="symCancel">Abbrechen</button><button class="btn primary" id="symSave">' + (isEdit ? 'Speichern' : 'Hochladen') + '</button></div></div>';
+      + '<div class="m-foot"><button class="btn" id="symCancel">' + t('Abbrechen') + '</button><button class="btn primary" id="symSave">' + (isEdit ? t('Speichern') : t('Hochladen')) + '</button></div></div>';
     m.style.display = 'flex';
     const f = document.getElementById('symFile');
     f.addEventListener('change', () => { const file = f.files[0]; if (file) { const u = URL.createObjectURL(file); document.getElementById('symPrev').innerHTML = '<img src="' + u + '" alt="">'; } });
@@ -2213,12 +2232,12 @@ const STATE_ICONS = {
     const draft = state.symFieldsDraft || [];
     container.innerHTML = draft.map((f, i) =>
       '<div class="sf-row" data-i="' + i + '">'
-      + '<input class="sf-label" placeholder="Überschrift" value="' + esc(f.label || '') + '">'
-      + '<select class="sf-type"><option value="text"' + (f.type === 'text' || !f.type ? ' selected' : '') + '>Text</option><option value="select"' + (f.type === 'select' ? ' selected' : '') + '>Auswahl</option><option value="multiselect"' + (f.type === 'multiselect' ? ' selected' : '') + '>Mehrfachauswahl</option></select>'
-      + '<input class="sf-opts" placeholder="Optionen, mit Komma getrennt" value="' + esc((f.options || []).join(', ')) + '"' + (f.type === 'select' || f.type === 'multiselect' ? '' : ' style="display:none"') + '>'
-      + '<button type="button" class="sf-del" data-symact="field-del" data-i="' + i + '" title="Feld entfernen">×</button>'
+      + '<input class="sf-label" placeholder="' + t('Überschrift') + '" value="' + esc(f.label || '') + '">'
+      + '<select class="sf-type"><option value="text"' + (f.type === 'text' || !f.type ? ' selected' : '') + '>' + t('Text') + '</option><option value="select"' + (f.type === 'select' ? ' selected' : '') + '>' + t('Auswahl') + '</option><option value="multiselect"' + (f.type === 'multiselect' ? ' selected' : '') + '>' + t('Mehrfachauswahl') + '</option></select>'
+      + '<input class="sf-opts" placeholder="' + t('Optionen, mit Komma getrennt') + '" value="' + esc((f.options || []).join(', ')) + '"' + (f.type === 'select' || f.type === 'multiselect' ? '' : ' style="display:none"') + '>'
+      + '<button type="button" class="sf-del" data-symact="field-del" data-i="' + i + '" title="' + t('Feld entfernen') + '">×</button>'
       + '</div>').join('')
-      + '<button type="button" class="sf-add" data-symact="field-add">+ Feld</button>';
+      + '<button type="button" class="sf-add" data-symact="field-add">' + t('+ Feld') + '</button>';
   }
   function syncSymFields(container) {
     const draft = [];
@@ -2271,6 +2290,7 @@ const STATE_ICONS = {
     if (lang === state.lang) return;
     const msg = document.getElementById('pfMsg'); if (msg) msg.textContent = t('Wird gespeichert …');
     try { await Api.setLanguage(lang); } catch (e) { if (msg) msg.textContent = (e.data && e.data.message) || 'Fehler'; return; }
+    try { localStorage.setItem('promodx_lang', lang); } catch (e2) { /* noop */ }
     location.reload();
   }
   function closeProfile() { const m = document.getElementById('profileModal'); if (m) m.style.display = 'none'; }
@@ -2290,10 +2310,10 @@ const STATE_ICONS = {
     const file = document.getElementById('symFile').files[0];
     const msg = document.getElementById('symMsg');
     const edit = state.symEdit;
-    if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
-    if (!edit && !file) { msg.textContent = 'Bitte ein Bild wählen.'; return; }
-    if (file && file.size > 2 * 1024 * 1024) { msg.textContent = 'Bild ist zu groß (max. 2 MB).'; return; }
-    msg.textContent = edit ? 'Wird gespeichert …' : 'Wird hochgeladen …';
+    if (!name) { msg.textContent = t('Bitte einen Namen eingeben.'); return; }
+    if (!edit && !file) { msg.textContent = t('Bitte ein Bild wählen.'); return; }
+    if (file && file.size > 2 * 1024 * 1024) { msg.textContent = t('Bild ist zu groß (max. 2 MB).'); return; }
+    msg.textContent = edit ? t('Wird gespeichert …') : t('Wird hochgeladen …');
     const fc = document.getElementById('symFields'); if (fc) syncSymFields(fc);
     const fields = (state.symFieldsDraft || []).filter((f) => f.label).map((f) => ({ label: f.label, type: (f.type === 'select' || f.type === 'multiselect') ? f.type : 'text', options: (f.type === 'select' || f.type === 'multiselect') ? (f.options || []) : [] }));
     try {
@@ -2306,7 +2326,7 @@ const STATE_ICONS = {
   async function deleteCustomSym(id) {
     if (!window.confirm('Dieses eigene Symbol aus der Palette löschen?')) return;
     try { await Api.deletePaletteSymbol(id); } catch (e) { toast('Löschen fehlgeschlagen'); return; }
-    const w = currentWerk(); await loadCustomSyms(w ? w.id : null, { force: true }); renderEditor(); toast('Symbol gelöscht');
+    const w = currentWerk(); await loadCustomSyms(w ? w.id : null, { force: true }); renderEditor(); toast(t('Symbol gelöscht'));
   }
 
   function triggerUpload() { $('layoutFile').click(); }
@@ -2407,7 +2427,7 @@ const STATE_ICONS = {
     const mat = routeMaterial(z);
     const bez = ((z.metatags || []).find((m) => m.label === 'Bezeichnung') || {}).value || '';
     const col = (layerById(z.layerId) || {}).color || '#0FA47F';
-    const opts = '<option value="">— bitte wählen —</option>'
+    const opts = '<option value="">' + t('— bitte wählen —') + '</option>'
       + ROUTE_ARTS.map((a) => '<option value="' + esc(a) + '"' + (a === art ? ' selected' : '') + '>' + esc(a) + '</option>').join('');
     const matOpts = '<option value="">— ohne —</option>'
       + FLOW_TYPES.map((f) => '<option value="' + esc(f.name) + '"' + (f.name === mat ? ' selected' : '') + '>' + esc(f.name) + '</option>').join('');
@@ -2867,15 +2887,15 @@ const STATE_ICONS = {
     else if (act === 'user-save') { saveUser(); }
     else if (act === 'user-pw') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.pwForm = { id: u.id, name: u.name }; renderAdmin(); } }
     else if (act === 'pw-save') { savePw(); }
-    else if (act === 'user-del') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u && window.confirm('Benutzer „' + u.name + '" wirklich löschen?')) delUser(u.id); }
+    else if (act === 'user-del') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u && window.confirm(t('Benutzer „{n}“ wirklich löschen?', { n: u.name }))) delUser(u.id); }
     else if (act === 'group-new') { a.groupForm = { name: '', role: 'viewer', allWerke: false, werkIds: new Set(), allLayers: true, layerCodes: new Set() }; renderAdmin(); }
     else if (act === 'group-edit') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g) { a.groupForm = { id: g.id, name: g.name, role: g.role, allWerke: g.allWerke, werkIds: new Set(g.werke.map((w) => w.id)), allLayers: g.allLayers !== false && !(g.layerCodes && g.layerCodes.length), layerCodes: new Set(g.layerCodes || []) }; renderAdmin(); } }
     else if (act === 'group-save') { saveGroup(); }
-    else if (act === 'group-del') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g && window.confirm('Gruppe „' + g.name + '" wirklich löschen?')) delGroup(g.id); }
+    else if (act === 'group-del') { const g = a.groups.find((x) => String(x.id) === el.getAttribute('data-id')); if (g && window.confirm(t('Gruppe „{n}“ wirklich löschen?', { n: g.name }))) delGroup(g.id); }
     else if (act === 'layer-new') { a.layerForm = { name: '', code: '', color: '#0065A5', categories: [] }; renderAdmin(); }
     else if (act === 'layer-edit') { const l = (a.layers || []).find((x) => String(x.id) === el.getAttribute('data-id')); if (l) { a.layerForm = { id: l.id, name: l.name, code: l.code, color: l.color, categories: (l.categories || []).map((c) => c.name) }; renderAdmin(); } }
     else if (act === 'layer-save') { saveLayerDef(); }
-    else if (act === 'layer-del') { const l = (a.layers || []).find((x) => String(x.id) === el.getAttribute('data-id')); if (l && window.confirm('Ebene „' + l.code + ' ' + l.name + '" wirklich löschen?')) delLayerDef(l.id); }
+    else if (act === 'layer-del') { const l = (a.layers || []).find((x) => String(x.id) === el.getAttribute('data-id')); if (l && window.confirm(t('Ebene „{n}“ wirklich löschen?', { n: l.code + ' ' + l.name }))) delLayerDef(l.id); }
     else if (act === 'layer-up') { moveLayerDef(el.getAttribute('data-id'), 1); }
     else if (act === 'layer-down') { moveLayerDef(el.getAttribute('data-id'), -1); }
   }
@@ -2900,7 +2920,7 @@ const STATE_ICONS = {
     const a = state.admin, f = a.userForm, msg = document.getElementById('admMsg');
     const name = document.getElementById('admUName').value.trim();
     const groupId = document.getElementById('admUGroup').value;
-    if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
+    if (!name) { msg.textContent = t('Bitte einen Namen eingeben.'); return; }
     if (!groupId) { msg.textContent = 'Bitte eine Gruppe wählen (ggf. zuerst eine anlegen).'; return; }
     try {
       if (!f.id) {
@@ -2938,7 +2958,7 @@ const STATE_ICONS = {
     const role = document.getElementById('admGRole').value;
     const allWerke = document.getElementById('admGAll').checked;
     const allLayers = document.getElementById('admGAllLayers').checked;
-    if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
+    if (!name) { msg.textContent = t('Bitte einen Namen eingeben.'); return; }
     const werkIds = allWerke ? [] : Array.from(f.werkIds);
     const layerCodes = allLayers ? [] : Array.from(f.layerCodes);
     try {
@@ -2961,7 +2981,7 @@ const STATE_ICONS = {
     let color = (document.getElementById('admLColorHex').value || '').trim();
     if (!/^#[0-9a-fA-F]{6}$/.test(color)) color = document.getElementById('admLColor').value || '#0065A5';
     const categories = (document.getElementById('admLCats').value || '').split('\n').map((s) => s.trim()).filter(Boolean);
-    if (!name) { msg.textContent = 'Bitte einen Namen eingeben.'; return; }
+    if (!name) { msg.textContent = t('Bitte einen Namen eingeben.'); return; }
     if (!code) { msg.textContent = 'Bitte einen Code eingeben (z. B. L7.0).'; return; }
     try {
       if (!f.id) await Api.createLayer({ name, code, color, categories });
