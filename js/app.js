@@ -1053,6 +1053,8 @@
     }
     else if (act === 'toggle-zone') { const on = !(state.drawZone && state.drawShape === 'zone'); state.drawZone = on; state.drawShape = on ? 'zone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'toggle-spszone') { const on = !(state.drawZone && state.drawShape === 'spszone'); state.drawZone = on; state.drawShape = on ? 'spszone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
+    else if (act === 'undo') { doUndo(); }
+    else if (act === 'redo') { doRedo(); }
     else if (act === 'toggle-route') { const on = !(state.drawZone && state.drawShape === 'route'); state.drawZone = on; state.drawShape = on ? 'route' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'flow-type') { state.flowType = parseInt(el.getAttribute('data-flow'), 10) || 0; renderEditor(); }
     else if (act === 'flow-legend') { state.flowLegend = !state.flowLegend; renderEditor(); }
@@ -1339,6 +1341,7 @@ const STATE_ICONS = {
 
   async function openEditor() {
     state.view = 'editor';
+    state.undoStack = []; state.redoStack = [];
     if (!state.activeLayer || !layerAllowed((layerById(state.activeLayer) || {}).code)) {
       const al = allowedLayers(); if (al[0]) state.activeLayer = al[0].id;
     }
@@ -1878,6 +1881,8 @@ const STATE_ICONS = {
       + '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'
       + '<div id="collabBar">' + presenceHtml() + '</div>'
       + (canEdit() ? '<button class="up-btn" data-act="editor-upload">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? t('LAYOUT ERSETZEN') : t('LAYOUT HOCHLADEN')) + '</button>' : '')
+      + (canEdit() ? '<div class="up-btn undo-ctl"><button id="btnUndo" data-act="undo" title="Rückgängig (Strg+Z)"' + ((state.undoStack && state.undoStack.length) ? '' : ' disabled') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg></button>'
+      + '<button id="btnRedo" data-act="redo" title="Wiederholen (Strg+Umschalt+Z)"' + ((state.redoStack && state.redoStack.length) ? '' : ' disabled') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/></svg></button></div>' : '')
       + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
@@ -1984,6 +1989,7 @@ const STATE_ICONS = {
     const base = (name || 'Objekt').replace(/\s+/g, '_');
     const num = String((state.detail.objects || []).filter((o) => o.symbolType === sym).length + 1).padStart(2, '0');
     try {
+      pushUndo();
       const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: base + '_' + num, symbolType: sym, color: color || L.color, x, y });
       obj.metatags = obj.metatags || [];
       const pt = processTypeByName(name);
@@ -2033,6 +2039,7 @@ const STATE_ICONS = {
     const id = state.iconDrag; state.iconDrag = null;
     if (!id || !id.moved || id.nx == null) return;
     const o = (state.detail.objects || []).find((x) => x.id === id.oid); if (!o) return;
+    if (state._preDrag) { pushUndoSnap(state._preDrag); state._preDrag = null; }
     const map = iconPosMap(o); map[id.st] = { x: id.nx, y: id.ny };
     const metatags = (o.metatags || []).filter((m) => m.label !== 'Icon-Positionen')
       .concat([{ position: 90, label: 'Icon-Positionen', value: JSON.stringify(map) }]);
@@ -2077,13 +2084,14 @@ const STATE_ICONS = {
     if (state.techDrag) {
       const td = state.techDrag; state.techDrag = null;
       const o = (state.detail.objects || []).find((z) => z.id === td.id);
-      if (td.moved && o) { protectObj(o.id); try { await Api.updateObject(o.id, { points: o.points }); } catch (e2) { toast('Position nicht gespeichert'); } }
+      if (td.moved && o) { if (state._preDrag) { pushUndoSnap(state._preDrag); state._preDrag = null; } protectObj(o.id); try { await Api.updateObject(o.id, { points: o.points }); } catch (e2) { toast('Position nicht gespeichert'); } }
       renderEditor(); return;
     }
     if (state.zoneDrag) {
       const zd = state.zoneDrag; state.zoneDrag = null;
       const z = (state.detail.objects || []).find((o) => o.id === zd.id);
       if ((zd.type === 'vertex' || zd.type === 'move') && zd.moved && z) {
+        if (state._preDrag) { pushUndoSnap(state._preDrag); state._preDrag = null; }
         protectObj(z.id);
         state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
         updateZoneDom(z);
@@ -2115,6 +2123,7 @@ const STATE_ICONS = {
       if (state.selectedObj !== dm.oid) { state.selectedObj = dm.oid; selRender = true; }
     } else if (state.selectedObj) { state.selectedObj = null; selRender = true; }
     if (dm.moved && dm.nx != null) {
+      if (state._preDrag) { pushUndoSnap(state._preDrag); state._preDrag = null; }
       const o = clicked;
       if (o) {
         o.x = dm.nx; o.y = dm.ny;
@@ -2255,6 +2264,7 @@ const STATE_ICONS = {
   async function saveTags() {
     const o = (state.detail.objects || []).find((x) => x.id === state.modalObjId);
     if (!o) { closeTagModal(); return; }
+    pushUndo();
     const pt = processTypeBySym(o.symbolType);
     let metatags;
     if (pt) {
@@ -2293,11 +2303,13 @@ const STATE_ICONS = {
   async function deletePlaced() {
     const oid = state.modalObjId; const o = (state.detail.objects || []).find((x) => x.id === oid);
     closeTagModal(); if (!o) return;
+    pushUndo();
     try { await Api.deleteObject(oid); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     state.detail.objects = state.detail.objects.filter((x) => x.id !== oid);
     toast('Objekt gelöscht'); renderEditor();
   }
   async function deleteObjectById(oid) {
+    pushUndo();
     try { await Api.deleteObject(oid); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     state.detail.objects = state.detail.objects.filter((x) => x.id !== oid);
     toast('Objekt gelöscht'); renderEditor();
@@ -2539,6 +2551,7 @@ const STATE_ICONS = {
       const clash = (state.detail.objects || []).find((o) => o.symbolType === 'sps_zone' && o.id !== zoneId && o.plcConfigId === plcId);
       if (clash) { toast('Diese SPS ist bereits einem anderen SPS-Bereich zugeordnet'); return; }
     }
+    pushUndo();
     const L = layerById(z.layerId);
     const color = plcId ? (plcColor || z.color) : (L ? L.color : z.color);
     try {
@@ -2608,6 +2621,7 @@ const STATE_ICONS = {
   async function reverseRoute(routeId) {
     const z = (state.detail.objects || []).find((o) => o.id === routeId);
     if (!z || !z.points || z.points.length < 2) return;
+    pushUndo();
     z.points = z.points.slice().reverse();
     protectObj(z.id);
     try { await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }); }
@@ -2617,6 +2631,7 @@ const STATE_ICONS = {
 
   function onContentPointerDown(e) {
     if (!canEdit()) return;
+    state._preDrag = snapObjects();
     // Technologie-Blase greifen
     const td = e.target.closest('[data-techdrag]');
     if (td) { e.preventDefault(); state.techDrag = { id: td.getAttribute('data-techdrag'), moved: false }; try { td.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } return; }
@@ -2628,6 +2643,7 @@ const STATE_ICONS = {
       const z = (state.detail.objects || []).find((o) => o.id === zid);
       if (z && z.points) {
         const p = z.points[eidx], q = z.points[(eidx + 1) % z.points.length];
+        pushUndo();
         z.points.splice(eidx + 1, 0, { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 });
         protectObj(z.id);
         state.geomPending[z.id] = { points: z.points.map(function (pp) { return { x: pp.x, y: pp.y }; }), ts: Date.now() };
@@ -2795,6 +2811,7 @@ const STATE_ICONS = {
 
   async function finishZone() {
     if (!state.drawZone || state.zoneDraft.length < 3) { toast('Mindestens 3 Stützpunkte nötig'); return; }
+    pushUndo();
     const pts = state.zoneDraft.slice();
     const L = layerById(state.activeLayer);
     const kind = zoneKind(L);
@@ -2813,6 +2830,7 @@ const STATE_ICONS = {
 
   async function finishRoute() {
     if (state.drawShape !== 'route' || state.zoneDraft.length < 2) { toast('Mindestens 2 Wegpunkte nötig'); return; }
+    pushUndo();
     const pts = state.zoneDraft.slice();
     const L = layerById(state.activeLayer);
     const ft = FLOW_TYPES[state.flowType] || FLOW_TYPES[0];
@@ -2832,6 +2850,7 @@ const STATE_ICONS = {
   async function deleteSelectedZone() {
     const id = state.selectedZone; const z = (state.detail.objects || []).find((o) => o.id === id);
     if (!z) return;
+    pushUndo();
     const isRoute = z.symbolType === 'mf_route';
     state.selectedZone = null;
     try { await Api.deleteObject(id); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
@@ -2924,16 +2943,97 @@ const STATE_ICONS = {
     const z = (state.detail.objects || []).find((o) => o.id === zid); if (!z || !z.points) return;
     const minPts = z.symbolType === 'mf_route' ? 2 : 3;
     if (z.points.length <= minPts) { toast('Mindestens ' + minPts + ' Stützpunkte nötig'); return; }
+    pushUndo();
     z.points.splice(idx, 1);
     protectObj(z.id);
     state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
     Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { /* ignore */ });
     renderEditor();
   }
+  /* ---------- Undo / Redo (Editor, mit Server-Sync) ---------- */
+  function snapObjects() { return JSON.parse(JSON.stringify(state.detail.objects || [])); }
+  function updateUndoBtns() {
+    const u = document.getElementById('btnUndo'), r = document.getElementById('btnRedo');
+    if (u) u.disabled = !(state.undoStack && state.undoStack.length);
+    if (r) r.disabled = !(state.redoStack && state.redoStack.length);
+  }
+  function pushUndoSnap(snap) {
+    state.undoStack = state.undoStack || []; state.redoStack = state.redoStack || [];
+    state.undoStack.push(snap);
+    if (state.undoStack.length > 60) state.undoStack.shift();
+    state.redoStack = [];
+    updateUndoBtns();
+  }
+  function pushUndo() { if (state.detail) pushUndoSnap(snapObjects()); }
+  function objPayload(o) {
+    const p = { layerId: o.layerId, name: o.name, symbolType: o.symbolType, color: o.color };
+    if (o.points && o.points.length) { p.points = o.points; p.x = o.points[0].x; p.y = o.points[0].y; } else { p.x = o.x; p.y = o.y; }
+    return p;
+  }
+  function objChanged(a, b) {
+    return JSON.stringify([a.name, a.color, a.x, a.y, a.points || null, a.plcConfigId || null, a.layerId, a.symbolType, a.metatags || []])
+      !== JSON.stringify([b.name, b.color, b.x, b.y, b.points || null, b.plcConfigId || null, b.layerId, b.symbolType, b.metatags || []]);
+  }
+  function remapId(oldId, newId) {
+    const fix = (arr) => (arr || []).forEach((o) => { if (o.id === oldId) o.id = newId; });
+    fix(state.detail.objects);
+    (state.undoStack || []).forEach(fix); (state.redoStack || []).forEach(fix);
+    if (state.selectedZone === oldId) state.selectedZone = newId;
+    if (state.selectedObj === oldId) state.selectedObj = newId;
+    if (state.geomPending && state.geomPending[oldId]) { state.geomPending[newId] = state.geomPending[oldId]; delete state.geomPending[oldId]; }
+  }
+  // Serverzustand von "from" nach "to" ueberfuehren (Loeschen/Anlegen/Aendern), IDs neu angelegter Objekte uebernehmen.
+  async function applyObjectsState(from, to) {
+    state.detail.objects = to; renderEditor();
+    const fromById = {}, toById = {};
+    from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
+    const sid = state.detail.id;
+    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { /* ignore */ } } }
+    for (const o of to) {
+      if (!fromById[o.id]) {
+        try {
+          const created = await Api.createObject(sid, objPayload(o));
+          const newId = created && created.id;
+          if (newId) {
+            if (o.plcConfigId) { try { await Api.updateObject(newId, { plcConfigId: o.plcConfigId, color: o.color }); } catch (e) { /* ignore */ } }
+            if (o.metatags && o.metatags.length) { try { await Api.setMetatags(newId, o.metatags); } catch (e) { /* ignore */ } }
+            remapId(o.id, newId);
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
+    for (const o of to) {
+      const f = fromById[o.id];
+      if (f && objChanged(f, o)) {
+        const patch = objPayload(o); patch.plcConfigId = o.plcConfigId || null;
+        state.geomPending[o.id] = { points: (o.points || []).map((p) => ({ x: p.x, y: p.y })), ts: Date.now() };
+        try { await Api.updateObject(o.id, patch); } catch (e) { /* ignore */ }
+        if (JSON.stringify(f.metatags || []) !== JSON.stringify(o.metatags || [])) { try { await Api.setMetatags(o.id, o.metatags || []); } catch (e) { /* ignore */ } }
+      }
+    }
+    renderEditor(); updateUndoBtns();
+  }
+  async function doUndo() {
+    if (!(state.undoStack && state.undoStack.length)) return;
+    const curr = snapObjects(); const target = state.undoStack.pop();
+    (state.redoStack = state.redoStack || []).push(curr);
+    await applyObjectsState(curr, target);
+  }
+  async function doRedo() {
+    if (!(state.redoStack && state.redoStack.length)) return;
+    const curr = snapObjects(); const target = state.redoStack.pop();
+    (state.undoStack = state.undoStack || []).push(curr);
+    await applyObjectsState(curr, target);
+  }
   function onEditorKey(e) {
     if (state.view !== 'editor' || !canEdit()) return;
     const t = document.activeElement;
     const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
+    if ((e.ctrlKey || e.metaKey) && !inField) {
+      const k = (e.key || '').toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); return; }
+      if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); doRedo(); return; }
+    }
     if (state.drawZone) {
       if (e.key === 'Enter') { e.preventDefault(); state.drawShape === 'route' ? finishRoute() : finishZone(); }
       else if (e.key === 'Escape') { e.preventDefault(); state.drawZone = false; state.zoneDraft = []; state.zoneCursor = null; renderEditor(); }
@@ -2948,6 +3048,9 @@ const STATE_ICONS = {
       const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && o.points);
       if (z) {
         e.preventDefault();
+        if (!state._nudgeUndoActive) { pushUndo(); state._nudgeUndoActive = true; }
+        if (state._nudgeTimer2) clearTimeout(state._nudgeTimer2);
+        state._nudgeTimer2 = setTimeout(function () { state._nudgeUndoActive = false; }, 600);
         const step = e.shiftKey ? 0.02 : 0.004;
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
