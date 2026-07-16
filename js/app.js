@@ -424,8 +424,7 @@
 
   function renderWelcome() {
     $('content').innerHTML = '<div class="welcome"><div class="welcome-inner">'
-      + '<svg class="glyph" width="60" height="60" viewBox="0 0 60 60" fill="none">'
-      + '<path d="M30 6 L52 17 L30 28 L8 17 Z" fill="#0065A5"/><path d="M30 22 L52 33 L30 44 L8 33 Z" fill="#3d8bc0"/><path d="M30 38 L52 49 L30 60 L8 49 Z" fill="#939598"/></svg>'
+      + '<img class="welcome-logo" src="img/logo.png?v=0.25.18" alt="ProModXgOEM2">'
       + '<h2>' + t('Anlage auswählen') + '</h2>'
       + '<p>Navigiere links durch die Struktur. Neue Knoten legst du mit dem +-Symbol an. Detailansicht und Editor folgen in den nächsten Schritten.</p>'
       + '</div></div>';
