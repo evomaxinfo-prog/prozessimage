@@ -1051,6 +1051,7 @@
       document.querySelectorAll('.palette [data-ppanel]').forEach((p) => { p.style.display = p.getAttribute('data-ppanel') === t ? '' : 'none'; });
     }
     else if (act === 'toggle-zone') { const on = !(state.drawZone && state.drawShape === 'zone'); state.drawZone = on; state.drawShape = on ? 'zone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
+    else if (act === 'toggle-spszone') { const on = !(state.drawZone && state.drawShape === 'spszone'); state.drawZone = on; state.drawShape = on ? 'spszone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'toggle-route') { const on = !(state.drawZone && state.drawShape === 'route'); state.drawZone = on; state.drawShape = on ? 'route' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'flow-type') { state.flowType = parseInt(el.getAttribute('data-flow'), 10) || 0; renderEditor(); }
     else if (act === 'flow-legend') { state.flowLegend = !state.flowLegend; renderEditor(); }
@@ -1244,11 +1245,17 @@ const STATE_ICONS = {
   function objectsOfLayer(id) { return (state.detail.objects || []).filter((o) => o.layerId === id); }
 
   /* ---- Punkt-basierte Formen: Schutzbereich (geschlossen) + Materialfluss-Förderweg (offen) ---- */
-  function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'mf_route'); }
+  function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'mf_route'); }
   // Polygon-Art abhängig von der Ebene: "Funktionsgruppen" -> fg_zone, sonst Schutzbereich (sb_zone). Nach Namen, damit Umnummerieren nichts bricht.
   function zoneKind(layer) {
+    if (state.drawShape === 'spszone') return { type: 'sps_zone', prefix: 'SPS-Bereich', noun: 'SPS-Bereich', label: 'SPS BEREICH' };
     if (layer && layer.name === 'Funktionsgruppen') return { type: 'fg_zone', prefix: 'Funktionsgruppe', noun: 'Funktionsgruppe', label: 'FG FUNKTIONSGRUPPE' };
     return { type: 'sb_zone', prefix: 'Schutzbereich', noun: 'Schutzbereich', label: 'SB SCHUTZBEREICH' };
+  }
+  // Label eines SPS-Bereichs = Name der zugeordneten SPS (1:1), sonst der Objektname.
+  function spsZoneLabel(z) {
+    if (z.plcConfigId) { const p = (state.detail.plcs || []).find((x) => x.id === z.plcConfigId); if (p) return p.name; }
+    return z.name || 'SPS-Bereich';
   }
 
   const ROUTE_ARTS = ['Rollenbahn', 'Kettenförderer', 'Band-/Gurtförderer', 'Hängeförderer', 'FTS / AGV', 'Stapler / manuell', 'Manueller Transport'];
@@ -1662,13 +1669,13 @@ const STATE_ICONS = {
 
   // Metatags einer Funktionsgruppe/eines Schutzbereichs dauerhaft mittig im Polygon anzeigen (HTML-Overlay, damit kein Verzerren)
   function fgLabelLayer(visible) {
-    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'fg_zone' || o.symbolType === 'sb_zone') && o.points && o.points.length >= 3 && visible[o.layerId] !== false);
+    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'fg_zone' || o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone') && o.points && o.points.length >= 3 && visible[o.layerId] !== false);
     if (!zones.length) return '';
     return '<div class="fg-label-layer">' + zones.map((z) => {
       const cx = z.points.reduce((s, p) => s + p.x, 0) / z.points.length;
       const cy = z.points.reduce((s, p) => s + p.y, 0) / z.points.length;
       const tags = (z.metatags || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).map((m) => m.value).filter((v) => v !== null && v !== '');
-      const lines = tags.length ? tags : [z.name];
+      const lines = z.symbolType === 'sps_zone' ? [spsZoneLabel(z)] : (tags.length ? tags : [z.name]);
       const abbrev = (t) => (z.symbolType === 'sb_zone' ? String(t).replace(/Schutzbereich/g, 'SB') : t);
       const inner = lines.map((t) => '<div class="fgl-line">' + esc(abbrev(t)) + '</div>').join('');
       return '<div class="fg-label" data-zone="' + z.id + '" style="left:' + (cx * 100) + '%;top:' + (cy * 100) + '%;color:' + esc(zoneColor(z)) + '">' + inner + '</div>';
@@ -1676,13 +1683,15 @@ const STATE_ICONS = {
   }
 
   function zoneOverlaySvg(visible) {
-    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'fg_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
+    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
     const hlFg = highlightedFgZoneId();
+    const hlSps = highlightedSpsZoneId();
     const polys = zones.map((z) => {
       const pts = z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' ');
       const sel = state.selectedZone === z.id;
-      const hl = z.id === hlFg;
-      const col = hl ? '#16A34A' : esc(zoneColor(z));
+      const hl = z.id === hlFg || z.id === hlSps;
+      const hlCol = z.id === hlSps ? '#0065A5' : '#16A34A';
+      const col = hl ? hlCol : esc(zoneColor(z));
       const sw = hl ? 3.4 : (sel ? 2.4 : 1.6);
       return '<polygon id="zone-poly-' + z.id + '" points="' + pts + '" fill="' + col + '" fill-opacity="' + (hl ? '0.22' : '0.13') + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : (sel ? 'stroke-dasharray="4 3" ' : '')) + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
     }).join('');
@@ -1891,13 +1900,24 @@ const STATE_ICONS = {
         ? 'Klicken setzt Wegpunkte · Klick auf den letzten Punkt oder <b>Enter</b> beendet · <b>Esc</b> bricht ab. Farbe = gewählter Materialfluss-Typ; Doppelklick öffnet Typ &amp; Förderart.'
         : 'Erst Typ oben wählen (Farbe), dann zeichnen. Wegpunkte danach verschiebbar. Weg anklicken: <b>Entf</b> löscht, <b>R</b> kehrt die Richtung um.';
     } else {
-      const kind = zoneKind(layerById(state.activeLayer));
-      btn = '<button class="btn zone-btn ' + (zoneActive ? 'active' : '') + '" data-act="toggle-zone" style="width:100%;justify-content:center">'
-        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> '
-        + (zoneActive ? 'ZEICHNEN AKTIV' : kind.label) + '</button>';
-      hint = zoneActive
-        ? 'Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab'
-        : 'Polygon zeichnen; Stützpunkte danach verschiebbar. ' + kind.noun + ' anklicken &amp; <b>Entf</b> löscht ihn.';
+      const spsActive = state.drawShape === 'spszone';
+      const zsvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> ';
+      const zbtn = (a, on, label) => '<button class="btn zone-btn ' + (on ? 'active' : '') + '" data-act="' + a + '" style="width:100%;justify-content:center">' + zsvg + label + '</button>';
+      if (isSteuer) {
+        // SPS-Bereich (1:1 zu einer SPS) ueber dem Schutzbereich-Button
+        btn = zbtn('toggle-spszone', spsActive, spsActive ? 'ZEICHNEN AKTIV' : 'SPS BEREICH')
+          + '<div style="height:7px"></div>'
+          + zbtn('toggle-zone', zoneActive, zoneActive ? 'ZEICHNEN AKTIV' : 'SB SCHUTZBEREICH');
+        hint = (spsActive || zoneActive)
+          ? 'Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab'
+          : '<b>SPS-Bereich:</b> genau eine SPS je Bereich (1:1) – nach dem Zeichnen SPS wählen. <b>Schutzbereich:</b> optionale SPS-Zuordnung.';
+      } else {
+        const kind = zoneKind(layerById(state.activeLayer));
+        btn = zbtn('toggle-zone', zoneActive, zoneActive ? 'ZEICHNEN AKTIV' : kind.label);
+        hint = zoneActive
+          ? 'Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab'
+          : 'Polygon zeichnen; Stützpunkte danach verschiebbar. ' + kind.noun + ' anklicken &amp; <b>Entf</b> löscht ihn.';
+      }
     }
     return '<div class="lp-action">' + btn + extra + '<div class="zone-hint">' + hint + '</div></div>';
   }
@@ -2050,6 +2070,8 @@ const STATE_ICONS = {
         try {
           await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
         } catch (e2) { toast('Position nicht gespeichert'); }
+        // SB-Polygon auf einen SPS-Bereich gezogen -> automatische SPS-Verknuepfung
+        if (zd.type === 'move' && z.symbolType === 'sb_zone') { await autoLinkSbToSps(z); }
         return;
       }
       // Klick ohne Bewegung: Auswahl bzw. Doppelklick (zeitbasiert, re-render-fest)
@@ -2057,7 +2079,7 @@ const STATE_ICONS = {
         const now = Date.now();
         const dbl = state.lastZoneUp && state.lastZoneUp.id === z.id && (now - state.lastZoneUp.t) < 400;
         state.lastZoneUp = dbl ? null : { id: z.id, t: now };
-        if (dbl) { if (z.symbolType === 'mf_route') openRouteModal(z.id); else if (z.symbolType === 'sb_zone') openZoneAssignModal(z.id); else if (z.symbolType === 'fg_zone') openTagModal(z.id); return; }
+        if (dbl) { if (z.symbolType === 'mf_route') openRouteModal(z.id); else if (z.symbolType === 'sb_zone' || z.symbolType === 'sps_zone') openZoneAssignModal(z.id); else if (z.symbolType === 'fg_zone') openTagModal(z.id); return; }
         if (state.selectedZone !== z.id) { state.selectedZone = z.id; renderEditor(); }
         return;
       }
@@ -2458,15 +2480,23 @@ const STATE_ICONS = {
   function openZoneAssignModal(zoneId) {
     closeZoneModal();
     const z = (state.detail.objects || []).find((o) => o.id === zoneId); if (!z) return;
+    const isSps = z.symbolType === 'sps_zone';
     const plcs = state.detail.plcs || [];
     const cur = z.plcConfigId || null;
+    // 1:1 – SPS, die bereits einem ANDEREN SPS-Bereich zugeordnet sind, sperren
+    const usedBy = {};
+    if (isSps) (state.detail.objects || []).forEach((o) => { if (o.symbolType === 'sps_zone' && o.id !== zoneId && o.plcConfigId) usedBy[o.plcConfigId] = o; });
     const rows = plcs.length
-      ? plcs.map((p) => '<button class="za-row ' + (cur === p.id ? 'sel' : '') + '" data-plc="' + p.id + '" data-color="' + esc(p.color) + '">'
-        + '<span class="za-swatch" style="background:' + esc(p.color) + '"></span><span class="za-name">' + esc(p.name) + '</span>'
-        + (cur === p.id ? '<span class="za-check">✓</span>' : '') + '</button>').join('')
+      ? plcs.map((p) => {
+          const taken = isSps && !!usedBy[p.id];
+          return '<button class="za-row ' + (cur === p.id ? 'sel ' : '') + (taken ? 'taken' : '') + '"'
+            + (taken ? ' disabled' : ' data-plc="' + p.id + '" data-color="' + esc(p.color) + '"') + '>'
+            + '<span class="za-swatch" style="background:' + esc(p.color) + '"></span><span class="za-name">' + esc(p.name) + '</span>'
+            + (cur === p.id ? '<span class="za-check">✓</span>' : (taken ? '<span class="za-taken">bereits belegt</span>' : '')) + '</button>';
+        }).join('')
       : '<div class="za-empty">Für diese Anlage sind noch keine SPS angelegt. Lege sie in der Detailansicht an (EDITIEREN › SPS hinzufügen).</div>';
     const html = '<div class="za-backdrop" id="zaBackdrop"><div class="za-card">'
-      + '<div class="za-head"><div><div class="za-title">Schutzbereich zuordnen</div><div class="za-sub">' + esc(z.name) + '</div></div>'
+      + '<div class="za-head"><div><div class="za-title">' + (isSps ? 'SPS-Bereich zuordnen' : 'Schutzbereich zuordnen') + '</div><div class="za-sub">' + esc(z.name) + (isSps ? ' · genau eine SPS (1:1)' : '') + '</div></div>'
       + '<button class="za-x" data-za="close" title="Schließen">×</button></div>'
       + '<div class="za-body">' + rows + '</div>'
       + '<div class="za-foot"><button class="btn ' + (cur ? 'del-btn' : '') + '" data-za="none">Keine Zuordnung</button>'
@@ -2485,6 +2515,10 @@ const STATE_ICONS = {
   function closeZoneModal() { const b = document.getElementById('zaBackdrop'); if (b) b.remove(); }
   async function assignZone(zoneId, plcId, plcColor) {
     const z = (state.detail.objects || []).find((o) => o.id === zoneId); if (!z) { closeZoneModal(); return; }
+    if (z.symbolType === 'sps_zone' && plcId) {
+      const clash = (state.detail.objects || []).find((o) => o.symbolType === 'sps_zone' && o.id !== zoneId && o.plcConfigId === plcId);
+      if (clash) { toast('Diese SPS ist bereits einem anderen SPS-Bereich zugeordnet'); return; }
+    }
     const L = layerById(z.layerId);
     const color = plcId ? (plcColor || z.color) : (L ? L.color : z.color);
     try {
@@ -2657,6 +2691,35 @@ const STATE_ICONS = {
     const z = (state.detail.objects || []).find((x) => x.symbolType === 'fg_zone' && fgName(x) === fgv);
     return z ? z.id : null;
   }
+  function zoneCentroid(z) { const n = z.points.length; return { x: z.points.reduce((s, p) => s + p.x, 0) / n, y: z.points.reduce((s, p) => s + p.y, 0) / n }; }
+  // SPS-Bereich (sps_zone), der den Punkt enthaelt – oberster, sonst null.
+  function spsZoneAt(x, y) {
+    const visible = visibleMap();
+    const zs = (state.detail.objects || []).filter((o) => o.symbolType === 'sps_zone' && o.points && o.points.length >= 3 && visible[o.layerId] !== false);
+    for (let i = zs.length - 1; i >= 0; i--) { if (pointInZone(zs[i], x, y)) return zs[i]; }
+    return null;
+  }
+  // Beim Anklicken eines Schutzbereichs den verknuepften SPS-Bereich (gleiche SPS, 1:1) hervorheben.
+  function highlightedSpsZoneId() {
+    if (!state.selectedZone) return null;
+    const o = (state.detail && state.detail.objects || []).find((x) => x.id === state.selectedZone);
+    if (!o || o.symbolType !== 'sb_zone' || !o.plcConfigId) return null;
+    const sps = (state.detail.objects || []).find((z) => z.symbolType === 'sps_zone' && z.plcConfigId === o.plcConfigId);
+    return sps ? sps.id : null;
+  }
+  // SB-Polygon auf einen SPS-Bereich gezogen -> automatisch dessen SPS uebernehmen (Verknuepfung ueber plcConfigId).
+  async function autoLinkSbToSps(z) {
+    const c = zoneCentroid(z);
+    const sps = spsZoneAt(c.x, c.y);
+    const newPlc = sps && sps.plcConfigId ? sps.plcConfigId : null;
+    if (newPlc && z.plcConfigId !== newPlc) {
+      const plc = (state.detail.plcs || []).find((p) => p.id === newPlc);
+      z.plcConfigId = newPlc; z.color = (plc && plc.color) || z.color;
+      try { await Api.updateObject(z.id, { plcConfigId: newPlc, color: z.color }); } catch (e) { /* ignore */ }
+      toast('Schutzbereich automatisch SPS „' + ((plc && plc.name) || '') + '" zugeordnet');
+      renderEditor();
+    }
+  }
   function zoneAt(x, y) {
     const visible = visibleMap();
     const shapes = (state.detail.objects || []).filter((o) => isShape(o) && o.points && visible[o.layerId] !== false);
@@ -2690,6 +2753,9 @@ const STATE_ICONS = {
       const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: kind.prefix + '_' + num, symbolType: kind.type, color: L.color, x: pts[0].x, y: pts[0].y, points: pts });
       state.detail.objects.push(obj); state.selectedZone = obj.id; protectObj(obj.id);
       toast(kind.noun + ' erstellt');
+      renderEditor();
+      if (kind.type === 'sps_zone') openZoneAssignModal(obj.id); // SPS-Bereich: sofort die (genau eine) SPS zuordnen
+      return;
     } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
     renderEditor();
   }
@@ -2737,7 +2803,7 @@ const STATE_ICONS = {
       const h = document.querySelector('.zone-vertex[data-zone="' + z.id + '"][data-vidx="' + i + '"]');
       if (h) { h.style.left = (p.x * 100) + '%'; h.style.top = (p.y * 100) + '%'; }
     });
-    if (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone') {
+    if (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone' || z.symbolType === 'sps_zone') {
       const lbl = document.querySelector('.fg-label[data-zone="' + z.id + '"]');
       if (lbl) {
         const cx = z.points.reduce((s, p) => s + p.x, 0) / z.points.length;
