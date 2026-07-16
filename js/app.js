@@ -1002,7 +1002,8 @@
       const doc = e.target.closest('#canvasDoc');
       if (doc) {
         const r = doc.getBoundingClientRect();
-        const x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+        let x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+        const _sn = snapCursor(x, y); x = _sn.x; y = _sn.y;
         if (state.drawShape === 'route') {
           if (state.zoneDraft.length >= 2) {
             const last = state.zoneDraft[state.zoneDraft.length - 1];
@@ -1631,7 +1632,7 @@ const STATE_ICONS = {
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + (state.drawZone ? '<div class="draw-grid"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
   }
 
   // Frei platzierbare Zustands-Icons mit Verbindungslinie zum Prozesstyp
@@ -1708,15 +1709,23 @@ const STATE_ICONS = {
       return line + arrow;
     }).join('');
     let draft = '';
-    if (state.drawZone && state.zoneDraft.length) {
+    if (state.drawZone) {
       const L = layerById(state.activeLayer); const col = esc(L ? L.color : '#0065A5');
-      const dots = state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
-      if (state.drawShape === 'route') {
-        const dpull = state.zoneCursor ? state.zoneDraft.concat([state.zoneCursor]) : state.zoneDraft;
-        draft = '<path id="zone-draft" d="' + buildRouteCurve(dpull).d + '" fill="none" stroke="' + col + '" stroke-width="1.8" stroke-dasharray="5 3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="pointer-events:none"/>' + dots;
-      } else {
-        const dpts = state.zoneDraft.map((p) => (p.x * 100) + ',' + (p.y * 100));
-        draft = '<polyline id="zone-draft" points="' + dpts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>' + dots;
+      const cur = state.zoneCursor; const al = state.zoneAlign || {};
+      const gx = cur ? (cur.x * 100) : -20, gy = cur ? (cur.y * 100) : -20;
+      // Fadenkreuz-Hilfslinien am Cursor (orange, wenn auf einen Stützpunkt ausgerichtet)
+      draft += '<line id="guide-v" x1="' + gx + '" y1="0" x2="' + gx + '" y2="100" stroke="' + (al.x ? '#E8663F' : '#0065A5') + '" stroke-width="0.35" stroke-dasharray="1.4 1.4" opacity="0.6" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      draft += '<line id="guide-h" x1="0" y1="' + gy + '" x2="100" y2="' + gy + '" stroke="' + (al.y ? '#E8663F' : '#0065A5') + '" stroke-width="0.35" stroke-dasharray="1.4 1.4" opacity="0.6" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      if (state.zoneDraft.length) {
+        const dots = state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
+        if (state.drawShape === 'route') {
+          const dpull = cur ? state.zoneDraft.concat([cur]) : state.zoneDraft;
+          draft += '<path id="zone-draft" d="' + buildRouteCurve(dpull).d + '" fill="none" stroke="' + col + '" stroke-width="1.8" stroke-dasharray="5 3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="pointer-events:none"/>' + dots;
+        } else {
+          const dpts = state.zoneDraft.map((p) => (p.x * 100) + ',' + (p.y * 100));
+          if (cur) dpts.push((cur.x * 100) + ',' + (cur.y * 100));
+          draft += '<polyline id="zone-draft" points="' + dpts.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>' + dots;
+        }
       }
     }
     return '<svg class="zone-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2">' + techLinesSvg(visible) + polys + routeSvg + draft + '</svg>';
@@ -2025,7 +2034,7 @@ const STATE_ICONS = {
     if (state.zoneDrag) { onZoneDrag(e); return; }
     if (state.drawZone && state.zoneDraft.length) {
       const doc = document.getElementById('canvasDoc');
-      if (doc) { const r = doc.getBoundingClientRect(); state.zoneCursor = { x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height) }; updateDraftDom(); }
+      if (doc) { const r = doc.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; updateDraftDom(); }
     }
     if (!dragMove) return;
     if (!dragMove.moved && Math.hypot(e.clientX - dragMove.sx, e.clientY - dragMove.sy) < 4) return;
@@ -2812,7 +2821,20 @@ const STATE_ICONS = {
       }
     }
   }
+  // Cursor/Stützpunkt an vorhandene Draft-Punkte ausrichten (gleiche x/y) -> gerade Kanten.
+  function snapCursor(cx, cy) {
+    const th = 0.012; let x = cx, y = cy, ax = false, ay = false;
+    (state.zoneDraft || []).forEach((p) => {
+      if (Math.abs(cx - p.x) < th) { x = p.x; ax = true; }
+      if (Math.abs(cy - p.y) < th) { y = p.y; ay = true; }
+    });
+    return { x: x, y: y, ax: ax, ay: ay };
+  }
   function updateDraftDom() {
+    const cur = state.zoneCursor, al = state.zoneAlign || {};
+    const gv = document.getElementById('guide-v'), gh = document.getElementById('guide-h');
+    if (gv && cur) { gv.setAttribute('x1', cur.x * 100); gv.setAttribute('x2', cur.x * 100); gv.setAttribute('stroke', al.x ? '#E8663F' : '#0065A5'); }
+    if (gh && cur) { gh.setAttribute('y1', cur.y * 100); gh.setAttribute('y2', cur.y * 100); gh.setAttribute('stroke', al.y ? '#E8663F' : '#0065A5'); }
     const el = document.getElementById('zone-draft'); if (!el) return;
     if (state.drawShape === 'route') {
       const dpull = state.zoneCursor ? state.zoneDraft.concat([state.zoneCursor]) : state.zoneDraft;
