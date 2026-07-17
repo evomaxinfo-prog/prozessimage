@@ -107,7 +107,7 @@
     'MODELLIEREN': 'MODEL', 'Stammdaten': 'Master data', 'Bearbeitung': 'Editing',
     'Anlagenname': 'System name', 'Bereich': 'Area', 'Anlagenversion': 'System version',
     'Erstellt am': 'Created on', 'Letzte Änderung': 'Last change', 'Beschreibung': 'Description',
-    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Prozesstyp vorschlagen': 'Suggest process type', 'Für erkannte Roboter Prozesstypen vorschlagen': 'Suggest process types for detected robots', 'Prozesstyp-Vorschläge – Typ wählen & bestätigen': 'process-type suggestions – choose type & confirm', 'Keine offenen Stationen für Prozesstypen.': 'No open stations for process types.', 'Prozesstyp-Vorschlag': 'Process-type suggestion', 'Prozesstyp wählen': 'Choose process type', 'Prozesstyp-Ebene fehlt.': 'Process-type layer missing.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
+    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Gelernte Vorlagen': 'Learned templates', 'zurücksetzen': 'reset', 'Als Vorlage gelernt': 'Learned as template', 'Gelernte Vorlagen zurückgesetzt.': 'Learned templates reset.', 'Prozesstyp vorschlagen': 'Suggest process type', 'Für erkannte Roboter Prozesstypen vorschlagen': 'Suggest process types for detected robots', 'Prozesstyp-Vorschläge – Typ wählen & bestätigen': 'process-type suggestions – choose type & confirm', 'Keine offenen Stationen für Prozesstypen.': 'No open stations for process types.', 'Prozesstyp-Vorschlag': 'Process-type suggestion', 'Prozesstyp wählen': 'Choose process type', 'Prozesstyp-Ebene fehlt.': 'Process-type layer missing.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
     'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
     'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
     'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
@@ -1129,6 +1129,7 @@
     else if (act === 'rob-confirm') { e.stopPropagation(); confirmRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
     else if (act === 'rob-dismiss') { e.stopPropagation(); dismissRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
     else if (act === 'rob-dismiss-all') { state.robotSuggestions = []; renderEditor(); }
+    else if (act === 'tpl-reset') { try { localStorage.removeItem('promodx_robot_templates'); } catch (e) { /* */ } toast(t('Gelernte Vorlagen zurückgesetzt.')); renderEditor(); }
     else if (act === 'suggest-pt') { suggestProcessTypes(); }
     else if (act === 'pt-confirm') { e.stopPropagation(); var pw = el.closest('.pt-sugg'); var sel = pw && pw.querySelector('.pts-sel'); confirmProcessSuggestion(parseInt(el.getAttribute('data-idx'), 10), sel ? sel.value : 'ptk_1'); }
     else if (act === 'pt-dismiss') { e.stopPropagation(); dismissProcessSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
@@ -2060,7 +2061,8 @@ const STATE_ICONS = {
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal
-        + ((L.name === 'Saferobot / Technologie' && state.layoutBlobUrl && window.RobotDetect) ? '<button class="pal-detect" data-act="detect-robots" title="' + t('Roboter im Layout automatisch finden') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> ' + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>' : '')
+        + (((meta.palette || []).some(function (pp) { return pp[1] === 'robot'; }) && state.layoutBlobUrl && window.RobotDetect) ? '<button class="pal-detect" data-act="detect-robots" title="' + t('Roboter im Layout automatisch finden') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> ' + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>'
+          + '<div class="tpl-lib">' + t('Gelernte Vorlagen') + ': <b>' + loadTplLib().length + '</b>' + (loadTplLib().length ? ' · <button class="tpl-reset" data-act="tpl-reset">' + t('zurücksetzen') + '</button>' : '') + '</div>' : '')
         + ((meta === PROCESS_META) ? '<button class="pal-detect" data-act="suggest-pt" title="' + t('Für erkannte Roboter Prozesstypen vorschlagen') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18" cy="18" r="3"/></svg> ' + t('Prozesstyp vorschlagen') + '</button>' : '')
         + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
@@ -2187,14 +2189,70 @@ const STATE_ICONS = {
       img.onerror = reject; img.src = state.layoutBlobUrl;
     });
   }
+  // --- Vorlagen-Bibliothek (browser-lokal): aus bestätigten/gesetzten Robotern lernen ---
+  function tplLibKey() { return 'promodx_robot_templates'; }
+  function loadTplLib() { try { return JSON.parse(localStorage.getItem(tplLibKey()) || '[]'); } catch (e) { return []; } }
+  function saveTplLib(arr) { try { localStorage.setItem(tplLibKey(), JSON.stringify(arr)); } catch (e) { /* Speicher voll */ } }
+  function urlToGray(url) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () {
+        var cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+        var cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+        var d = cx.getImageData(0, 0, cv.width, cv.height);
+        resolve(RobotDetect.grayFromRGBA(d.data, cv.width, cv.height));
+      };
+      img.onerror = reject; img.src = url;
+    });
+  }
+  function loadAllTemplates() {
+    var urls = ['img/robot-template.png?v=0.25.48'].concat(loadTplLib().map(function (e) { return e.url; }));
+    return Promise.all(urls.map(function (u) { return urlToGray(u).catch(function () { return null; }); }))
+      .then(function (arr) { return arr.filter(Boolean); });
+  }
+  function captureRobotTemplate(nx, ny) {
+    return new Promise(function (resolve, reject) {
+      if (!state.layoutBlobUrl) { reject(); return; }
+      var img = new Image();
+      img.onload = function () {
+        var W = img.naturalWidth, H = img.naturalHeight;
+        var side = Math.max(24, Math.round(0.161 * W));
+        var cx = Math.round(nx * W), cy = Math.round(ny * H);
+        var x0 = Math.max(0, Math.min(W - side, cx - Math.round(side / 2)));
+        var y0 = Math.max(0, Math.min(H - side, cy - Math.round(side / 2)));
+        var out = document.createElement('canvas'); out.width = 132; out.height = 132;
+        var o = out.getContext('2d'); o.drawImage(img, x0, y0, side, side, 0, 0, 132, 132);
+        var d = o.getImageData(0, 0, 132, 132);
+        for (var i = 0; i < d.data.length; i += 4) { var g = 0.299 * d.data[i] + 0.587 * d.data[i + 1] + 0.114 * d.data[i + 2]; d.data[i] = d.data[i + 1] = d.data[i + 2] = g; }
+        o.putImageData(d, 0, 0);
+        resolve(out.toDataURL('image/png'));
+      };
+      img.onerror = reject; img.src = state.layoutBlobUrl;
+    });
+  }
+  function learnRobotTemplate(nx, ny, silent) {
+    if (!state.layoutBlobUrl || !window.RobotDetect) return;
+    captureRobotTemplate(nx, ny).then(function (url) {
+      var lib = loadTplLib();
+      lib.push({ id: 'tpl_' + Date.now(), url: url });
+      if (lib.length > 12) lib = lib.slice(lib.length - 12);
+      saveTplLib(lib);
+      if (!silent) toast(t('Als Vorlage gelernt') + ' (' + lib.length + ')');
+      renderEditor();
+    }).catch(function () { /* kein Layout */ });
+  }
+
   function detectRobotsFlow() {
     if (!window.RobotDetect || !state.layoutBlobUrl) { toast(t('Kein Layout vorhanden.')); return; }
     if (state.robotDetecting) return;
     state.robotDetecting = true; toast(t('Erkenne Roboter …'));
-    Promise.all([loadTemplateGray(), loadLayoutGray()]).then(function (arr) {
+    Promise.all([loadAllTemplates(), loadLayoutGray()]).then(function (arr) {
       return new Promise(function (r) { setTimeout(function () { r(arr); }, 30); });
     }).then(function (arr) {
-      var found = RobotDetect.detect(arr[1], arr[0], { workW: 300, threshold: 0.62 });
+      var tpls = arr[0], lay = arr[1];
+      var opts = { workW: tpls.length > 1 ? 260 : 300, threshold: 0.6 };
+      if (tpls.length > 3) opts.scales = [0.8, 1.0, 1.2];
+      var found = RobotDetect.detectMulti(lay, tpls, opts);
       var existing = (state.detail.objects || []).filter(function (o) { return o.symbolType === 'robot'; });
       var sugg = found.filter(function (f) { return !existing.some(function (o) { return Math.hypot(o.x - f.x, o.y - f.y) < 0.05; }); });
       state.robotSuggestions = sugg; state.robotDetecting = false; renderEditor();
@@ -2318,6 +2376,7 @@ const STATE_ICONS = {
         toast(name + ' ' + t('platziert'));
       } else { toast(name + ' ' + t('platziert')); }
       state.detail.objects.push(obj); protectObj(obj.id);
+      if (sym === 'robot' && state.layoutBlobUrl) learnRobotTemplate(x, y, true);
       renderEditor();
     } catch (e) { toast('Platzieren fehlgeschlagen: ' + e.message); }
   }

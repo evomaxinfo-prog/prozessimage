@@ -131,5 +131,27 @@
     return kept.map(function (c) { return { x: c.cx / workW, y: c.cy / workH, score: c.score }; });
   }
 
-  return { grayFromRGBA: grayFromRGBA, resizeGray: resizeGray, matchTemplate: matchTemplate, detect: detect };
+  return { grayFromRGBA: grayFromRGBA, resizeGray: resizeGray, matchTemplate: matchTemplate, detect: detect, detectMulti: detectMulti };
+
+  // Erkennung mit mehreren Vorlagen: je Vorlage detektieren, dann global per NMS zusammenführen (bester Score gewinnt).
+  function detectMulti(layout, templates, opts) {
+    opts = opts || {};
+    var all = [];
+    for (var i = 0; i < templates.length; i++) {
+      if (!templates[i]) continue;
+      var r = detect(layout, templates[i], opts);
+      for (var j = 0; j < r.length; j++) all.push(r[j]);
+    }
+    all.sort(function (a, b) { return b.score - a.score; });
+    var minD = opts.mergeDist || 0.05, kept = [];
+    for (var k = 0; k < all.length; k++) {
+      var c = all[k], ok = true;
+      for (var m = 0; m < kept.length; m++) {
+        var dx = c.x - kept[m].x, dy = c.y - kept[m].y;
+        if (dx * dx + dy * dy < minD * minD) { ok = false; break; }
+      }
+      if (ok) kept.push(c);
+    }
+    return kept;
+  }
 });
