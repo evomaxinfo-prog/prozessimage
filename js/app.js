@@ -107,7 +107,7 @@
     'MODELLIEREN': 'MODEL', 'Stammdaten': 'Master data', 'Bearbeitung': 'Editing',
     'Anlagenname': 'System name', 'Bereich': 'Area', 'Anlagenversion': 'System version',
     'Erstellt am': 'Created on', 'Letzte Änderung': 'Last change', 'Beschreibung': 'Description',
-    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Gelernte Vorlagen': 'Learned templates', 'Kommentar': 'Comment', 'Noch keine Nachrichten – schreib den ersten Kommentar.': 'No messages yet - write the first comment.', 'Nachricht …': 'Message …', 'Senden': 'Send', 'Schließen': 'Close', 'Fehlbeispiele': 'Negatives', 'Positive Vorlagen': 'Positive templates', 'Als Fehlbeispiel gemerkt': 'Saved as negative', 'Ähnliche Vorlage bereits vorhanden – übersprungen.': 'Similar template already exists - skipped.', 'Noch keine gelernten Vorlagen.': 'No learned templates yet.', 'Alle zurücksetzen': 'Reset all', 'Fehlbeispiele zurückgesetzt.': 'Negatives reset.', 'Löschen': 'Delete', 'zurücksetzen': 'reset', 'Als Vorlage gelernt': 'Learned as template', 'Gelernte Vorlagen zurückgesetzt.': 'Learned templates reset.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
+    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Gelernte Vorlagen': 'Learned templates', 'Kommentar': 'Comment', 'Kommentar (ziehen zum Verschieben)': 'Comment (drag to move)', 'Noch keine Nachrichten – schreib den ersten Kommentar.': 'No messages yet - write the first comment.', 'Nachricht …': 'Message …', 'Senden': 'Send', 'Schließen': 'Close', 'Fehlbeispiele': 'Negatives', 'Positive Vorlagen': 'Positive templates', 'Als Fehlbeispiel gemerkt': 'Saved as negative', 'Ähnliche Vorlage bereits vorhanden – übersprungen.': 'Similar template already exists - skipped.', 'Noch keine gelernten Vorlagen.': 'No learned templates yet.', 'Alle zurücksetzen': 'Reset all', 'Fehlbeispiele zurückgesetzt.': 'Negatives reset.', 'Löschen': 'Delete', 'zurücksetzen': 'reset', 'Als Vorlage gelernt': 'Learned as template', 'Gelernte Vorlagen zurückgesetzt.': 'Learned templates reset.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
     'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
     'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
     'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
@@ -2384,7 +2384,7 @@ const STATE_ICONS = {
     if (!cs.length) return '';
     return '<div class="comment-pin-layer">' + cs.map(function (c) {
       var n = (c.messages || []).length;
-      return '<div class="comment-pin' + (c.id === state.openComment ? ' active' : '') + '" style="left:' + (c.x * 100) + '%;top:' + (c.y * 100) + '%" data-act="comment-open" data-id="' + c.id + '" title="' + t('Kommentar') + '">'
+      return '<div class="comment-pin' + (c.id === state.openComment ? ' active' : '') + '" style="left:' + (c.x * 100) + '%;top:' + (c.y * 100) + '%" ' + (canEdit() ? '' : 'data-act="comment-open" ') + 'data-id="' + c.id + '" title="' + t('Kommentar (ziehen zum Verschieben)') + '">'
         + '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M4 4h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H10l-5 4v-4H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/></svg>'
         + (n ? '<span class="cp-badge">' + n + '</span>' : '') + '</div>';
     }).join('') + '</div>';
@@ -2527,8 +2527,17 @@ const STATE_ICONS = {
     win.style.left = leftPct + '%'; win.style.top = topPct + '%';
     d.leftPct = leftPct; d.topPct = topPct;
   }
+  function onPinDrag(e) {
+    var d = state.pinDrag; if (!d) return;
+    if (Math.abs(e.clientX - d.sx) > 3 || Math.abs(e.clientY - d.sy) > 3) d.moved = true;
+    var x = Math.max(0, Math.min(1, (e.clientX - d.docL) / d.docW));
+    var y = Math.max(0, Math.min(1, (e.clientY - d.docT) / d.docH));
+    d.x = x; d.y = y;
+    if (d.moved) { var pin = document.querySelector('.comment-pin[data-id="' + d.id + '"]'); if (pin) { pin.style.left = x * 100 + '%'; pin.style.top = y * 100 + '%'; } }
+  }
   function onMove(e) {
     if (state.cwDrag) { onCwDrag(e); return; }
+    if (state.pinDrag) { onPinDrag(e); return; }
     if (state.iconDrag) { onIconDrag(e); return; }
     if (state.techDrag) { onTechDrag(e); return; }
     if (state.zoneDrag) { onZoneDrag(e); return; }
@@ -2566,6 +2575,15 @@ const STATE_ICONS = {
     }
   }
   async function endMove() {
+    if (state.pinDrag) {
+      var d = state.pinDrag; state.pinDrag = null;
+      var c = (state.comments || []).find(function (x) { return x.id === d.id; });
+      if (c) {
+        if (d.moved && d.x != null) { c.x = d.x; c.y = d.y; saveComments(); renderEditor(); }
+        else { state.openComment = d.id; renderEditor(); setTimeout(function () { var i = $('cwText'); if (i) i.focus(); }, 30); }
+      }
+      return;
+    }
     if (state.cwDrag) {
       var d = state.cwDrag; state.cwDrag = null;
       var c = (state.comments || []).find(function (x) { return x.id === d.id; });
@@ -3162,6 +3180,18 @@ const STATE_ICONS = {
         const dr = doc0.getBoundingClientRect(), wr = win.getBoundingClientRect();
         state.cwDrag = { id: state.openComment, offx: e.clientX - wr.left, offy: e.clientY - wr.top, docW: dr.width, docH: dr.height, docL: dr.left, docT: dr.top };
         try { win.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      }
+      return;
+    }
+    // Kommentar-Nadel verschieben (Ziehen) bzw. bei Klick ohne Bewegung öffnen
+    const pin = e.target.closest('.comment-pin');
+    if (pin) {
+      const doc0 = document.getElementById('canvasDoc');
+      if (doc0) {
+        e.preventDefault();
+        const dr = doc0.getBoundingClientRect();
+        state.pinDrag = { id: pin.getAttribute('data-id'), docL: dr.left, docT: dr.top, docW: dr.width, docH: dr.height, sx: e.clientX, sy: e.clientY, moved: false };
+        try { pin.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
       }
       return;
     }
