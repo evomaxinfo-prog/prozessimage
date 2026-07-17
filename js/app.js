@@ -2061,7 +2061,7 @@ const STATE_ICONS = {
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal
         + ((L.name === 'Saferobot / Technologie' && state.layoutBlobUrl && window.RobotDetect) ? '<button class="pal-detect" data-act="detect-robots" title="' + t('Roboter im Layout automatisch finden') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> ' + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>' : '')
-        + ((L.name === 'Prozesstypen' && (state.detail.objects || []).some(function (o) { return o.symbolType === 'robot'; })) ? '<button class="pal-detect" data-act="suggest-pt" title="' + t('Für erkannte Roboter Prozesstypen vorschlagen') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18" cy="18" r="3"/></svg> ' + t('Prozesstyp vorschlagen') + '</button>' : '')
+        + ((meta === PROCESS_META) ? '<button class="pal-detect" data-act="suggest-pt" title="' + t('Für erkannte Roboter Prozesstypen vorschlagen') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18" cy="18" r="3"/></svg> ' + t('Prozesstyp vorschlagen') + '</button>' : '')
         + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
@@ -2235,6 +2235,7 @@ const STATE_ICONS = {
   function suggestProcessTypes() {
     var objs = state.detail.objects || [];
     var robots = objs.filter(function (o) { return o.symbolType === 'robot'; });
+    if (!robots.length) { toast(t('Noch keine Roboter platziert – zuerst „Roboter erkennen/setzen".')); return; }
     var ptks = objs.filter(function (o) { return /^ptk_/.test(o.symbolType); });
     var sugg = [];
     robots.forEach(function (r) {
