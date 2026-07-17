@@ -1130,6 +1130,8 @@
     else if (act === 'rob-dismiss') { e.stopPropagation(); dismissRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
     else if (act === 'rob-dismiss-all') { state.robotSuggestions = []; renderEditor(); }
     else if (act === 'tpl-reset') { try { localStorage.removeItem('promodx_robot_templates'); } catch (e) { /* */ } toast(t('Gelernte Vorlagen zurückgesetzt.')); renderEditor(); }
+    else if (act === 'tpl-learn-yes') { confirmLearnPrompt(); }
+    else if (act === 'tpl-learn-no') { dismissLearnPrompt(); }
     else if (act === 'suggest-pt') { suggestProcessTypes(); }
     else if (act === 'pt-confirm') { e.stopPropagation(); var pw = el.closest('.pt-sugg'); var sel = pw && pw.querySelector('.pts-sel'); confirmProcessSuggestion(parseInt(el.getAttribute('data-idx'), 10), sel ? sel.value : 'ptk_1'); }
     else if (act === 'pt-dismiss') { e.stopPropagation(); dismissProcessSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
@@ -1735,7 +1737,7 @@ const STATE_ICONS = {
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + processSuggestionLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + processSuggestionLayer() + learnPromptLayer() + zoneHandleLayer() + badge + '</div>';
   }
 
   // Frei platzierbare Zustands-Icons mit Verbindungslinie zum Prozesstyp
@@ -2230,17 +2232,33 @@ const STATE_ICONS = {
       img.onerror = reject; img.src = state.layoutBlobUrl;
     });
   }
-  function learnRobotTemplate(nx, ny, silent) {
+  function promptLearnTemplate(nx, ny) {
     if (!state.layoutBlobUrl || !window.RobotDetect) return;
     captureRobotTemplate(nx, ny).then(function (url) {
-      var lib = loadTplLib();
-      lib.push({ id: 'tpl_' + Date.now(), url: url });
-      if (lib.length > 12) lib = lib.slice(lib.length - 12);
-      saveTplLib(lib);
-      if (!silent) toast(t('Als Vorlage gelernt') + ' (' + lib.length + ')');
+      state.learnPrompt = { url: url };
       renderEditor();
     }).catch(function () { /* kein Layout */ });
   }
+  function learnPromptLayer() {
+    var lp = state.learnPrompt;
+    if (!lp) return '';
+    return '<div class="learn-prompt">'
+      + '<img class="lp-thumb" src="' + lp.url + '" alt="">'
+      + '<div class="lp-body"><div class="lp-txt">' + t('Diesen Ausschnitt als Roboter-Vorlage lernen?') + '</div>'
+      + '<div class="lp-btns"><button class="lp-yes" data-act="tpl-learn-yes">' + t('Als Vorlage lernen') + '</button>'
+      + '<button class="lp-no" data-act="tpl-learn-no">' + t('Nein') + '</button></div></div></div>';
+  }
+  function confirmLearnPrompt() {
+    var lp = state.learnPrompt; if (!lp) return;
+    var lib = loadTplLib();
+    lib.push({ id: 'tpl_' + Date.now(), url: lp.url });
+    if (lib.length > 12) lib = lib.slice(lib.length - 12);
+    saveTplLib(lib);
+    state.learnPrompt = null;
+    toast(t('Als Vorlage gelernt') + ' (' + lib.length + ')');
+    renderEditor();
+  }
+  function dismissLearnPrompt() { state.learnPrompt = null; renderEditor(); }
 
   function detectRobotsFlow() {
     if (!window.RobotDetect || !state.layoutBlobUrl) { toast(t('Kein Layout vorhanden.')); return; }
@@ -2376,7 +2394,7 @@ const STATE_ICONS = {
         toast(name + ' ' + t('platziert'));
       } else { toast(name + ' ' + t('platziert')); }
       state.detail.objects.push(obj); protectObj(obj.id);
-      if (sym === 'robot' && state.layoutBlobUrl) learnRobotTemplate(x, y, true);
+      if (sym === 'robot' && state.layoutBlobUrl) promptLearnTemplate(x, y);
       renderEditor();
     } catch (e) { toast('Platzieren fehlgeschlagen: ' + e.message); }
   }
