@@ -1955,7 +1955,7 @@ const STATE_ICONS = {
       if (visible[o.layerId] === false) return '';
       const t = techInfo(o); if (!t) return '';
       const e = techLineEnds(t.rx, t.ry, t.bx, t.by);
-      return '<line id="tech-line-' + t.id + '" x1="' + e.x1.toFixed(3) + '" y1="' + e.y1.toFixed(3) + '" x2="' + e.x2.toFixed(3) + '" y2="' + e.y2.toFixed(3) + '" stroke="' + esc(t.col) + '" stroke-width="1.3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      return '<line id="tech-line-' + t.id + '" x1="' + e.x1.toFixed(3) + '" y1="' + e.y1.toFixed(3) + '" x2="' + e.x2.toFixed(3) + '" y2="' + e.y2.toFixed(3) + '" stroke="' + esc(t.col) + '" stroke-width="1.3" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
     }).join('');
   }
   function techBadgeLayer() {
