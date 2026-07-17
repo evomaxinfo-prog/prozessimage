@@ -107,7 +107,7 @@
     'MODELLIEREN': 'MODEL', 'Stammdaten': 'Master data', 'Bearbeitung': 'Editing',
     'Anlagenname': 'System name', 'Bereich': 'Area', 'Anlagenversion': 'System version',
     'Erstellt am': 'Created on', 'Letzte Änderung': 'Last change', 'Beschreibung': 'Description',
-    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Gelernte Vorlagen': 'Learned templates', 'Fehlbeispiele': 'Negatives', 'Positive Vorlagen': 'Positive templates', 'Als Fehlbeispiel gemerkt': 'Saved as negative', 'Ähnliche Vorlage bereits vorhanden – übersprungen.': 'Similar template already exists - skipped.', 'Noch keine gelernten Vorlagen.': 'No learned templates yet.', 'Alle zurücksetzen': 'Reset all', 'Fehlbeispiele zurückgesetzt.': 'Negatives reset.', 'Löschen': 'Delete', 'zurücksetzen': 'reset', 'Als Vorlage gelernt': 'Learned as template', 'Gelernte Vorlagen zurückgesetzt.': 'Learned templates reset.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
+    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Gelernte Vorlagen': 'Learned templates', 'Kommentar': 'Comment', 'Noch keine Nachrichten – schreib den ersten Kommentar.': 'No messages yet - write the first comment.', 'Nachricht …': 'Message …', 'Senden': 'Send', 'Schließen': 'Close', 'Fehlbeispiele': 'Negatives', 'Positive Vorlagen': 'Positive templates', 'Als Fehlbeispiel gemerkt': 'Saved as negative', 'Ähnliche Vorlage bereits vorhanden – übersprungen.': 'Similar template already exists - skipped.', 'Noch keine gelernten Vorlagen.': 'No learned templates yet.', 'Alle zurücksetzen': 'Reset all', 'Fehlbeispiele zurückgesetzt.': 'Negatives reset.', 'Löschen': 'Delete', 'zurücksetzen': 'reset', 'Als Vorlage gelernt': 'Learned as template', 'Gelernte Vorlagen zurückgesetzt.': 'Learned templates reset.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
     'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
     'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
     'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
@@ -1133,6 +1133,10 @@
     else if (act === 'tpl-panel') { state.tplPanel = !state.tplPanel; renderEditor(); }
     else if (act === 'tpl-del') { delTplEntry(el.getAttribute('data-id')); renderEditor(); }
     else if (act === 'neg-reset') { saveTplLib(posLib()); toast(t('Fehlbeispiele zurückgesetzt.')); renderEditor(); }
+    else if (act === 'comment-open') { state.openComment = el.getAttribute('data-id'); renderEditor(); setTimeout(function () { var i = $('cwText'); if (i) i.focus(); }, 30); }
+    else if (act === 'comment-close') { closeCommentWindow(); }
+    else if (act === 'comment-send') { sendCommentMsg(); }
+    else if (act === 'comment-delete') { deleteComment(el.getAttribute('data-id')); }
     else if (act === 'tpl-learn-yes') { confirmLearnPrompt(); }
     else if (act === 'tpl-learn-no') { dismissLearnPrompt(); }
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
@@ -1736,7 +1740,7 @@ const STATE_ICONS = {
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + learnPromptLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + learnPromptLayer() + commentPinLayer() + commentWindowLayer() + zoneHandleLayer() + badge + '</div>';
   }
 
   // Frei platzierbare Zustands-Icons mit Verbindungslinie zum Prozesstyp
@@ -2354,6 +2358,72 @@ const STATE_ICONS = {
     var r = state.robotSuggestions[idx];
     if (r && state.layoutBlobUrl) learnNegativeTemplate(r.x, r.y);
     state.robotSuggestions.splice(idx, 1); renderEditor();
+  }
+
+  // ===== Kommentare (positionierte Chat-Fenster, Rechtsklick zum Anlegen) =====
+  function commentsKey() { return 'promodx_comments_' + (state.detail && state.detail.id); }
+  function ensureComments() {
+    if (state.commentsStation === (state.detail && state.detail.id)) return;
+    try { state.comments = JSON.parse(localStorage.getItem(commentsKey()) || '[]'); } catch (e) { state.comments = []; }
+    state.commentsStation = state.detail && state.detail.id;
+  }
+  function saveComments() { try { localStorage.setItem(commentsKey(), JSON.stringify(state.comments || [])); } catch (e) { /* voll */ } }
+  function fmtCommentTime(ts) {
+    try { return new Date(ts).toLocaleString(state.lang === 'en' ? 'en-GB' : 'de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; }
+  }
+  function createCommentAt(x, y) {
+    ensureComments();
+    var c = { id: 'cm_' + Date.now(), x: x, y: y, messages: [], created: Date.now() };
+    state.comments.push(c); saveComments();
+    state.openComment = c.id; renderEditor();
+    setTimeout(function () { var i = $('cwText'); if (i) i.focus(); }, 30);
+  }
+  function commentPinLayer() {
+    ensureComments();
+    var cs = state.comments || [];
+    if (!cs.length) return '';
+    return '<div class="comment-pin-layer">' + cs.map(function (c) {
+      var n = (c.messages || []).length;
+      return '<div class="comment-pin' + (c.id === state.openComment ? ' active' : '') + '" style="left:' + (c.x * 100) + '%;top:' + (c.y * 100) + '%" data-act="comment-open" data-id="' + c.id + '" title="' + t('Kommentar') + '">'
+        + '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M4 4h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H10l-5 4v-4H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/></svg>'
+        + (n ? '<span class="cp-badge">' + n + '</span>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
+  function commentWindowLayer() {
+    var c = (state.comments || []).find(function (x) { return x.id === state.openComment; });
+    if (!c) return '';
+    var left = Math.max(2, Math.min(60, c.x * 100));
+    var top = Math.max(2, Math.min(48, c.y * 100));
+    var me = (state.user && state.user.email) || '';
+    var msgs = (c.messages || []).map(function (m) {
+      var own = m.author === me;
+      return '<div class="cm-msg' + (own ? ' own' : '') + '"><div class="cm-meta">' + esc(m.author || '') + ' · ' + fmtCommentTime(m.ts) + '</div><div class="cm-bubble">' + esc(m.text) + '</div></div>';
+    }).join('') || '<div class="cm-empty">' + t('Noch keine Nachrichten – schreib den ersten Kommentar.') + '</div>';
+    return '<div class="comment-window" style="left:' + left + '%;top:' + top + '%">'
+      + '<div class="cw-head"><span class="cw-ttl">' + t('Kommentar') + '</span>'
+      + '<button class="cw-del" data-act="comment-delete" data-id="' + c.id + '" title="' + t('Löschen') + '">🗑</button>'
+      + '<button class="cw-x" data-act="comment-close" title="' + t('Schließen') + '">×</button></div>'
+      + '<div class="cw-body" id="cwBody">' + msgs + '</div>'
+      + '<div class="cw-input"><input id="cwText" type="text" placeholder="' + t('Nachricht …') + '" autocomplete="off" maxlength="1000">'
+      + '<button class="cw-send" data-act="comment-send" data-id="' + c.id + '" title="' + t('Senden') + '">➤</button></div>'
+      + '</div>';
+  }
+  function sendCommentMsg() {
+    var inp = $('cwText'); if (!inp) return;
+    var text = inp.value.trim(); if (!text) return;
+    var c = (state.comments || []).find(function (x) { return x.id === state.openComment; }); if (!c) return;
+    c.messages.push({ author: (state.user && state.user.email) || 'Ich', ts: Date.now(), text: text });
+    saveComments(); renderEditor();
+    setTimeout(function () { var b = $('cwBody'); if (b) b.scrollTop = b.scrollHeight; var i = $('cwText'); if (i) i.focus(); }, 20);
+  }
+  function closeCommentWindow() {
+    var c = (state.comments || []).find(function (x) { return x.id === state.openComment; });
+    if (c && (!c.messages || !c.messages.length)) { state.comments = state.comments.filter(function (x) { return x.id !== c.id; }); saveComments(); }
+    state.openComment = null; renderEditor();
+  }
+  function deleteComment(id) {
+    state.comments = (state.comments || []).filter(function (x) { return x.id !== id; });
+    saveComments(); if (state.openComment === id) state.openComment = null; renderEditor();
   }
 
   async function placeFromDrop(clientX, clientY, sym, name, color) {
@@ -3385,18 +3455,28 @@ const STATE_ICONS = {
   // Rechtsklick auf einen Stützpunkt entfernt ihn (Polygon bleibt >=3, Weg >=2 Punkte).
   function onContentContextMenu(e) {
     if (state.view !== 'editor' || !canEdit()) return;
-    const v = e.target.closest('.zone-vertex'); if (!v) return;
+    const v = e.target.closest('.zone-vertex');
+    if (v) {
+      e.preventDefault();
+      const zid = v.getAttribute('data-zone'), idx = +v.getAttribute('data-vidx');
+      const z = (state.detail.objects || []).find((o) => o.id === zid); if (!z || !z.points) return;
+      const minPts = z.symbolType === 'mf_route' ? 2 : 3;
+      if (z.points.length <= minPts) { toast('Mindestens ' + minPts + ' Stützpunkte nötig'); return; }
+      pushUndo();
+      z.points.splice(idx, 1);
+      protectObj(z.id);
+      state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
+      Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { /* ignore */ });
+      renderEditor();
+      return;
+    }
+    // sonst: Kommentar an dieser Stelle anlegen
+    const doc = e.target.closest('#canvasDoc'); if (!doc) return;
     e.preventDefault();
-    const zid = v.getAttribute('data-zone'), idx = +v.getAttribute('data-vidx');
-    const z = (state.detail.objects || []).find((o) => o.id === zid); if (!z || !z.points) return;
-    const minPts = z.symbolType === 'mf_route' ? 2 : 3;
-    if (z.points.length <= minPts) { toast('Mindestens ' + minPts + ' Stützpunkte nötig'); return; }
-    pushUndo();
-    z.points.splice(idx, 1);
-    protectObj(z.id);
-    state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
-    Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { /* ignore */ });
-    renderEditor();
+    const r = doc.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return;
+    createCommentAt(x, y);
   }
   /* ---------- Undo / Redo (Editor, mit Server-Sync) ---------- */
   function snapObjects() { return JSON.parse(JSON.stringify(state.detail.objects || [])); }
@@ -3867,6 +3947,7 @@ const STATE_ICONS = {
     c.addEventListener('dblclick', onContentDblClick);
     c.addEventListener('pointerdown', onContentPointerDown);
     c.addEventListener('contextmenu', onContentContextMenu);
+    c.addEventListener('keydown', function (e) { if (e.target && e.target.id === 'cwText' && e.key === 'Enter') { e.preventDefault(); sendCommentMsg(); } });
     c.addEventListener('wheel', onWheelZoom, { passive: false });
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', endMove);
