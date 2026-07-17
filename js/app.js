@@ -2392,8 +2392,8 @@ const STATE_ICONS = {
   function commentWindowLayer() {
     var c = (state.comments || []).find(function (x) { return x.id === state.openComment; });
     if (!c) return '';
-    var left = Math.max(2, Math.min(60, c.x * 100));
-    var top = Math.max(2, Math.min(48, c.y * 100));
+    var left = c.winX != null ? Math.max(0, Math.min(96, c.winX * 100)) : Math.max(2, Math.min(60, c.x * 100));
+    var top = c.winY != null ? Math.max(0, Math.min(92, c.winY * 100)) : Math.max(2, Math.min(48, c.y * 100));
     var me = (state.user && state.user.email) || '';
     var msgs = (c.messages || []).map(function (m) {
       var own = m.author === me;
@@ -2516,7 +2516,19 @@ const STATE_ICONS = {
     } else { doc.removeAttribute('title'); }
   }
 
+  function onCwDrag(e) {
+    var win = document.querySelector('.comment-window'); var d = state.cwDrag; if (!win || !d) return;
+    var wr = win.getBoundingClientRect();
+    var wpct = wr.width / d.docW * 100, hpct = wr.height / d.docH * 100;
+    var leftPct = (e.clientX - d.offx - d.docL) / d.docW * 100;
+    var topPct = (e.clientY - d.offy - d.docT) / d.docH * 100;
+    leftPct = Math.max(0, Math.min(100 - wpct, leftPct));
+    topPct = Math.max(0, Math.min(100 - hpct, topPct));
+    win.style.left = leftPct + '%'; win.style.top = topPct + '%';
+    d.leftPct = leftPct; d.topPct = topPct;
+  }
   function onMove(e) {
+    if (state.cwDrag) { onCwDrag(e); return; }
     if (state.iconDrag) { onIconDrag(e); return; }
     if (state.techDrag) { onTechDrag(e); return; }
     if (state.zoneDrag) { onZoneDrag(e); return; }
@@ -2554,6 +2566,12 @@ const STATE_ICONS = {
     }
   }
   async function endMove() {
+    if (state.cwDrag) {
+      var d = state.cwDrag; state.cwDrag = null;
+      var c = (state.comments || []).find(function (x) { return x.id === d.id; });
+      if (c && d.leftPct != null) { c.winX = d.leftPct / 100; c.winY = d.topPct / 100; saveComments(); }
+      return;
+    }
     if (state.iconDrag) { await endIconDrag(); return; }
     if (state.techDrag) {
       const td = state.techDrag; state.techDrag = null;
@@ -3135,6 +3153,18 @@ const STATE_ICONS = {
 
   function onContentPointerDown(e) {
     if (!canEdit()) return;
+    // Kommentar-Fenster an der Kopfzeile verschieben (nicht auf X/Löschen)
+    const cwh = e.target.closest('.cw-head');
+    if (cwh && !e.target.closest('.cw-x, .cw-del')) {
+      const win = cwh.closest('.comment-window'), doc0 = document.getElementById('canvasDoc');
+      if (win && doc0) {
+        e.preventDefault();
+        const dr = doc0.getBoundingClientRect(), wr = win.getBoundingClientRect();
+        state.cwDrag = { id: state.openComment, offx: e.clientX - wr.left, offy: e.clientY - wr.top, docW: dr.width, docH: dr.height, docL: dr.left, docT: dr.top };
+        try { win.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      }
+      return;
+    }
     // Klicks auf interaktive Overlays (Kommentar-Fenster/-Nadel, Vorschläge, Lern-/Vorlagen-UI)
     // nicht zur Zonen-Auswahl/Verschiebung durchschlagen lassen.
     if (e.target.closest('.comment-window, .comment-pin, .robot-sugg-layer, .learn-prompt, .pt-sugg-layer, .tpl-panel')) return;
