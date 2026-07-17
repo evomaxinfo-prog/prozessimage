@@ -107,7 +107,7 @@
     'MODELLIEREN': 'MODEL', 'Stammdaten': 'Master data', 'Bearbeitung': 'Editing',
     'Anlagenname': 'System name', 'Bereich': 'Area', 'Anlagenversion': 'System version',
     'Erstellt am': 'Created on', 'Letzte Änderung': 'Last change', 'Beschreibung': 'Description',
-    'SPS-Konfiguration': 'PLC configuration', 'Steuerungen': 'controllers',
+    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', '— keine —': '— none —', 'Steuerungen': 'controllers',
     'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
     'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
     'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
@@ -2265,6 +2265,15 @@ const STATE_ICONS = {
       + list.map((o) => '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>').join('');
     return '<div class="m-field"><label>' + esc(label) + '</label><select id="' + id + '" data-label="' + esc(label) + '">' + options + '</select></div>';
   }
+  // SPS-Bereich-Auswahl (nur Funktionsgruppen) – manuell zuordnen, analog zum Schutzbereich.
+  function spsSelectField(o) {
+    if (!o || o.symbolType !== 'fg_zone') return '';
+    const plcs = state.detail.plcs || [];
+    const cur = o.plcConfigId || '';
+    let opts = '<option value="">' + t('— keine —') + '</option>';
+    plcs.forEach((p) => { opts += '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + '</option>'; });
+    return '<div class="m-field"><label>' + t('SPS-Bereich') + '</label><select id="mSps">' + opts + '</select></div>';
+  }
   function tagFieldInput(id, label, val, dataLabel, editLabel) {
     const head = editLabel
       ? '<input class="m-lbl-edit" id="' + id + '_lbl" value="' + esc(label) + '" placeholder="Überschrift" title="Überschrift bearbeiten">'
@@ -2349,7 +2358,7 @@ const STATE_ICONS = {
     } else {
       const gl1 = (o.metatags.find((m) => m.position === 1) || {}).label || 'Metatag 1';
       const gl2 = (o.metatags.find((m) => m.position === 2) || {}).label || 'Metatag 2';
-      $('mBody').innerHTML = tagFieldInput('mTag1', gl1, v1, gl1, canManagePalette()) + tagFieldInput('mTag2', gl2, v2, gl2, canManagePalette());
+      $('mBody').innerHTML = spsSelectField(o) + tagFieldInput('mTag1', gl1, v1, gl1, canManagePalette()) + tagFieldInput('mTag2', gl2, v2, gl2, canManagePalette());
     }
     $('tagModal').style.display = 'flex';
     setTimeout(() => { const f = $('mBody').querySelector('input,select'); if (f) { f.focus(); if (f.tagName === 'INPUT') f.select(); } }, 60);
@@ -2358,6 +2367,18 @@ const STATE_ICONS = {
     const o = (state.detail.objects || []).find((x) => x.id === state.modalObjId);
     if (!o) { closeTagModal(); return; }
     pushUndo();
+    // Funktionsgruppe: SPS-Bereich-Zuordnung manuell aus dem Auswahlfeld uebernehmen (analog Schutzbereich)
+    const spsSel = $('mSps');
+    if (spsSel && o.symbolType === 'fg_zone') {
+      const newPlc = spsSel.value || null;
+      if ((o.plcConfigId || null) !== newPlc) {
+        const plc = (state.detail.plcs || []).find((p) => p.id === newPlc);
+        const L = layerById(o.layerId);
+        o.plcConfigId = newPlc;
+        o.color = newPlc ? ((plc && plc.color) || o.color) : (L ? L.color : o.color);
+        try { protectObj(o.id); await Api.updateObject(o.id, { plcConfigId: newPlc, color: o.color }); } catch (e) { /* ignore */ }
+      }
+    }
     const pt = processTypeBySym(o.symbolType);
     let metatags;
     if (pt) {
