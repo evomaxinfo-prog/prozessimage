@@ -2149,7 +2149,7 @@ const STATE_ICONS = {
     renderEditor();
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
     let cx, cy;
-    if (o.points && o.points.length) { cx = o.points.reduce((s, p) => s + p.x, 0) / o.points.length; cy = o.points.reduce((s, p) => s + p.y, 0) / o.points.length; }
+    if (isShape(o) && o.points && o.points.length) { cx = o.points.reduce((s, p) => s + p.x, 0) / o.points.length; cy = o.points.reduce((s, p) => s + p.y, 0) / o.points.length; }
     else { cx = o.x; cy = o.y; }
     if (cx == null || cy == null) return;
     const ring = document.createElement('div');
