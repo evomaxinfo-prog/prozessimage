@@ -1141,6 +1141,7 @@
     else if (act === 'tpl-learn-no') { dismissLearnPrompt(); }
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
+    else if (act === 'obj-focus') { focusObjInLayout(el.getAttribute('data-obj')); }
     else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
     else if (act === 'pal-add') { openSymUpload(); }
     else if (act === 'pal-edit') { e.stopPropagation(); const c = state.customSyms['custom:' + el.getAttribute('data-id')]; if (c) openSymUpload(c); }
@@ -2138,9 +2139,28 @@ const STATE_ICONS = {
     const row = document.querySelector('.objlist .obj[data-obj="' + id + '"]');
     if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
+  // Umgekehrt: Auswahl in der Objektliste -> Objekt im Layout selektieren und mit einem kurzen Puls hervorheben. Gilt fuer Icons, Polygone und Foerderstrecken.
+  function focusObjInLayout(id) {
+    const o = (state.detail && state.detail.objects || []).find((x) => x.id === id);
+    if (!o) return;
+    if (o.layerId && layerById(o.layerId) && state.activeLayer !== o.layerId) state.activeLayer = o.layerId;
+    if (isShape(o)) { state.selectedZone = id; state.selectedObj = null; }
+    else { state.selectedObj = id; state.selectedZone = null; }
+    renderEditor();
+    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    let cx, cy;
+    if (o.points && o.points.length) { cx = o.points.reduce((s, p) => s + p.x, 0) / o.points.length; cy = o.points.reduce((s, p) => s + p.y, 0) / o.points.length; }
+    else { cx = o.x; cy = o.y; }
+    if (cx == null || cy == null) return;
+    const ring = document.createElement('div');
+    ring.className = 'focus-ring';
+    ring.style.left = (cx * 100) + '%'; ring.style.top = (cy * 100) + '%';
+    doc.appendChild(ring);
+    setTimeout(() => { ring.remove(); }, 1300);
+  }
   function objCatBlock(name, list, color) {
     const tools = canEdit();
-    const rows = list.map((o) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span><span class="oname">' + esc(o.name) + '</span>'
+    const rows = list.map((o) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span><span class="oname">' + esc(o.name) + '</span>'
       + (tools ? ('<div class="obj-tools">'
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
