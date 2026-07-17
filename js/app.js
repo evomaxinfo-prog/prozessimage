@@ -1884,19 +1884,22 @@ const STATE_ICONS = {
     else { bx = Math.min(o.x + 0.12, 0.94); by = Math.max(o.y - 0.12, 0.07); }
     return { id: o.id, name: m.value, code: techCode(m.value), col: objIconColor(o), rx: o.x, ry: o.y, bx, by };
   }
-  // Endpunkte der Technologie-Linie: Roboter-Ende in der Mitte des Robotersymbols (Ankerpunkt),
-  // Badge-Ende um Icon-Aussenradius (13px) + 2px zurueckgezogen.
+  // Endpunkte der Technologie-Linie: beide Enden mit gleichem Abstand (Symbolrand + 2px) -
+  // Roboter-Kasten (38px inkl. Rahmen, quadratisch) und Tech-Icon (Radius 13px).
   function techLineEnds(rx, ry, bx, by) {
     const doc = document.getElementById('canvasDoc');
     const W = (doc && doc.clientWidth) || 900, H = (doc && doc.clientHeight) || 560;
     const dxPx = (bx - rx) * W, dyPx = (by - ry) * H;
     const len = Math.hypot(dxPx, dyPx);
-    const x1 = rx * 100, y1 = ry * 100;
-    let x2 = bx * 100, y2 = by * 100;
+    let x1 = rx * 100, y1 = ry * 100, x2 = bx * 100, y2 = by * 100;
     if (len > 1) {
       const ux = dxPx / len, uy = dyPx / len;
-      const tB = 15; // Badge-Radius 13px + 2px
-      if (len > tB + 1) { x2 -= (ux * tB) / W * 100; y2 -= (uy * tB) / H * 100; }
+      const tR = 19 / Math.max(Math.abs(ux), Math.abs(uy)) + 2; // Kastenrand + 2px
+      const tB = 13 + 2; // Icon-Radius + 2px
+      if (len > tR + tB + 1) {
+        x1 += (ux * tR) / W * 100; y1 += (uy * tR) / H * 100;
+        x2 -= (ux * tB) / W * 100; y2 -= (uy * tB) / H * 100;
+      }
     }
     return { x1, y1, x2, y2 };
   }

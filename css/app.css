@@ -1,11 +1,11 @@
 /* Selbst gehostete Schriften (kein Google-Fonts-CDN) – Enterprise-Security: keine Drittanbieter-Verbindung */
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.25.41') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.25.41') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.25.41') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.25.41') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.25.41') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.25.41') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.25.41') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.25.41') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.25.41') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.25.41') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.25.41') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.25.41') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.25.41') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.25.41') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.25.42') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.25.42') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.25.42') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.25.42') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.25.42') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.25.42') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.25.42') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.25.42') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.25.42') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.25.42') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.25.42') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.25.42') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.25.42') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.25.42') format('woff')}
 :root{
     --brand-blue:#0065A5;
     --brand-blue-dark:#004E80;
@@ -1137,5 +1137,6 @@ header{padding:0 22px}
   .tb-dot .tb-ic{width:16px;height:16px;display:block;pointer-events:none}
 
   /* Roboter: Metatags standardmaessig ausblenden, nur bei Hover zeigen (absolut -> Kasten bleibt mittig) */
-  .placed.hover-tags .ptags{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:2px;display:none;z-index:6}
-  .placed.hover-tags:hover .ptags{display:flex}
+  .placed.hover-tags .ptags{position:absolute;top:100%;left:50%;margin-top:2px;display:none;z-index:6;transform:translateX(-50%);animation:none}
+  .placed.hover-tags:hover .ptags{display:flex;animation:tagsInC .15s ease}
+  @keyframes tagsInC{from{opacity:0;transform:translate(-50%,-3px)}to{opacity:1;transform:translate(-50%,0)}}
