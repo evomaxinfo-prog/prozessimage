@@ -2140,7 +2140,7 @@ const STATE_ICONS = {
   }
   function objCatBlock(name, list, color) {
     const tools = canEdit();
-    const rows = list.map((o) => '<div class="obj' + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span><span class="oname">' + esc(o.name) + '</span>'
+    const rows = list.map((o) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span><span class="oname">' + esc(o.name) + '</span>'
       + (tools ? ('<div class="obj-tools">'
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
@@ -2612,7 +2612,11 @@ const STATE_ICONS = {
         const dbl = state.lastZoneUp && state.lastZoneUp.id === z.id && (now - state.lastZoneUp.t) < 400;
         state.lastZoneUp = dbl ? null : { id: z.id, t: now };
         if (dbl) { if (z.symbolType === 'mf_route') openRouteModal(z.id); else if (z.symbolType === 'sb_zone' || z.symbolType === 'sps_zone') openZoneAssignModal(z.id); else if (z.symbolType === 'fg_zone') openTagModal(z.id); return; }
-        if (state.selectedZone !== z.id) { state.selectedZone = z.id; renderEditor(); }
+        let zRender = false;
+        if (state.selectedZone !== z.id) { state.selectedZone = z.id; zRender = true; }
+        if (z.layerId && layerById(z.layerId) && state.activeLayer !== z.layerId) { state.activeLayer = z.layerId; zRender = true; }
+        if (zRender) renderEditor();
+        focusObjInList(z.id);
         return;
       }
       return;
