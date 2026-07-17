@@ -1884,24 +1884,31 @@ const STATE_ICONS = {
     else { bx = Math.min(o.x + 0.12, 0.94); by = Math.max(o.y - 0.12, 0.07); }
     return { id: o.id, name: m.value, code: techCode(m.value), rx: o.x, ry: o.y, bx, by };
   }
-  // Endpunkt der Technologie-Linie auf der Badge-Seite: um Badge-Aussenradius (13px) + 2px Abstand
-  // Richtung Roboter zurueckziehen -> Linie startet mittig des Icons, wird aber erst 2px ausserhalb sichtbar.
-  function techLineBadgeEnd(rx, ry, bx, by) {
+  // Endpunkte der Technologie-Linie: Roboter-Ende bis zum Rand des Robotersymbols (Kasten 38px inkl.
+  // Rahmen, quadratisch; ohne Textlabel), Badge-Ende um Icon-Aussenradius (13px) + 2px zurueckgezogen.
+  function techLineEnds(rx, ry, bx, by) {
     const doc = document.getElementById('canvasDoc');
     const W = (doc && doc.clientWidth) || 900, H = (doc && doc.clientHeight) || 560;
-    const GAP = 15;
-    const dxPx = (rx - bx) * W, dyPx = (ry - by) * H;
+    const dxPx = (bx - rx) * W, dyPx = (by - ry) * H;
     const len = Math.hypot(dxPx, dyPx);
-    let x2 = bx * 100, y2 = by * 100;
-    if (len > GAP + 1) { x2 += (dxPx / len) * GAP / W * 100; y2 += (dyPx / len) * GAP / H * 100; }
-    return { x2, y2 };
+    let x1 = rx * 100, y1 = ry * 100, x2 = bx * 100, y2 = by * 100;
+    if (len > 1) {
+      const ux = dxPx / len, uy = dyPx / len;
+      const tR = 19 / Math.max(Math.abs(ux), Math.abs(uy)); // bis Kastenrand (halbe Kante 19px)
+      const tB = 15; // Badge-Radius 13px + 2px
+      if (len > tR + tB + 1) {
+        x1 += (ux * tR) / W * 100; y1 += (uy * tR) / H * 100;
+        x2 -= (ux * tB) / W * 100; y2 -= (uy * tB) / H * 100;
+      }
+    }
+    return { x1, y1, x2, y2 };
   }
   function techLinesSvg(visible) {
     return (state.detail.objects || []).map((o) => {
       if (visible[o.layerId] === false) return '';
       const t = techInfo(o); if (!t) return '';
-      const e2 = techLineBadgeEnd(t.rx, t.ry, t.bx, t.by);
-      return '<line id="tech-line-' + t.id + '" x1="' + (t.rx * 100) + '" y1="' + (t.ry * 100) + '" x2="' + e2.x2.toFixed(3) + '" y2="' + e2.y2.toFixed(3) + '" stroke="#E67E22" stroke-width="1.3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      const e = techLineEnds(t.rx, t.ry, t.bx, t.by);
+      return '<line id="tech-line-' + t.id + '" x1="' + e.x1.toFixed(3) + '" y1="' + e.y1.toFixed(3) + '" x2="' + e.x2.toFixed(3) + '" y2="' + e.y2.toFixed(3) + '" stroke="#E67E22" stroke-width="1.3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
     }).join('');
   }
   function techBadgeLayer() {
@@ -1923,7 +1930,7 @@ const STATE_ICONS = {
     const o = (state.detail.objects || []).find((z) => z.id === state.techDrag.id); if (!o) return;
     o.points = [{ x, y }]; state.techDrag.moved = true;
     const line = document.getElementById('tech-line-' + o.id);
-    if (line) { const e2 = techLineBadgeEnd(o.x, o.y, x, y); line.setAttribute('x2', e2.x2.toFixed(3)); line.setAttribute('y2', e2.y2.toFixed(3)); }
+    if (line) { const e = techLineEnds(o.x, o.y, x, y); line.setAttribute('x1', e.x1.toFixed(3)); line.setAttribute('y1', e.y1.toFixed(3)); line.setAttribute('x2', e.x2.toFixed(3)); line.setAttribute('y2', e.y2.toFixed(3)); }
     const badge = document.querySelector('.tech-badge[data-tech="' + o.id + '"]');
     if (badge) { badge.style.left = (x * 100) + '%'; badge.style.top = (y * 100) + '%'; }
   }
@@ -2218,7 +2225,6 @@ const STATE_ICONS = {
     // Technologie-Linie live mitziehen (Roboter-Ende der Linie)
     const tline = document.getElementById('tech-line-' + dragMove.oid);
     if (tline) {
-      tline.setAttribute('x1', x * 100); tline.setAttribute('y1', y * 100);
       const ro = (state.detail.objects || []).find((z) => z.id === dragMove.oid);
       let bx, by;
       if (ro && ro.points && ro.points.length >= 1 && ro.points[0]) { bx = ro.points[0].x; by = ro.points[0].y; }
@@ -2227,8 +2233,9 @@ const STATE_ICONS = {
         const bd = document.querySelector('.tech-badge[data-tech="' + (ro ? ro.id : '') + '"]');
         if (bd) { bd.style.left = (bx * 100) + '%'; bd.style.top = (by * 100) + '%'; }
       }
-      const e2 = techLineBadgeEnd(x, y, bx, by);
-      tline.setAttribute('x2', e2.x2.toFixed(3)); tline.setAttribute('y2', e2.y2.toFixed(3));
+      const e = techLineEnds(x, y, bx, by);
+      tline.setAttribute('x1', e.x1.toFixed(3)); tline.setAttribute('y1', e.y1.toFixed(3));
+      tline.setAttribute('x2', e.x2.toFixed(3)); tline.setAttribute('y2', e.y2.toFixed(3));
     }
   }
   async function endMove() {
