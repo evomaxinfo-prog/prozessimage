@@ -1882,7 +1882,7 @@ const STATE_ICONS = {
     let bx, by;
     if (o.points && o.points.length >= 1 && o.points[0]) { bx = o.points[0].x; by = o.points[0].y; }
     else { bx = Math.min(o.x + 0.12, 0.94); by = Math.max(o.y - 0.12, 0.07); }
-    return { id: o.id, name: m.value, code: techCode(m.value), rx: o.x, ry: o.y, bx, by };
+    return { id: o.id, name: m.value, code: techCode(m.value), col: objIconColor(o), rx: o.x, ry: o.y, bx, by };
   }
   // Endpunkte der Technologie-Linie: Roboter-Ende bis zum Rand des Robotersymbols (Kasten 38px inkl.
   // Rahmen, quadratisch; ohne Textlabel), Badge-Ende um Icon-Aussenradius (13px) + 2px zurueckgezogen.
@@ -1908,7 +1908,7 @@ const STATE_ICONS = {
       if (visible[o.layerId] === false) return '';
       const t = techInfo(o); if (!t) return '';
       const e = techLineEnds(t.rx, t.ry, t.bx, t.by);
-      return '<line id="tech-line-' + t.id + '" x1="' + e.x1.toFixed(3) + '" y1="' + e.y1.toFixed(3) + '" x2="' + e.x2.toFixed(3) + '" y2="' + e.y2.toFixed(3) + '" stroke="#E67E22" stroke-width="1.3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      return '<line id="tech-line-' + t.id + '" x1="' + e.x1.toFixed(3) + '" y1="' + e.y1.toFixed(3) + '" x2="' + e.x2.toFixed(3) + '" y2="' + e.y2.toFixed(3) + '" stroke="' + esc(t.col) + '" stroke-width="1.3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
     }).join('');
   }
   function techBadgeLayer() {
@@ -1918,7 +1918,7 @@ const STATE_ICONS = {
       if (visible[o.layerId] === false) return '';
       const t = techInfo(o); if (!t) return '';
       return '<div class="tech-badge" data-tech="' + t.id + '" style="left:' + (t.bx * 100) + '%;top:' + (t.by * 100) + '%">'
-        + '<span class="tb-dot"' + (editable ? ' data-techdrag="' + t.id + '" title="Verschieben"' : '') + '>' + techIconSvg(t.name) + '</span>'
+        + '<span class="tb-dot" style="background:' + esc(t.col) + ';box-shadow:0 2px 7px rgba(30,42,51,.35)"' + (editable ? ' data-techdrag="' + t.id + '" title="Verschieben"' : '') + '>' + techIconSvg(t.name) + '</span>'
         + '<span class="tb-name">' + esc(t.name) + '</span></div>';
     }).join('');
     return '<div class="tech-badge-layer">' + badges + '</div>';
