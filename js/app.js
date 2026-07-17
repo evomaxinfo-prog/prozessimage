@@ -107,7 +107,7 @@
     'MODELLIEREN': 'MODEL', 'Stammdaten': 'Master data', 'Bearbeitung': 'Editing',
     'Anlagenname': 'System name', 'Bereich': 'Area', 'Anlagenversion': 'System version',
     'Erstellt am': 'Created on', 'Letzte Änderung': 'Last change', 'Beschreibung': 'Description',
-    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
+    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
     'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
     'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
     'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
@@ -1125,6 +1125,10 @@
     else if (act === 'layer-eye') { e.stopPropagation(); if (!canEdit()) { toast('Nur Lesezugriff'); return; } toggleLayerVis(el.getAttribute('data-layer')); }
     else if (act === 'export-pdf') { exportFile('pdf'); }
     else if (act === 'export-csv') { exportFile('csv'); }
+    else if (act === 'detect-robots') { detectRobotsFlow(); }
+    else if (act === 'rob-confirm') { e.stopPropagation(); confirmRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
+    else if (act === 'rob-dismiss') { e.stopPropagation(); dismissRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
+    else if (act === 'rob-dismiss-all') { state.robotSuggestions = []; renderEditor(); }
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
     else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
@@ -1726,7 +1730,7 @@ const STATE_ICONS = {
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + zoneHandleLayer() + badge + '</div>';
   }
 
   // Frei platzierbare Zustands-Icons mit Verbindungslinie zum Prozesstyp
@@ -2051,7 +2055,9 @@ const STATE_ICONS = {
       + '<div class="zoom-ctl"><button data-act="zoom-out" aria-label="' + t('Verkleinern') + '">−</button><span class="z" aria-hidden="true">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in" aria-label="' + t('Vergrößern') + '">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
-      + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal + '</div>' : '')
+      + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal
+        + ((L.name === 'Saferobot / Technologie' && state.layoutBlobUrl && window.RobotDetect) ? '<button class="pal-detect" data-act="detect-robots" title="' + t('Roboter im Layout automatisch finden') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> ' + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>' : '')
+        + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
       + stationNavHtml()
@@ -2143,6 +2149,81 @@ const STATE_ICONS = {
     const nv = !(lay.visible !== false); lay.visible = nv;
     try { await Api.setLayerVisibility(state.detail.id, id, nv); } catch (e) { lay.visible = !nv; toast('Sichtbarkeit nicht gespeichert'); }
     renderEditor();
+  }
+
+  // ===== Roboter-Erkennung (Vorschlag + Bestätigung) =====
+  var _robotTplGray = null;
+  function loadTemplateGray() {
+    if (_robotTplGray) return Promise.resolve(_robotTplGray);
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () {
+        var cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+        var cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+        var d = cx.getImageData(0, 0, cv.width, cv.height);
+        _robotTplGray = RobotDetect.grayFromRGBA(d.data, cv.width, cv.height);
+        resolve(_robotTplGray);
+      };
+      img.onerror = reject; img.src = 'img/robot-template.png?v=0.25.45';
+    });
+  }
+  function loadLayoutGray() {
+    return new Promise(function (resolve, reject) {
+      if (!state.layoutBlobUrl) { reject(new Error('kein Layout')); return; }
+      var img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight, maxW = 900;
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        var cx = cv.getContext('2d'); cx.drawImage(img, 0, 0, w, h);
+        var d = cx.getImageData(0, 0, w, h);
+        resolve(RobotDetect.grayFromRGBA(d.data, w, h));
+      };
+      img.onerror = reject; img.src = state.layoutBlobUrl;
+    });
+  }
+  function detectRobotsFlow() {
+    if (!window.RobotDetect || !state.layoutBlobUrl) { toast(t('Kein Layout vorhanden.')); return; }
+    if (state.robotDetecting) return;
+    state.robotDetecting = true; toast(t('Erkenne Roboter …'));
+    Promise.all([loadTemplateGray(), loadLayoutGray()]).then(function (arr) {
+      return new Promise(function (r) { setTimeout(function () { r(arr); }, 30); });
+    }).then(function (arr) {
+      var found = RobotDetect.detect(arr[1], arr[0], { workW: 300, threshold: 0.62 });
+      var existing = (state.detail.objects || []).filter(function (o) { return o.symbolType === 'robot'; });
+      var sugg = found.filter(function (f) { return !existing.some(function (o) { return Math.hypot(o.x - f.x, o.y - f.y) < 0.05; }); });
+      state.robotSuggestions = sugg; state.robotDetecting = false; renderEditor();
+      toast(sugg.length ? (sugg.length + ' ' + t('Roboter erkannt – bitte bestätigen')) : t('Keine (neuen) Roboter erkannt.'));
+    }).catch(function () { state.robotDetecting = false; toast(t('Erkennung fehlgeschlagen.')); });
+  }
+  function robotSuggestionLayer() {
+    var s = state.robotSuggestions || [];
+    if (!s.length) return '';
+    return '<div class="robot-sugg-layer">' + s.map(function (r, i) {
+      return '<div class="robot-sugg" style="left:' + (r.x * 100) + '%;top:' + (r.y * 100) + '%">'
+        + '<div class="rs-ic">' + symInner('robot', 22) + '</div>'
+        + '<div class="rs-bar"><span class="rs-score" title="' + t('Konfidenz') + '">' + Math.round(r.score * 100) + '%</span>'
+        + '<button class="rs-yes" data-act="rob-confirm" data-idx="' + i + '" title="' + t('Übernehmen') + '">✓</button>'
+        + '<button class="rs-no" data-act="rob-dismiss" data-idx="' + i + '" title="' + t('Verwerfen') + '">×</button></div>'
+        + '</div>';
+    }).join('') + '<button class="rs-clear" data-act="rob-dismiss-all">' + t('Alle verwerfen') + '</button></div>';
+  }
+  function confirmRobotSuggestion(idx) {
+    var s = state.robotSuggestions || []; var r = s[idx]; if (!r) return;
+    var L = (state.detail.layers || []).find(function (l) { return l.name === 'Saferobot / Technologie'; });
+    if (!L) { toast(t('Roboter-Ebene fehlt.')); return; }
+    pushUndo();
+    var num = String((state.detail.objects || []).filter(function (o) { return o.symbolType === 'robot'; }).length + 1).padStart(2, '0');
+    Api.createObject(state.detail.id, { layerId: L.id, name: 'Roboter_' + num, symbolType: 'robot', color: L.color, x: r.x, y: r.y }).then(function (obj) {
+      obj.metatags = obj.metatags || [];
+      state.detail.objects.push(obj);
+      state.robotSuggestions.splice(idx, 1);
+      renderEditor();
+    }).catch(function () { toast(t('Speichern fehlgeschlagen.')); });
+  }
+  function dismissRobotSuggestion(idx) {
+    if (!state.robotSuggestions) return;
+    state.robotSuggestions.splice(idx, 1); renderEditor();
   }
 
   async function placeFromDrop(clientX, clientY, sym, name, color) {
