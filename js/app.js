@@ -107,7 +107,7 @@
     'MODELLIEREN': 'MODEL', 'Stammdaten': 'Master data', 'Bearbeitung': 'Editing',
     'Anlagenname': 'System name', 'Bereich': 'Area', 'Anlagenversion': 'System version',
     'Erstellt am': 'Created on', 'Letzte Änderung': 'Last change', 'Beschreibung': 'Description',
-    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
+    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Prozesstyp vorschlagen': 'Suggest process type', 'Für erkannte Roboter Prozesstypen vorschlagen': 'Suggest process types for detected robots', 'Prozesstyp-Vorschläge – Typ wählen & bestätigen': 'process-type suggestions – choose type & confirm', 'Keine offenen Stationen für Prozesstypen.': 'No open stations for process types.', 'Prozesstyp-Vorschlag': 'Process-type suggestion', 'Prozesstyp wählen': 'Choose process type', 'Prozesstyp-Ebene fehlt.': 'Process-type layer missing.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
     'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
     'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
     'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
@@ -1129,6 +1129,10 @@
     else if (act === 'rob-confirm') { e.stopPropagation(); confirmRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
     else if (act === 'rob-dismiss') { e.stopPropagation(); dismissRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
     else if (act === 'rob-dismiss-all') { state.robotSuggestions = []; renderEditor(); }
+    else if (act === 'suggest-pt') { suggestProcessTypes(); }
+    else if (act === 'pt-confirm') { e.stopPropagation(); var pw = el.closest('.pt-sugg'); var sel = pw && pw.querySelector('.pts-sel'); confirmProcessSuggestion(parseInt(el.getAttribute('data-idx'), 10), sel ? sel.value : 'ptk_1'); }
+    else if (act === 'pt-dismiss') { e.stopPropagation(); dismissProcessSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
+    else if (act === 'pt-dismiss-all') { state.ptSuggestions = []; renderEditor(); }
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
     else if (act === 'pal-hint') { /* nur Hinweis-Titel, kein Toast beim Ziehen */ }
@@ -1730,7 +1734,7 @@ const STATE_ICONS = {
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + processSuggestionLayer() + zoneHandleLayer() + badge + '</div>';
   }
 
   // Frei platzierbare Zustands-Icons mit Verbindungslinie zum Prozesstyp
@@ -2057,6 +2061,7 @@ const STATE_ICONS = {
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal
         + ((L.name === 'Saferobot / Technologie' && state.layoutBlobUrl && window.RobotDetect) ? '<button class="pal-detect" data-act="detect-robots" title="' + t('Roboter im Layout automatisch finden') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> ' + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>' : '')
+        + ((L.name === 'Prozesstypen' && (state.detail.objects || []).some(function (o) { return o.symbolType === 'robot'; })) ? '<button class="pal-detect" data-act="suggest-pt" title="' + t('Für erkannte Roboter Prozesstypen vorschlagen') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18" cy="18" r="3"/></svg> ' + t('Prozesstyp vorschlagen') + '</button>' : '')
         + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
@@ -2225,6 +2230,58 @@ const STATE_ICONS = {
     if (!state.robotSuggestions) return;
     state.robotSuggestions.splice(idx, 1); renderEditor();
   }
+
+  // ===== Prozesstyp-Vorschläge (regelbasiert: je Roboter ohne Prozesstyp ein Vorschlag; Typ wählt der Nutzer) =====
+  function suggestProcessTypes() {
+    var objs = state.detail.objects || [];
+    var robots = objs.filter(function (o) { return o.symbolType === 'robot'; });
+    var ptks = objs.filter(function (o) { return /^ptk_/.test(o.symbolType); });
+    var sugg = [];
+    robots.forEach(function (r) {
+      var has = ptks.some(function (p) { return Math.hypot(p.x - r.x, p.y - r.y) < 0.09; });
+      if (!has) sugg.push({ x: Math.min(0.95, r.x + 0.05), y: Math.min(0.94, r.y + 0.05), from: r.name });
+    });
+    state.ptSuggestions = sugg; renderEditor();
+    toast(sugg.length ? (sugg.length + ' ' + t('Prozesstyp-Vorschläge – Typ wählen & bestätigen')) : t('Keine offenen Stationen für Prozesstypen.'));
+  }
+  function processSuggestionLayer() {
+    var s = state.ptSuggestions || [];
+    if (!s.length) return '';
+    var opts = PROCESS_TYPES.map(function (p) { return '<option value="' + p.sym + '">' + esc(p.name) + '</option>'; }).join('');
+    return '<div class="pt-sugg-layer">' + s.map(function (r, i) {
+      return '<div class="pt-sugg" style="left:' + (r.x * 100) + '%;top:' + (r.y * 100) + '%">'
+        + '<div class="pts-ic" title="' + t('Prozesstyp-Vorschlag') + '">PT</div>'
+        + '<div class="pts-bar"><select class="pts-sel" title="' + t('Prozesstyp wählen') + '">' + opts + '</select>'
+        + '<button class="pts-yes" data-act="pt-confirm" data-idx="' + i + '" title="' + t('Übernehmen') + '">✓</button>'
+        + '<button class="pts-no" data-act="pt-dismiss" data-idx="' + i + '" title="' + t('Verwerfen') + '">×</button></div>'
+        + '</div>';
+    }).join('') + '<button class="rs-clear" data-act="pt-dismiss-all">' + t('Alle verwerfen') + '</button></div>';
+  }
+  function confirmProcessSuggestion(idx, sym) {
+    var s = state.ptSuggestions || []; var r = s[idx]; if (!r) return;
+    var pt = processTypeBySym(sym); if (!pt) return;
+    var L = (state.detail.layers || []).find(function (l) { return l.name === 'Prozesstypen'; });
+    if (!L) { toast(t('Prozesstyp-Ebene fehlt.')); return; }
+    pushUndo();
+    var num = String((state.detail.objects || []).filter(function (o) { return /^ptk_/.test(o.symbolType); }).length + 1).padStart(2, '0');
+    Api.createObject(state.detail.id, { layerId: L.id, name: pt.name + '_' + num, symbolType: pt.sym, color: L.color, x: r.x, y: r.y }).then(function (obj) {
+      var fg = detectFgName(r.x, r.y);
+      var tags = [
+        { position: 0, label: 'Funktionsgruppen', value: fg },
+        { position: 1, label: 'Prozesstyp', value: pt.ptyp },
+        { position: 2, label: 'Hardware · Art', value: pt.hwart },
+      ];
+      var pos = 3;
+      ptStateList(pt).forEach(function (st) { tags.push({ position: pos++, label: st.kind + ' – ' + st.name, value: '' }); });
+      return Api.setMetatags(obj.id, tags).then(function (upd) { obj.metatags = (upd && upd.metatags) || tags; }).catch(function () { obj.metatags = tags; }).then(function () {
+        state.detail.objects.push(obj);
+        state.ptSuggestions.splice(idx, 1);
+        renderEditor();
+        if (fg) toast(pt.name + ' → „' + fg + '"'); else toast(pt.name + ' ' + t('platziert'));
+      });
+    }).catch(function () { toast(t('Speichern fehlgeschlagen.')); });
+  }
+  function dismissProcessSuggestion(idx) { if (!state.ptSuggestions) return; state.ptSuggestions.splice(idx, 1); renderEditor(); }
 
   async function placeFromDrop(clientX, clientY, sym, name, color) {
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
