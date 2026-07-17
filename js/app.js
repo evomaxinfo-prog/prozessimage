@@ -2163,21 +2163,6 @@ const STATE_ICONS = {
   }
 
   // ===== Roboter-Erkennung (Vorschlag + Bestätigung) =====
-  var _robotTplGray = null;
-  function loadTemplateGray() {
-    if (_robotTplGray) return Promise.resolve(_robotTplGray);
-    return new Promise(function (resolve, reject) {
-      var img = new Image();
-      img.onload = function () {
-        var cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
-        var cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
-        var d = cx.getImageData(0, 0, cv.width, cv.height);
-        _robotTplGray = RobotDetect.grayFromRGBA(d.data, cv.width, cv.height);
-        resolve(_robotTplGray);
-      };
-      img.onerror = reject; img.src = 'img/robot-template.png?v=0.25.45';
-    });
-  }
   function loadLayoutGray() {
     return new Promise(function (resolve, reject) {
       if (!state.layoutBlobUrl) { reject(new Error('kein Layout')); return; }
