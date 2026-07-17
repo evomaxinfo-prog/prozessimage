@@ -2133,9 +2133,14 @@ const STATE_ICONS = {
     return '<div class="lp-action">' + btn + extra + '<div class="zone-hint">' + hint + '</div></div>';
   }
 
+  // Objektzeile in der Objektliste sichtbar scrollen (nach Auswahl im Layout).
+  function focusObjInList(id) {
+    const row = document.querySelector('.objlist .obj[data-obj="' + id + '"]');
+    if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
   function objCatBlock(name, list, color) {
     const tools = canEdit();
-    const rows = list.map((o) => '<div class="obj"><span class="odot" style="background:' + esc(o.color) + '"></span><span class="oname">' + esc(o.name) + '</span>'
+    const rows = list.map((o) => '<div class="obj' + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span><span class="oname">' + esc(o.name) + '</span>'
       + (tools ? ('<div class="obj-tools">'
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
@@ -2617,9 +2622,10 @@ const STATE_ICONS = {
     if (dm.el) dm.el.style.cursor = '';
     const clicked = (state.detail.objects || []).find((x) => x.id === dm.oid);
     let selRender = false;
-    // Prozesstyp anklicken/verschieben -> auswählen, damit die zugeordnete Funktionsgruppe hervorgehoben wird.
-    if (clicked && /^ptk_/.test(clicked.symbolType)) {
+    // Objekt anklicken/verschieben -> auswaehlen; zugehoerige Ebene rechts aktiv setzen (Prozesstyp hebt zudem die Funktionsgruppe hervor).
+    if (clicked) {
       if (state.selectedObj !== dm.oid) { state.selectedObj = dm.oid; selRender = true; }
+      if (clicked.layerId && layerById(clicked.layerId) && state.activeLayer !== clicked.layerId) { state.activeLayer = clicked.layerId; selRender = true; }
     } else if (state.selectedObj) { state.selectedObj = null; selRender = true; }
     if (dm.moved && dm.nx != null) {
       if (state._preDrag) { pushUndoSnap(state._preDrag); state._preDrag = null; }
@@ -2643,6 +2649,7 @@ const STATE_ICONS = {
       }
     }
     if (selRender) renderEditor();
+    if (clicked && state.selectedObj === dm.oid) focusObjInList(dm.oid);
   }
 
   const ROBOT_RISK = ['CK (Hohes Risiko)', 'K (Hohes Risiko, nachbar SB)', 'C (Geringes Risiko)', 'BS (Bedienerschutz)', 'T (sichere Werkzeugumschaltung)', 'Kein Risiko'];
