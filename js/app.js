@@ -107,7 +107,7 @@
     'MODELLIEREN': 'MODEL', 'Stammdaten': 'Master data', 'Bearbeitung': 'Editing',
     'Anlagenname': 'System name', 'Bereich': 'Area', 'Anlagenversion': 'System version',
     'Erstellt am': 'Created on', 'Letzte Änderung': 'Last change', 'Beschreibung': 'Description',
-    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Gelernte Vorlagen': 'Learned templates', 'zurücksetzen': 'reset', 'Als Vorlage gelernt': 'Learned as template', 'Gelernte Vorlagen zurückgesetzt.': 'Learned templates reset.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
+    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Gelernte Vorlagen': 'Learned templates', 'Fehlbeispiele': 'Negatives', 'Positive Vorlagen': 'Positive templates', 'Als Fehlbeispiel gemerkt': 'Saved as negative', 'Ähnliche Vorlage bereits vorhanden – übersprungen.': 'Similar template already exists - skipped.', 'Noch keine gelernten Vorlagen.': 'No learned templates yet.', 'Alle zurücksetzen': 'Reset all', 'Fehlbeispiele zurückgesetzt.': 'Negatives reset.', 'Löschen': 'Delete', 'zurücksetzen': 'reset', 'Als Vorlage gelernt': 'Learned as template', 'Gelernte Vorlagen zurückgesetzt.': 'Learned templates reset.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
     'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
     'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
     'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
@@ -1129,7 +1129,10 @@
     else if (act === 'rob-confirm') { e.stopPropagation(); confirmRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
     else if (act === 'rob-dismiss') { e.stopPropagation(); dismissRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
     else if (act === 'rob-dismiss-all') { state.robotSuggestions = []; renderEditor(); }
-    else if (act === 'tpl-reset') { try { localStorage.removeItem('promodx_robot_templates'); } catch (e) { /* */ } toast(t('Gelernte Vorlagen zurückgesetzt.')); renderEditor(); }
+    else if (act === 'tpl-reset') { try { localStorage.removeItem('promodx_robot_templates'); } catch (e) { /* */ } state.tplPanel = false; toast(t('Gelernte Vorlagen zurückgesetzt.')); renderEditor(); }
+    else if (act === 'tpl-panel') { state.tplPanel = !state.tplPanel; renderEditor(); }
+    else if (act === 'tpl-del') { delTplEntry(el.getAttribute('data-id')); renderEditor(); }
+    else if (act === 'neg-reset') { saveTplLib(posLib()); toast(t('Fehlbeispiele zurückgesetzt.')); renderEditor(); }
     else if (act === 'tpl-learn-yes') { confirmLearnPrompt(); }
     else if (act === 'tpl-learn-no') { dismissLearnPrompt(); }
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
@@ -2060,7 +2063,7 @@ const STATE_ICONS = {
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal
         + (((meta.palette || []).some(function (pp) { return pp[1] === 'robot'; }) && state.layoutBlobUrl && window.RobotDetect) ? '<button class="pal-detect" data-act="detect-robots" title="' + t('Roboter im Layout automatisch finden') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> ' + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>'
-          + '<div class="tpl-lib">' + t('Gelernte Vorlagen') + ': <b>' + loadTplLib().length + '</b>' + (loadTplLib().length ? ' · <button class="tpl-reset" data-act="tpl-reset">' + t('zurücksetzen') + '</button>' : '') + '</div>' : '')
+          + '<div class="tpl-lib"><button class="tpl-manage' + (state.tplPanel ? ' open' : '') + '" data-act="tpl-panel">' + t('Gelernte Vorlagen') + ': <b>' + posLib().length + '</b>' + (negLib().length ? ' · ' + t('Fehlbeispiele') + ': <b>' + negLib().length + '</b>' : '') + ' ▾</button>' + tplPanelHtml() + '</div>' : '')
         + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
@@ -2202,10 +2205,22 @@ const STATE_ICONS = {
       img.onerror = reject; img.src = url;
     });
   }
-  function loadAllTemplates() {
-    var urls = ['img/robot-template.png?v=0.25.48'].concat(loadTplLib().map(function (e) { return e.url; }));
-    return Promise.all(urls.map(function (u) { return urlToGray(u).catch(function () { return null; }); }))
-      .then(function (arr) { return arr.filter(Boolean); });
+  function posLib() { return loadTplLib().filter(function (e) { return !e.neg; }); }
+  function negLib() { return loadTplLib().filter(function (e) { return e.neg; }); }
+  function delTplEntry(id) { saveTplLib(loadTplLib().filter(function (e) { return e.id !== id; })); }
+  function loadPosNegGray() {
+    var lib = loadTplLib();
+    var posUrls = ['img/robot-template.png?v=0.25.52'].concat(lib.filter(function (e) { return !e.neg; }).map(function (e) { return e.url; }));
+    var negUrls = lib.filter(function (e) { return e.neg; }).map(function (e) { return e.url; });
+    function decode(urls) { return Promise.all(urls.map(function (u) { return urlToGray(u).catch(function () { return null; }); })).then(function (a) { return a.filter(Boolean); }); }
+    return Promise.all([decode(posUrls), decode(negUrls)]).then(function (a) { return { pos: a[0], neg: a[1] }; });
+  }
+  // Höchste Ähnlichkeit eines neuen 132er-Graubilds zu den angegebenen Vorlagen-URLs (für Dedupe/Vergiftungsschutz).
+  function maxSimilarityTo(newGray, urls) {
+    if (!urls.length) return Promise.resolve(0);
+    return Promise.all(urls.map(function (u) {
+      return urlToGray(u).then(function (g) { return RobotDetect.similarity(RobotDetect.resizeGray(g, 132, 132), newGray); }).catch(function () { return 0; });
+    })).then(function (sc) { return sc.length ? Math.max.apply(null, sc) : 0; });
   }
   function captureRobotTemplate(nx, ny) {
     return new Promise(function (resolve, reject) {
@@ -2245,27 +2260,64 @@ const STATE_ICONS = {
   }
   function confirmLearnPrompt() {
     var lp = state.learnPrompt; if (!lp) return;
-    var lib = loadTplLib();
-    lib.push({ id: 'tpl_' + Date.now(), url: lp.url });
-    if (lib.length > 12) lib = lib.slice(lib.length - 12);
-    saveTplLib(lib);
     state.learnPrompt = null;
-    toast(t('Als Vorlage gelernt') + ' (' + lib.length + ')');
-    renderEditor();
+    urlToGray(lp.url).then(function (ng) {
+      return maxSimilarityTo(ng, posLib().map(function (e) { return e.url; }));
+    }).then(function (sim) {
+      if (sim > 0.92) { toast(t('Ähnliche Vorlage bereits vorhanden – übersprungen.')); renderEditor(); return; }
+      var lib = loadTplLib();
+      lib.push({ id: 'tpl_' + Date.now(), url: lp.url, neg: false });
+      if (lib.length > 24) lib = lib.slice(lib.length - 24);
+      saveTplLib(lib);
+      toast(t('Als Vorlage gelernt') + ' (' + posLib().length + ')');
+      renderEditor();
+    }).catch(function () { renderEditor(); });
   }
   function dismissLearnPrompt() { state.learnPrompt = null; renderEditor(); }
+  function tplPanelHtml() {
+    if (!state.tplPanel) return '';
+    var pos = posLib(), neg = negLib();
+    var thumbs = pos.length ? pos.map(function (e) {
+      return '<div class="tp-item"><img src="' + e.url + '" alt=""><button class="tp-del" data-act="tpl-del" data-id="' + e.id + '" title="' + t('Löschen') + '">×</button></div>';
+    }).join('') : '<div class="tp-empty">' + t('Noch keine gelernten Vorlagen.') + '</div>';
+    return '<div class="tpl-panel">'
+      + '<div class="tp-head">' + t('Positive Vorlagen') + ' (' + pos.length + ')</div>'
+      + '<div class="tp-grid">' + thumbs + '</div>'
+      + (neg.length ? '<div class="tp-neg">' + t('Fehlbeispiele') + ': ' + neg.length + ' · <button class="tpl-linkbtn" data-act="neg-reset">' + t('zurücksetzen') + '</button></div>' : '')
+      + ((pos.length || neg.length) ? '<div class="tp-foot"><button class="tpl-linkbtn" data-act="tpl-reset">' + t('Alle zurücksetzen') + '</button></div>' : '')
+      + '</div>';
+  }
+  // Aus einer Ablehnung lernen: Region als Fehlbeispiel (Negativ) merken – aber nicht, wenn sie einem bekannten Roboter ähnelt.
+  function learnNegativeTemplate(nx, ny) {
+    if (!state.layoutBlobUrl || !window.RobotDetect) return;
+    captureRobotTemplate(nx, ny).then(function (url) {
+      return urlToGray(url).then(function (ng) {
+        return maxSimilarityTo(ng, posLib().map(function (e) { return e.url; }).concat(['img/robot-template.png?v=0.25.52'])).then(function (simPos) {
+          if (simPos > 0.9) return; // ähnelt echtem Roboter -> nicht als Fehlbeispiel merken
+          return maxSimilarityTo(ng, negLib().map(function (e) { return e.url; })).then(function (simNeg) {
+            if (simNeg > 0.92) return; // schon ähnliches Fehlbeispiel vorhanden
+            var lib = loadTplLib();
+            lib.push({ id: 'neg_' + Date.now(), url: url, neg: true });
+            if (lib.length > 24) lib = lib.slice(lib.length - 24);
+            saveTplLib(lib);
+            toast(t('Als Fehlbeispiel gemerkt') + ' (' + negLib().length + ')');
+          });
+        });
+      });
+    }).catch(function () { /* egal */ });
+  }
 
   function detectRobotsFlow() {
     if (!window.RobotDetect || !state.layoutBlobUrl) { toast(t('Kein Layout vorhanden.')); return; }
     if (state.robotDetecting) return;
     state.robotDetecting = true; toast(t('Erkenne Roboter …'));
-    Promise.all([loadAllTemplates(), loadLayoutGray()]).then(function (arr) {
+    Promise.all([loadPosNegGray(), loadLayoutGray()]).then(function (arr) {
       return new Promise(function (r) { setTimeout(function () { r(arr); }, 30); });
     }).then(function (arr) {
-      var tpls = arr[0], lay = arr[1];
-      var opts = { workW: tpls.length > 1 ? 260 : 300, threshold: 0.6 };
-      if (tpls.length > 3) opts.scales = [0.8, 1.0, 1.2];
-      var found = RobotDetect.detectMulti(lay, tpls, opts);
+      var lib = arr[0], lay = arr[1];
+      var opts = { workW: lib.pos.length > 1 ? 260 : 300, threshold: 0.55, combine: true, negatives: lib.neg };
+      if (lib.pos.length > 3) opts.scales = [0.8, 1.0, 1.2];
+      var found = RobotDetect.detectMulti(lay, lib.pos, opts);
       var existing = (state.detail.objects || []).filter(function (o) { return o.symbolType === 'robot'; });
       var sugg = found.filter(function (f) { return !existing.some(function (o) { return Math.hypot(o.x - f.x, o.y - f.y) < 0.05; }); });
       state.robotSuggestions = sugg; state.robotDetecting = false; renderEditor();
@@ -2299,6 +2351,8 @@ const STATE_ICONS = {
   }
   function dismissRobotSuggestion(idx) {
     if (!state.robotSuggestions) return;
+    var r = state.robotSuggestions[idx];
+    if (r && state.layoutBlobUrl) learnNegativeTemplate(r.x, r.y);
     state.robotSuggestions.splice(idx, 1); renderEditor();
   }
 

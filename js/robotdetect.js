@@ -94,6 +94,24 @@
    * detect(layoutGray, tplGray, opts) -> [{x, y, score}] (x,y normiert 0..1 = Zentrum)
    * opts: workW (Arbeitsbreite), baseFrac (Basis/Layoutbreite), scales[], threshold, maxResults
    */
+  // Gradientenbetrag (Sobel) – für Kanten-Matching bei Strichzeichnungen.
+  function sobelMag(img) {
+    const w = img.w, h = img.h, d = img.data;
+    const out = new Float32Array(w * h);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        const a = d[i - w - 1], b = d[i - w], c = d[i - w + 1];
+        const e = d[i - 1], f = d[i + 1];
+        const g = d[i + w - 1], hh = d[i + w], k = d[i + w + 1];
+        const gx = (c + 2 * f + k) - (a + 2 * e + g);
+        const gy = (g + 2 * hh + k) - (a + 2 * b + c);
+        out[i] = Math.sqrt(gx * gx + gy * gy);
+      }
+    }
+    return { data: out, w: w, h: h };
+  }
+
   function detect(layout, tpl, opts) {
     opts = opts || {};
     const workW = opts.workW || 300;
@@ -102,14 +120,25 @@
     const thr = opts.threshold != null ? opts.threshold : 0.6;
     const maxResults = opts.maxResults || 12;
     const workH = Math.max(1, Math.round(layout.h * workW / layout.w));
-    const L = resizeGray(layout, workW, workH);
+    const Lg = resizeGray(layout, workW, workH);
+    const Le = (opts.edge || opts.combine) ? sobelMag(Lg) : null;
     const baseTpl = Math.max(12, Math.round(baseFrac * workW));
     const cands = [];
     for (let s = 0; s < scales.length; s++) {
       const tw = Math.max(10, Math.round(baseTpl * scales[s]));
       if (tw >= workW || tw >= workH) continue;
-      const T = resizeGray(tpl, tw, tw);
-      const r = matchTemplate(L, T);
+      const Tg = resizeGray(tpl, tw, tw);
+      let r;
+      if (opts.combine) {
+        const rg = matchTemplate(Lg, Tg), re = matchTemplate(Le, sobelMag(Tg));
+        const n = rg.map.length, map = new Float32Array(n);
+        for (let q = 0; q < n; q++) map[q] = 0.5 * (rg.map[q] + re.map[q]);
+        r = { map: map, mw: rg.mw, mh: rg.mh };
+      } else if (opts.edge) {
+        r = matchTemplate(Le, sobelMag(Tg));
+      } else {
+        r = matchTemplate(Lg, Tg);
+      }
       for (let y = 0; y < r.mh; y++) {
         for (let x = 0; x < r.mw; x++) {
           const sc = r.map[y * r.mw + x];
@@ -131,11 +160,12 @@
     return kept.map(function (c) { return { x: c.cx / workW, y: c.cy / workH, score: c.score }; });
   }
 
-  return { grayFromRGBA: grayFromRGBA, resizeGray: resizeGray, matchTemplate: matchTemplate, detect: detect, detectMulti: detectMulti };
+  return { grayFromRGBA: grayFromRGBA, resizeGray: resizeGray, matchTemplate: matchTemplate, detect: detect, detectMulti: detectMulti, similarity: similarity };
 
-  // Erkennung mit mehreren Vorlagen: je Vorlage detektieren, dann global per NMS zusammenführen (bester Score gewinnt).
+  // Erkennung mit mehreren Vorlagen + optionalen Negativ-Vorlagen (Hard Negatives).
   function detectMulti(layout, templates, opts) {
     opts = opts || {};
+    var negs = opts.negatives || [];
     var all = [];
     for (var i = 0; i < templates.length; i++) {
       if (!templates[i]) continue;
@@ -152,6 +182,30 @@
       }
       if (ok) kept.push(c);
     }
+    // Hard Negatives: Treffer verwerfen, an denen eine Negativ-Vorlage mindestens ähnlich stark matcht.
+    if (negs.length && kept.length) {
+      var negHits = [];
+      var nOpts = { workW: opts.workW, edge: opts.edge, combine: opts.combine, threshold: (opts.negThreshold != null ? opts.negThreshold : 0.5), scales: opts.scales };
+      for (var n = 0; n < negs.length; n++) {
+        if (!negs[n]) continue;
+        var rn = detect(layout, negs[n], nOpts);
+        for (var p = 0; p < rn.length; p++) negHits.push(rn[p]);
+      }
+      var margin = opts.negMargin != null ? opts.negMargin : 0.08;
+      kept = kept.filter(function (c2) {
+        return !negHits.some(function (nh) {
+          var ddx = c2.x - nh.x, ddy = c2.y - nh.y;
+          return (ddx * ddx + ddy * ddy < minD * minD) && nh.score >= c2.score - margin;
+        });
+      });
+    }
     return kept;
+  }
+
+  // NCC-Ähnlichkeit zweier gleich großer Graubilder (für Dedupe). 1 = identisch.
+  function similarity(a, b) {
+    if (!a || !b || a.w !== b.w || a.h !== b.h) return 0;
+    var r = matchTemplate(a, b);
+    return r.map.length ? r.map[0] : 0;
   }
 });
