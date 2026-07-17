@@ -107,7 +107,7 @@
     'MODELLIEREN': 'MODEL', 'Stammdaten': 'Master data', 'Bearbeitung': 'Editing',
     'Anlagenname': 'System name', 'Bereich': 'Area', 'Anlagenversion': 'System version',
     'Erstellt am': 'Created on', 'Letzte Änderung': 'Last change', 'Beschreibung': 'Description',
-    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', '— keine —': '— none —', 'Steuerungen': 'controllers',
+    'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
     'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
     'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
     'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
@@ -969,7 +969,9 @@
     const numin = 'style="width:100px;text-align:right;border:1px solid var(--border);border-radius:6px;padding:3px 6px;font:inherit"';
     const plcRow = (p, i) => {
       if (!ed) {
-        return '<tr><td><div class="sps-name"><span class="sps-swatch" style="background:' + esc(p.color) + '"></span>' + esc(p.name) + '</div></td>'
+        const _zc = (s.objects || []).filter((o) => (o.symbolType === 'fg_zone' || o.symbolType === 'sb_zone') && o.plcConfigId === p.id).length;
+        return '<tr><td><div class="sps-name"><span class="sps-swatch" style="background:' + esc(p.color) + '"></span>' + esc(p.name)
+          + (_zc ? '<span class="sps-zc" title="' + t('Zugeordnete Funktionsgruppen / Schutzbereiche') + '">' + _zc + ' ' + t(_zc === 1 ? 'Bereich' : 'Bereiche') + '</span>' : '') + '</div></td>'
           + '<td class="num">' + (p.cycleTimeMs || 0) + '</td><td class="num">' + Number(p.retentiveBytes || 0).toLocaleString('de-DE') + '</td><td class="num">' + (p.codeMemoryKb || 0) + '</td></tr>';
       }
       return '<tr>'
@@ -2139,10 +2141,33 @@ const STATE_ICONS = {
     protectObj(o.id);
     try { const upd = await Api.setMetatags(o.id, metatags); o.metatags = (upd && upd.metatags) || metatags; } catch (e) { toast('Icon-Position nicht gespeichert'); }
   }
+  // Hover-Tooltip: beim Ueberfahren einer Zone Name (+ SPS bei FG/SB) anzeigen.
+  let _hoverZoneId = null;
+  function updateZoneHoverTitle(e) {
+    const doc = document.getElementById('canvasDoc');
+    if (!doc || state.drawZone) return;
+    const r = doc.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+      if (_hoverZoneId !== null) { _hoverZoneId = null; doc.removeAttribute('title'); }
+      return;
+    }
+    const z = zoneAt((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+    const id = z ? z.id : null;
+    if (id === _hoverZoneId) return;
+    _hoverZoneId = id;
+    if (z && (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone')) {
+      const sps = plcNameOf(z);
+      doc.title = z.name + (sps ? ' — SPS: ' + sps : '');
+    } else if (z && z.symbolType === 'sps_zone') {
+      doc.title = spsZoneLabel(z);
+    } else { doc.removeAttribute('title'); }
+  }
+
   function onMove(e) {
     if (state.iconDrag) { onIconDrag(e); return; }
     if (state.techDrag) { onTechDrag(e); return; }
     if (state.zoneDrag) { onZoneDrag(e); return; }
+    updateZoneHoverTitle(e);
     if (state.drawZone && state.zoneDraft.length) {
       const doc = document.getElementById('canvasDoc');
       if (doc) { const r = doc.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; updateDraftDom(); }
@@ -2292,7 +2317,9 @@ const STATE_ICONS = {
     const L = layerById(o.layerId);
     const sym = $('mSym'); sym.style.color = o.color; sym.innerHTML = symInner(o.symbolType, 24);
     $('mTitle').textContent = o.name;
-    $('mSub').textContent = L ? (L.code + ' · ' + L.name) : '';
+    const _sub = L ? esc(L.code + ' · ' + L.name) : '';
+    const _hsps = plcNameOf(o);
+    $('mSub').innerHTML = _sub + (_hsps ? ' <span class="head-sps-chip"><span class="fgl-sps-k">SPS</span>' + esc(_hsps) + '</span>' : '');
     const v1 = (o.metatags.find((m) => m.position === 1) || {}).value || '';
     const v2 = (o.metatags.find((m) => m.position === 2) || {}).value || '';
     const pt = processTypeBySym(o.symbolType);
