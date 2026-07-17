@@ -2183,7 +2183,7 @@ const STATE_ICONS = {
           await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
         } catch (e2) { toast('Position nicht gespeichert'); }
         // SB-Polygon auf einen SPS-Bereich gezogen -> automatische SPS-Verknuepfung
-        if (zd.type === 'move' && z.symbolType === 'sb_zone') { await autoLinkSbToSps(z); }
+        if (zd.type === 'move' && (z.symbolType === 'sb_zone' || z.symbolType === 'fg_zone')) { await autoLinkZoneToSps(z); }
         return;
       }
       // Klick ohne Bewegung: Auswahl bzw. Doppelklick (zeitbasiert, re-render-fest)
@@ -2859,12 +2859,12 @@ const STATE_ICONS = {
   function highlightedSpsZoneId() {
     if (!state.selectedZone) return null;
     const o = (state.detail && state.detail.objects || []).find((x) => x.id === state.selectedZone);
-    if (!o || o.symbolType !== 'sb_zone' || !o.plcConfigId) return null;
+    if (!o || (o.symbolType !== 'sb_zone' && o.symbolType !== 'fg_zone') || !o.plcConfigId) return null;
     const sps = (state.detail.objects || []).find((z) => z.symbolType === 'sps_zone' && z.plcConfigId === o.plcConfigId);
     return sps ? sps.id : null;
   }
-  // SB-Polygon auf einen SPS-Bereich gezogen -> automatisch dessen SPS uebernehmen (Verknuepfung ueber plcConfigId).
-  async function autoLinkSbToSps(z) {
+  // SB-/FG-Polygon auf einen SPS-Bereich gezogen -> automatisch dessen SPS uebernehmen (Verknuepfung ueber plcConfigId).
+  async function autoLinkZoneToSps(z) {
     const c = zoneCentroid(z);
     const sps = spsZoneAt(c.x, c.y);
     const newPlc = sps && sps.plcConfigId ? sps.plcConfigId : null;
@@ -2872,7 +2872,8 @@ const STATE_ICONS = {
       const plc = (state.detail.plcs || []).find((p) => p.id === newPlc);
       z.plcConfigId = newPlc; z.color = (plc && plc.color) || z.color;
       try { await Api.updateObject(z.id, { plcConfigId: newPlc, color: z.color }); } catch (e) { /* ignore */ }
-      toast('Schutzbereich automatisch SPS „' + ((plc && plc.name) || '') + '" zugeordnet');
+      const kind = z.symbolType === 'fg_zone' ? 'Funktionsgruppe' : 'Schutzbereich';
+      toast(kind + ' automatisch SPS „' + ((plc && plc.name) || '') + '" zugeordnet');
       renderEditor();
     }
   }
