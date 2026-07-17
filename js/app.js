@@ -2265,14 +2265,18 @@ const STATE_ICONS = {
       + list.map((o) => '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>').join('');
     return '<div class="m-field"><label>' + esc(label) + '</label><select id="' + id + '" data-label="' + esc(label) + '">' + options + '</select></div>';
   }
-  // SPS-Bereich-Auswahl (nur Funktionsgruppen) – manuell zuordnen, analog zum Schutzbereich.
+  // SPS-Bereich-Auswahl (nur Funktionsgruppen) – gleiche Optik wie die Schutzbereich-Zuordnung.
   function spsSelectField(o) {
     if (!o || o.symbolType !== 'fg_zone') return '';
     const plcs = state.detail.plcs || [];
     const cur = o.plcConfigId || '';
-    let opts = '<option value="">' + t('— keine —') + '</option>';
-    plcs.forEach((p) => { opts += '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + '</option>'; });
-    return '<div class="m-field"><label>' + t('SPS-Bereich') + '</label><select id="mSps">' + opts + '</select></div>';
+    const head = '<div class="m-field m-sps"><label>' + t('SPS-Bereich') + '</label>';
+    if (!plcs.length) return head + '<div class="za-empty">' + t('Für diese Anlage sind noch keine SPS angelegt.') + '</div></div>';
+    const none = '<button type="button" class="za-row m-sps-row' + (cur ? '' : ' sel') + '" data-plc="">'
+      + '<span class="za-swatch za-swatch-none"></span><span class="za-name">' + t('Keine Zuordnung') + '</span><span class="za-check">✓</span></button>';
+    const rows = plcs.map((p) => '<button type="button" class="za-row m-sps-row' + (cur === p.id ? ' sel' : '') + '" data-plc="' + esc(p.id) + '" data-color="' + esc(p.color) + '">'
+      + '<span class="za-swatch" style="background:' + esc(p.color) + '"></span><span class="za-name">' + esc(p.name) + '</span><span class="za-check">✓</span></button>').join('');
+    return head + '<div class="m-sps-list" id="mSpsList" data-plc="' + esc(cur) + '">' + none + rows + '</div></div>';
   }
   function tagFieldInput(id, label, val, dataLabel, editLabel) {
     const head = editLabel
@@ -2367,10 +2371,10 @@ const STATE_ICONS = {
     const o = (state.detail.objects || []).find((x) => x.id === state.modalObjId);
     if (!o) { closeTagModal(); return; }
     pushUndo();
-    // Funktionsgruppe: SPS-Bereich-Zuordnung manuell aus dem Auswahlfeld uebernehmen (analog Schutzbereich)
-    const spsSel = $('mSps');
-    if (spsSel && o.symbolType === 'fg_zone') {
-      const newPlc = spsSel.value || null;
+    // Funktionsgruppe: SPS-Bereich-Zuordnung aus der Swatch-Auswahl uebernehmen (analog Schutzbereich)
+    const spsList = $('mSpsList');
+    if (spsList && o.symbolType === 'fg_zone') {
+      const newPlc = spsList.getAttribute('data-plc') || null;
       if ((o.plcConfigId || null) !== newPlc) {
         const plc = (state.detail.plcs || []).find((p) => p.id === newPlc);
         const L = layerById(o.layerId);
@@ -3561,6 +3565,14 @@ const STATE_ICONS = {
     // Layout-Upload + Metatag-Modal
     $('layoutFile').addEventListener('change', onLayoutFile);
     $('mSave').addEventListener('click', saveTags);
+    // SPS-Bereich-Auswahl (Swatch-Liste im FG-Tag-Fenster): Zeile waehlen
+    $('mBody').addEventListener('click', (e) => {
+      const row = e.target.closest('.m-sps-row'); if (!row) return;
+      const list = row.closest('.m-sps-list'); if (!list) return;
+      list.setAttribute('data-plc', row.getAttribute('data-plc') || '');
+      list.querySelectorAll('.m-sps-row').forEach((r) => r.classList.remove('sel'));
+      row.classList.add('sel');
+    });
     $('mDelete').addEventListener('click', deletePlaced);
     $('mClose').addEventListener('click', closeTagModal);
     $('mX').addEventListener('click', closeTagModal);
