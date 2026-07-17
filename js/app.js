@@ -2792,7 +2792,7 @@ const STATE_ICONS = {
       if (!state.zoneDrag.moved && Math.hypot(dx * r.width, dy * r.height) < 4) return;
       state.zoneDrag.moved = true;
       z.points = state.zoneDrag.orig.map((p) => ({ x: clamp01(p.x + dx), y: clamp01(p.y + dy) }));
-      updateZoneDom(z);
+      updateZoneDom(z); highlightDropTarget(z);
     } else if (state.zoneDrag.type === 'select') {
       const dx = x - state.zoneDrag.sx, dy = y - state.zoneDrag.sy;
       if (Math.hypot(dx * r.width, dy * r.height) >= 4) state.zoneDrag.moved = true;
@@ -2876,6 +2876,17 @@ const STATE_ICONS = {
       toast(kind + ' automatisch SPS „' + ((plc && plc.name) || '') + '" zugeordnet');
       renderEditor();
     }
+  }
+  // Live-Feedback beim Ziehen: SPS-Bereich unter dem Zonen-Zentroid hervorheben (Drop-Ziel).
+  function highlightDropTarget(z) {
+    let targetId = null;
+    if (z && (z.symbolType === 'sb_zone' || z.symbolType === 'fg_zone')) {
+      const c = zoneCentroid(z);
+      const sps = spsZoneAt(c.x, c.y);
+      if (sps && sps.plcConfigId) targetId = sps.id;
+    }
+    document.querySelectorAll('.sps-drop-target').forEach((el) => { if (el.id !== 'zone-poly-' + targetId) el.classList.remove('sps-drop-target'); });
+    if (targetId) { const el = document.getElementById('zone-poly-' + targetId); if (el) el.classList.add('sps-drop-target'); }
   }
   function zoneAt(x, y) {
     const visible = visibleMap();
