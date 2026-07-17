@@ -1827,7 +1827,7 @@ const STATE_ICONS = {
       const hlCol = z.id === hlSps ? '#0065A5' : '#16A34A';
       const col = hl ? hlCol : esc(zoneColor(z));
       const sw = hl ? 3.4 : (sel ? 2.4 : 1.6);
-      const dPath = roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 1.3);
+      const dPath = roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 0.8);
       return '<path id="zone-poly-' + z.id + '" d="' + dPath + '" fill="' + col + '" fill-opacity="' + (hl ? '0.22' : '0.13') + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : (sel ? 'stroke-dasharray="4 3" ' : '')) + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
     }).join('');
     const ar = docAspect();
@@ -3467,7 +3467,7 @@ const STATE_ICONS = {
         const a = document.getElementById('route-arrow-' + z.id);
         if (a) a.setAttribute('d', routeArrowFromTan(z.points[z.points.length - 1], cv.tan, docAspect()));
       } else {
-        el.setAttribute('d', roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 1.3));
+        el.setAttribute('d', roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 0.8));
       }
     }
     z.points.forEach((p, i) => {
