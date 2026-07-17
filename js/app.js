@@ -1727,12 +1727,19 @@ const STATE_ICONS = {
     const visible = visibleMap();
     const placed = (state.detail.objects || []).filter((o) => !isShape(o) && visible[o.layerId] !== false).map((o) => {
       const isProc = /^ptk_/.test(o.symbolType);
+      const isRobot = o.symbolType === 'robot';
       const fgm = isProc ? (o.metatags || []).find((m) => m.label === 'Funktionsgruppen' && m.value && String(m.value).trim()) : null;
       const fgAssigned = !!fgm;
-      // Prozesstyp-Icon: Metatags ausblenden, stattdessen nur die FG-Verknuepfung als Chip. Sonstige Objekte: alle Metatags als Chips.
-      const chipsHtml = isProc
-        ? (fgm ? '<span class="ptag fg-chip"><span class="fg-k">FG</span>' + esc(String(fgm.value).trim()) + '</span>' : '')
-        : (o.metatags || []).map((m) => m.value).filter(Boolean).map((t) => '<span class="ptag">' + esc(t) + '</span>').join('');
+      // Prozesstyp: nur FG-Verknuepfung als Chip. Roboter: nur den Metatag "Safe Funktion". Sonstige Objekte: alle Metatags.
+      let chipsHtml;
+      if (isProc) {
+        chipsHtml = fgm ? '<span class="ptag fg-chip"><span class="fg-k">FG</span>' + esc(String(fgm.value).trim()) + '</span>' : '';
+      } else if (isRobot) {
+        const sf = (o.metatags || []).find((m) => m.label === 'Safe Funktion' && m.value && String(m.value).trim());
+        chipsHtml = sf ? '<span class="ptag">' + esc(String(sf.value).trim()) + '</span>' : '';
+      } else {
+        chipsHtml = (o.metatags || []).map((m) => m.value).filter(Boolean).map((t) => '<span class="ptag">' + esc(t) + '</span>').join('');
+      }
       return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + (o.symbolType === 'robot' ? ' hover-tags' : '') + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
