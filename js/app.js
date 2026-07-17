@@ -48,6 +48,7 @@
     'Name': 'Name', 'E-Mail': 'E-mail', 'Rolle': 'Role', 'Gruppe': 'Group', 'Mandant': 'Tenant',
     'Sprache': 'Language', 'Deutsch': 'German', 'Englisch': 'English',
     'Passwort ändern': 'Change password', 'Aktuelles Passwort': 'Current password',
+    'Eintrag hinzufügen': 'Add entry', 'Verkleinern': 'Zoom out', 'Vergrößern': 'Zoom in',
     'Passwort vergessen?': 'Forgot password?',
     'Reset anfordern Hinweis': 'Enter your email address. If an account exists, we will send you a link to reset it.',
     'RESET-LINK ANFORDERN': 'REQUEST RESET LINK',
@@ -145,6 +146,17 @@
     document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.getAttribute('data-i18n')); });
     document.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.setAttribute('placeholder', t(el.getAttribute('data-i18n-ph'))); });
     document.querySelectorAll('[data-i18n-title]').forEach((el) => { el.setAttribute('title', t(el.getAttribute('data-i18n-title'))); });
+    document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria'))); });
+  }
+
+  // A11y: dekorative Inline-SVGs (ohne eigenen Namen) vor Screenreadern verbergen.
+  function decorateSvgs(root) {
+    (root || document).querySelectorAll('svg:not([aria-hidden])').forEach((svg) => {
+      if (!svg.getAttribute('aria-label') && !svg.getAttribute('role') && !svg.querySelector('title')) {
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+      }
+    });
   }
 
   /* ---------------- Toast ---------------- */
@@ -1013,7 +1025,7 @@
 
       + '<div class="card"><div class="card-head"><h3>' + t('Änderungsjournal') + '</h3><span class="badge">append-only</span></div>'
       + '<div class="card-body"><div class="journal-list">' + jlist + '</div>'
-      + (canEdit() ? '<div class="j-add"><input id="jInput" placeholder="' + t('Neuer Eintrag …') + '"><button data-act="journal-add"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' : '')
+      + (canEdit() ? '<div class="j-add"><input id="jInput" placeholder="' + t('Neuer Eintrag …') + '"><button data-act="journal-add" aria-label="' + t('Eintrag hinzufügen') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' : '')
       + '</div></div>'
       + '</div>';
 
@@ -1954,7 +1966,7 @@ const STATE_ICONS = {
       + (canEdit() ? '<button class="up-btn" data-act="editor-upload">' + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + (state.detail.hasLayout ? t('LAYOUT ERSETZEN') : t('LAYOUT HOCHLADEN')) + '</button>' : '')
       + (canEdit() ? '<div class="up-btn undo-ctl"><button id="btnUndo" data-act="undo" title="Rückgängig (Strg+Z)"' + ((state.undoStack && state.undoStack.length) ? '' : ' disabled') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg></button>'
       + '<button id="btnRedo" data-act="redo" title="Wiederholen (Strg+Umschalt+Z)"' + ((state.redoStack && state.redoStack.length) ? '' : ' disabled') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/></svg></button></div>' : '')
-      + '<div class="zoom-ctl"><button data-act="zoom-out">−</button><span class="z">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in">+</button></div>'
+      + '<div class="zoom-ctl"><button data-act="zoom-out" aria-label="' + t('Verkleinern') + '">−</button><span class="z" aria-hidden="true">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in" aria-label="' + t('Vergrößern') + '">+</button></div>'
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal + '</div>' : '')
@@ -2602,9 +2614,9 @@ const STATE_ICONS = {
             + (cur === p.id ? '<span class="za-check">✓</span>' : (taken ? '<span class="za-taken">bereits belegt</span>' : '')) + '</button>';
         }).join('')
       : '<div class="za-empty">Für diese Anlage sind noch keine SPS angelegt. Lege sie in der Detailansicht an (EDITIEREN › SPS hinzufügen).</div>';
-    const html = '<div class="za-backdrop" id="zaBackdrop"><div class="za-card">'
+    const html = '<div class="za-backdrop" id="zaBackdrop"><div class="za-card" role="dialog" aria-modal="true" aria-label="SPS-Zuordnung">'
       + '<div class="za-head"><div><div class="za-title">' + (isSps ? 'SPS-Bereich zuordnen' : 'Schutzbereich zuordnen') + '</div><div class="za-sub">' + esc(z.name) + (isSps ? ' · genau eine SPS (1:1)' : '') + '</div></div>'
-      + '<button class="za-x" data-za="close" title="Schließen">×</button></div>'
+      + '<button class="za-x" data-za="close" title="Schließen" aria-label="Schließen">×</button></div>'
       + '<div class="za-body">' + rows + '</div>'
       + '<div class="za-foot"><button class="btn ' + (cur ? 'del-btn' : '') + '" data-za="none">Keine Zuordnung</button>'
       + '<button class="btn" data-za="close">Schließen</button></div></div></div>';
@@ -2649,9 +2661,9 @@ const STATE_ICONS = {
       + ROUTE_ARTS.map((a) => '<option value="' + esc(a) + '"' + (a === art ? ' selected' : '') + '>' + esc(a) + '</option>').join('');
     const matOpts = '<option value="">— ohne —</option>'
       + FLOW_TYPES.map((f) => '<option value="' + esc(f.name) + '"' + (f.name === mat ? ' selected' : '') + '>' + esc(f.name) + '</option>').join('');
-    const html = '<div class="za-backdrop" id="zaBackdrop"><div class="za-card">'
+    const html = '<div class="za-backdrop" id="zaBackdrop"><div class="za-card" role="dialog" aria-modal="true" aria-label="SPS-Zuordnung">'
       + '<div class="za-head"><div><div class="za-title">Förderweg</div><div class="za-sub">' + esc(z.name) + '</div></div>'
-      + '<button class="za-x" data-za="close" title="Schließen">×</button></div>'
+      + '<button class="za-x" data-za="close" title="Schließen" aria-label="Schließen">×</button></div>'
       + '<div class="za-body" style="display:flex;flex-direction:column;gap:12px;padding:16px">'
       + '<div class="m-field"><label>Materialfluss-Typ (Farbe)</label><select id="rfMat">' + matOpts + '</select></div>'
       + '<div class="m-field"><label>Förderart (Linienstil)</label><select id="rfArt">' + opts + '</select></div>'
@@ -3518,5 +3530,13 @@ const STATE_ICONS = {
 
   wire();
   renderWelcome();
+  // A11y: dekorative SVGs initial + bei DOM-Änderungen markieren (entzerrt)
+  try {
+    let _svgTimer = null;
+    const _svgObs = new MutationObserver(() => { if (_svgTimer) return; _svgTimer = setTimeout(() => { _svgTimer = null; decorateSvgs(document); }, 250); });
+    _svgObs.observe(document.body, { childList: true, subtree: true });
+    decorateSvgs(document);
+  } catch (e) { /* noop */ }
+
   boot();
 })();
