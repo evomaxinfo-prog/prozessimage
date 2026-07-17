@@ -1714,7 +1714,7 @@ const STATE_ICONS = {
       const isProc = /^ptk_/.test(o.symbolType);
       const fgAssigned = isProc && (o.metatags || []).some((m) => m.label === 'Funktionsgruppen' && m.value && String(m.value).trim());
       const chips = o.metatags.filter((m) => !isProc || (m.position || 0) <= 2).map((m) => m.value).filter(Boolean);
-      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
+      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + (o.symbolType === 'robot' ? ' hover-tags' : '') + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
         + (chips.length ? '<div class="ptags">' + chips.map((t) => '<span class="ptag">' + esc(t) + '</span>').join('') + '</div>' : '')
@@ -1884,22 +1884,19 @@ const STATE_ICONS = {
     else { bx = Math.min(o.x + 0.12, 0.94); by = Math.max(o.y - 0.12, 0.07); }
     return { id: o.id, name: m.value, code: techCode(m.value), col: objIconColor(o), rx: o.x, ry: o.y, bx, by };
   }
-  // Endpunkte der Technologie-Linie: Roboter-Ende bis zum Rand des Robotersymbols (Kasten 38px inkl.
-  // Rahmen, quadratisch; ohne Textlabel), Badge-Ende um Icon-Aussenradius (13px) + 2px zurueckgezogen.
+  // Endpunkte der Technologie-Linie: Roboter-Ende in der Mitte des Robotersymbols (Ankerpunkt),
+  // Badge-Ende um Icon-Aussenradius (13px) + 2px zurueckgezogen.
   function techLineEnds(rx, ry, bx, by) {
     const doc = document.getElementById('canvasDoc');
     const W = (doc && doc.clientWidth) || 900, H = (doc && doc.clientHeight) || 560;
     const dxPx = (bx - rx) * W, dyPx = (by - ry) * H;
     const len = Math.hypot(dxPx, dyPx);
-    let x1 = rx * 100, y1 = ry * 100, x2 = bx * 100, y2 = by * 100;
+    const x1 = rx * 100, y1 = ry * 100;
+    let x2 = bx * 100, y2 = by * 100;
     if (len > 1) {
       const ux = dxPx / len, uy = dyPx / len;
-      const tR = 19 / Math.max(Math.abs(ux), Math.abs(uy)); // bis Kastenrand (halbe Kante 19px)
       const tB = 15; // Badge-Radius 13px + 2px
-      if (len > tR + tB + 1) {
-        x1 += (ux * tR) / W * 100; y1 += (uy * tR) / H * 100;
-        x2 -= (ux * tB) / W * 100; y2 -= (uy * tB) / H * 100;
-      }
+      if (len > tB + 1) { x2 -= (ux * tB) / W * 100; y2 -= (uy * tB) / H * 100; }
     }
     return { x1, y1, x2, y2 };
   }
