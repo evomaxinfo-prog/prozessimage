@@ -1780,18 +1780,36 @@ const STATE_ICONS = {
     }).join('') + '</div>';
   }
 
+  // Polygon mit leicht abgerundeten Ecken als SVG-Pfad (Punkte im 0..100-Raum). r = Rundungsradius.
+  function roundedPolyPath(pts, r) {
+    const n = pts.length;
+    if (n < 3) return pts.length ? 'M' + pts.map((p) => p.x.toFixed(2) + ',' + p.y.toFixed(2)).join('L') + 'Z' : '';
+    let d = '';
+    for (let i = 0; i < n; i++) {
+      const cur = pts[i], prev = pts[(i - 1 + n) % n], next = pts[(i + 1) % n];
+      const v1x = prev.x - cur.x, v1y = prev.y - cur.y;
+      const v2x = next.x - cur.x, v2y = next.y - cur.y;
+      const l1 = Math.hypot(v1x, v1y) || 1, l2 = Math.hypot(v2x, v2y) || 1;
+      const rr = Math.min(r, l1 / 2, l2 / 2);
+      const ax = cur.x + (v1x / l1) * rr, ay = cur.y + (v1y / l1) * rr;
+      const bx = cur.x + (v2x / l2) * rr, by = cur.y + (v2y / l2) * rr;
+      d += (i === 0 ? 'M' : 'L') + ax.toFixed(2) + ',' + ay.toFixed(2)
+        + 'Q' + cur.x.toFixed(2) + ',' + cur.y.toFixed(2) + ' ' + bx.toFixed(2) + ',' + by.toFixed(2);
+    }
+    return d + 'Z';
+  }
   function zoneOverlaySvg(visible) {
     const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
     const hlFg = highlightedFgZoneId();
     const hlSps = highlightedSpsZoneId();
     const polys = zones.map((z) => {
-      const pts = z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' ');
       const sel = state.selectedZone === z.id;
       const hl = z.id === hlFg || z.id === hlSps;
       const hlCol = z.id === hlSps ? '#0065A5' : '#16A34A';
       const col = hl ? hlCol : esc(zoneColor(z));
       const sw = hl ? 3.4 : (sel ? 2.4 : 1.6);
-      return '<polygon id="zone-poly-' + z.id + '" points="' + pts + '" fill="' + col + '" fill-opacity="' + (hl ? '0.22' : '0.13') + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : (sel ? 'stroke-dasharray="4 3" ' : '')) + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
+      const dPath = roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 1.3);
+      return '<path id="zone-poly-' + z.id + '" d="' + dPath + '" fill="' + col + '" fill-opacity="' + (hl ? '0.22' : '0.13') + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : (sel ? 'stroke-dasharray="4 3" ' : '')) + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
     }).join('');
     const ar = docAspect();
     const routes = (state.detail.objects || []).filter((o) => o.symbolType === 'mf_route' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
@@ -1884,8 +1902,23 @@ const STATE_ICONS = {
     else { bx = Math.min(o.x + 0.12, 0.94); by = Math.max(o.y - 0.12, 0.07); }
     return { id: o.id, name: m.value, code: techCode(m.value), col: objIconColor(o), rx: o.x, ry: o.y, bx, by };
   }
-  // Endpunkte der Technologie-Linie: beide Enden mit gleichem Abstand (Symbolrand + 2px) -
-  // Roboter-Kasten (38px inkl. Rahmen, quadratisch) und Tech-Icon (Radius 13px).
+  // Abstand vom Zentrum bis zur abgerundeten Rechteck-Umrandung entlang (ux,uy) (alles in Pixeln).
+  function rayRoundedRectDist(ux, uy, hx, hy, rc) {
+    const ax = Math.abs(ux), ay = Math.abs(uy);
+    const tx = ax > 1e-6 ? hx / ax : Infinity;
+    const ty = ay > 1e-6 ? hy / ay : Infinity;
+    let t = Math.min(tx, ty);
+    const px = ux * t, py = uy * t;
+    if (Math.abs(px) > hx - rc && Math.abs(py) > hy - rc) { // Eckbereich -> gegen Eckkreis schneiden
+      const cx = Math.sign(px) * (hx - rc), cy = Math.sign(py) * (hy - rc);
+      const dot = ux * cx + uy * cy;
+      const disc = dot * dot - (cx * cx + cy * cy - rc * rc);
+      if (disc >= 0) { const tc = dot + Math.sqrt(disc); if (tc > 0) t = tc; }
+    }
+    return t;
+  }
+  // Endpunkte der Technologie-Linie: 2px ausserhalb der sichtbaren Umrandung -
+  // Roboter-Kasten (38px inkl. Rahmen, abgerundet r=9) und Tech-Icon-Kreis (Radius 13px).
   function techLineEnds(rx, ry, bx, by) {
     const doc = document.getElementById('canvasDoc');
     const W = (doc && doc.clientWidth) || 900, H = (doc && doc.clientHeight) || 560;
@@ -1894,8 +1927,8 @@ const STATE_ICONS = {
     let x1 = rx * 100, y1 = ry * 100, x2 = bx * 100, y2 = by * 100;
     if (len > 1) {
       const ux = dxPx / len, uy = dyPx / len;
-      const tR = 19 / Math.max(Math.abs(ux), Math.abs(uy)) + 2; // Kastenrand + 2px
-      const tB = 13 + 2; // Icon-Radius + 2px
+      const tR = rayRoundedRectDist(ux, uy, 19, 19, 9) + 2; // Kasten-Umrandung + 2px
+      const tB = 13 + 2; // Icon-Kreisrand + 2px
       if (len > tR + tB + 1) {
         x1 += (ux * tR) / W * 100; y1 += (uy * tR) / H * 100;
         x2 -= (ux * tB) / W * 100; y2 -= (uy * tB) / H * 100;
@@ -3069,7 +3102,7 @@ const STATE_ICONS = {
         const a = document.getElementById('route-arrow-' + z.id);
         if (a) a.setAttribute('d', routeArrowFromTan(z.points[z.points.length - 1], cv.tan, docAspect()));
       } else {
-        el.setAttribute('points', z.points.map((p) => (p.x * 100) + ',' + (p.y * 100)).join(' '));
+        el.setAttribute('d', roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 1.3));
       }
     }
     z.points.forEach((p, i) => {
