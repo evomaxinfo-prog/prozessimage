@@ -1857,6 +1857,24 @@ const STATE_ICONS = {
     const w = String(name).replace(/[^A-Za-zÄÖÜäöüß ]/g, '').split(/\s+/).filter(Boolean);
     return w.map((x) => x[0]).join('').slice(0, 2).toUpperCase() || '•';
   }
+  // Grafische Symbole je Technologie (weiss auf orangem Punkt). Unbekannte -> Buchstabencode als Fallback.
+  const TECH_ICON = {
+    'Punkt Schweißen - Stahl': '<circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/><path d="M12 3.2v2.6M12 18.2v2.6M3.2 12h2.6M18.2 12h2.6M6.1 6.1l1.9 1.9M16 16l1.9 1.9M17.9 6.1 16 8M8 16l-1.9 1.9"/>',
+    'MIG-Schweißen': '<path d="M13 2.5 6 13h4.2l-2.2 8.5L18 10h-5z" fill="currentColor" stroke="none"/>',
+    'Bolzen-Schweißen': '<path d="M6.5 5h11M12 5v9"/><path d="M9 14h6l-3 5z" fill="currentColor" stroke="none"/>',
+    'Bolzen-Schweißen (Rotationskopf)': '<path d="M6.5 9h11M12 9v6"/><path d="M9.5 15h5l-2.5 4z" fill="currentColor" stroke="none"/><path d="M15.2 3.1a4.2 4.2 0 0 1 2.6 3.9"/><path d="M13.8 3.3 15.4 2.7 16.1 4.3"/>',
+    'Bolzen (stationär)': '<path d="M6.5 5h11M12 5v8"/><path d="M9 13h6l-3 5z" fill="currentColor" stroke="none"/><path d="M4.5 21h15"/>',
+    'Kleben': '<path d="M12 3.4c3.2 4.9 5 7.1 5 10.1a5 5 0 0 1-10 0c0-3 1.8-5.2 5-10.1z" fill="currentColor" stroke="none"/>',
+    'Laser': '<path d="M12 2v9" stroke-width="2.4"/><circle cx="12" cy="14.6" r="2" fill="currentColor" stroke="none"/><path d="M12 17.6v3.4M7.4 15.4 5.4 17.9M16.6 15.4 18.6 17.9" stroke-width="1.6"/>',
+    'Halbholstanznieten': '<path d="M5.5 6h13l-2.4 4H7.9z" fill="currentColor" stroke="none"/><path d="M9 10v6l3 3 3-3v-6"/>',
+    'Fließlochschrauben': '<path d="M9 3.5h6M12 3.5V7"/><path d="M8 8h8M8.7 11.2h6.6M9.6 14.4h4.8"/><path d="M10.6 16.8 12 20.5l1.4-3.7z" fill="currentColor" stroke="none"/>',
+    'Inline messen': '<rect x="3.5" y="8" width="17" height="8" rx="1"/><path d="M7 8v3.4M11 8v4.6M15 8v3.4M19 8v3.4" stroke-width="1.5"/>',
+  };
+  function techIconSvg(name) {
+    const inner = TECH_ICON[name];
+    if (!inner) return esc(techCode(name));
+    return '<svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + inner + '</svg>';
+  }
   function techInfo(o) {
     if (o.symbolType !== 'robot') return null;
     const m = (o.metatags || []).find((t) => t.position === 2 && t.value);
@@ -1880,7 +1898,7 @@ const STATE_ICONS = {
       if (visible[o.layerId] === false) return '';
       const t = techInfo(o); if (!t) return '';
       return '<div class="tech-badge" data-tech="' + t.id + '" style="left:' + (t.bx * 100) + '%;top:' + (t.by * 100) + '%">'
-        + '<span class="tb-dot"' + (editable ? ' data-techdrag="' + t.id + '" title="Verschieben"' : '') + '>' + esc(t.code) + '</span>'
+        + '<span class="tb-dot"' + (editable ? ' data-techdrag="' + t.id + '" title="Verschieben"' : '') + '>' + techIconSvg(t.name) + '</span>'
         + '<span class="tb-name">' + esc(t.name) + '</span></div>';
     }).join('');
     return '<div class="tech-badge-layer">' + badges + '</div>';
