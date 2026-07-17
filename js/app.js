@@ -2088,6 +2088,7 @@ const STATE_ICONS = {
       + '</aside></div>';
 
     applyZoomSat();
+    alignStateLines();
   }
 
   function actionPanelHtml(L) {
@@ -2169,6 +2170,23 @@ const STATE_ICONS = {
   }
 
   function applyZoomSat() { const doc = document.getElementById('canvasDoc'); if (doc) doc.style.transform = 'scale(' + (state.zoom || 1) + ')'; }
+  // Mitte des Icon-Symbols (.p-sym) eines Objekts als Bruchteil der Zeichenflaeche (zoom-invariant, da Symbol und Linien-SVG gemeinsam skalieren).
+  function symFrac(oid) {
+    const doc = document.getElementById('canvasDoc');
+    const sym = document.querySelector('.placed[data-obj="' + oid + '"] .p-sym');
+    if (!doc || !sym) return null;
+    const dr = doc.getBoundingClientRect(), sr = sym.getBoundingClientRect();
+    if (!dr.width || !dr.height) return null;
+    return { x: (sr.left + sr.width / 2 - dr.left) / dr.width, y: (sr.top + sr.height / 2 - dr.top) / dr.height };
+  }
+  // Prozesstyp-Ende der Zustands-Verbindungslinien auf die Icon-Mitte legen (statt Spalten-Anker o.x/o.y).
+  function alignStateLines() {
+    document.querySelectorAll('.state-link-svg line[data-sline]').forEach((ln) => {
+      const oid = (ln.getAttribute('data-sline') || '').split('__')[0];
+      const f = symFrac(oid);
+      if (f) { ln.setAttribute('x1', (f.x * 100).toFixed(3)); ln.setAttribute('y1', (f.y * 100).toFixed(3)); }
+    });
+  }
   function zoomStep(d) { state.zoom = Math.min(2.2, Math.max(0.5, (state.zoom || 1) + d)); applyZoomSat(); const z = document.querySelector('.zoom-ctl .z'); if (z) z.textContent = Math.round(state.zoom * 100) + '%'; }
   function onWheelZoom(e) {
     if (state.view !== 'editor') return;
@@ -2568,9 +2586,11 @@ const STATE_ICONS = {
     const y = Math.min(0.96, Math.max(0.04, (e.clientY - r.top) / r.height));
     dragMove.nx = x; dragMove.ny = y;
     dragMove.el.style.left = (x * 100) + '%'; dragMove.el.style.top = (y * 100) + '%'; dragMove.el.style.cursor = 'grabbing';
-    // Zustands-Icon-Verbindungslinien live mitziehen (Prozesstyp-Ende der Linie)
+    // Zustands-Icon-Verbindungslinien live mitziehen (auf die Icon-Mitte, nicht den Spalten-Anker)
+    const sf = symFrac(dragMove.oid);
+    const slx = (sf ? sf.x : x) * 100, sly = (sf ? sf.y : y) * 100;
     document.querySelectorAll('[data-sline^="' + dragMove.oid + '__"]').forEach((ln) => {
-      ln.setAttribute('x1', x * 100); ln.setAttribute('y1', y * 100);
+      ln.setAttribute('x1', slx.toFixed(3)); ln.setAttribute('y1', sly.toFixed(3));
     });
     // Technologie-Linie live mitziehen (Roboter-Ende der Linie)
     const tline = document.getElementById('tech-line-' + dragMove.oid);
