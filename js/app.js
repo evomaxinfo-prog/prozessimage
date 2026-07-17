@@ -1343,6 +1343,12 @@ const STATE_ICONS = {
     if (z.plcConfigId) { const p = (state.detail.plcs || []).find((x) => x.id === z.plcConfigId); if (p) return p.name; }
     return z.name || 'SPS-Bereich';
   }
+  // Name der einer Zone zugeordneten SPS (via plcConfigId), sonst ''.
+  function plcNameOf(z) {
+    if (!z || !z.plcConfigId) return '';
+    const p = (state.detail.plcs || []).find((x) => x.id === z.plcConfigId);
+    return p ? (p.name || '') : '';
+  }
 
   const ROUTE_ARTS = ['Rollenbahn', 'Kettenförderer', 'Band-/Gurtförderer', 'Hängeförderer', 'FTS / AGV', 'Stapler / manuell', 'Manueller Transport'];
   // Materialfluss-Typen mit fester Farbe (farbige Pfeile zur Auswahl unter Materialfluss)
@@ -1764,7 +1770,10 @@ const STATE_ICONS = {
       const tags = (z.metatags || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).map((m) => m.value).filter((v) => v !== null && v !== '');
       const lines = z.symbolType === 'sps_zone' ? [spsZoneLabel(z)] : (tags.length ? tags : [z.name]);
       const abbrev = (t) => (z.symbolType === 'sb_zone' ? String(t).replace(/Schutzbereich/g, 'SB') : t);
-      const inner = lines.map((t) => '<div class="fgl-line">' + esc(abbrev(t)) + '</div>').join('');
+      // SPS-Zuordnung als zusaetzlichen Meta-Tag anzeigen (Funktionsgruppe + Schutzbereich)
+      const spsNm = (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone') ? plcNameOf(z) : '';
+      const inner = lines.map((t) => '<div class="fgl-line">' + esc(abbrev(t)) + '</div>').join('')
+        + (spsNm ? '<div class="fgl-line fgl-sps"><span class="fgl-sps-k">SPS</span>' + esc(spsNm) + '</div>' : '');
       return '<div class="fg-label" data-zone="' + z.id + '" style="left:' + (cx * 100) + '%;top:' + (cy * 100) + '%;color:' + esc(zoneColor(z)) + '">' + inner + '</div>';
     }).join('') + '</div>';
   }
