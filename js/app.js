@@ -1521,7 +1521,7 @@ const STATE_ICONS = {
     // Objekte über den zuverlässigen /objects-Endpunkt (keine Zeitstempel-Logik) + Präsenz über /changes.
     const sid = state.detail.id;
     let objsList, chg;
-    const [objR, chR] = await Promise.allSettled([Api.getObjects(sid), Api.getChanges(sid, null)]);
+    const [objR, chR, cmR] = await Promise.allSettled([Api.getObjects(sid), Api.getChanges(sid, null), state.commentsServer ? Api.getComments(sid) : Promise.resolve(null)]);
     state.collab.inflight = false;
     if (objR.status === 'rejected') {
       const st = objR.reason && objR.reason.status;
@@ -1563,6 +1563,11 @@ const STATE_ICONS = {
       renderEditor(); state.collab.pendingRender = false;
     } else if (viewersChanged) {
       renderPresenceOnly();
+    }
+    // Kommentare mitpollen: bei Aenderung (neue Pins/Nachrichten anderer Nutzer) einspielen; Eingabe/Fokus bleiben erhalten.
+    if (state.commentsServer && cmR && cmR.status === 'fulfilled' && Array.isArray(cmR.value)) {
+      const csig = commentsSig(cmR.value);
+      if (csig !== state.commentsSig) { state.commentsSig = csig; applyCommentsUpdate(cmR.value); }
     }
   }
   // Gleicht die komplette Objektliste vom Server gegen den lokalen Stand ab (Hinzufügen/Ändern/Entfernen).
@@ -2422,16 +2427,50 @@ const STATE_ICONS = {
   // ===== Kommentare (positionierte Chat-Fenster, Rechtsklick zum Anlegen) =====
   function commentsKey() { return 'promodx_comments_' + (state.detail && state.detail.id); }
   function ensureComments() {
-    if (state.commentsStation === (state.detail && state.detail.id)) return;
+    var sid = state.detail && state.detail.id;
+    if (state.commentsStation === sid) return;
+    state.commentsStation = sid;
+    // Sofortiger lokaler Uebergangsstand (kein Flackern), dann Server drueber.
     try { state.comments = JSON.parse(localStorage.getItem(commentsKey()) || '[]'); } catch (e) { state.comments = []; }
-    state.commentsStation = state.detail && state.detail.id;
+    state.commentsServer = false;
+    loadComments(sid);
+  }
+  async function loadComments(sid) {
+    try {
+      var list = await Api.getComments(sid);
+      if (state.commentsStation !== sid) return;
+      state.comments = Array.isArray(list) ? list : [];
+      state.commentsServer = true;
+      state.commentsSig = commentsSig(state.comments);
+      renderEditor();
+    } catch (e) { state.commentsServer = false; /* Backend (noch) nicht da -> lokaler Fallback bleibt aktiv */ }
+  }
+  function commentsSig(list) {
+    return (list || []).map(function (c) { return c.id + '#' + ((c.messages || []).length); }).join('|');
+  }
+  // Kommentare aus dem Poll uebernehmen, ohne die offene Eingabe/den Fokus zu verlieren.
+  function applyCommentsUpdate(list) {
+    var winMap = {}; (state.comments || []).forEach(function (c) { if (c.winX != null) winMap[c.id] = { winX: c.winX, winY: c.winY }; });
+    state.comments = (list || []).map(function (c) { var w = winMap[c.id]; return w ? Object.assign({}, c, w) : c; });
+    var inp = $('cwText'); var pending = inp ? inp.value : null; var hadFocus = inp && document.activeElement === inp;
+    renderEditor();
+    if (pending != null) { var ni = $('cwText'); if (ni) { ni.value = pending; if (hadFocus) ni.focus(); } var b = $('cwBody'); if (b) b.scrollTop = b.scrollHeight; }
   }
   function saveComments() { try { localStorage.setItem(commentsKey(), JSON.stringify(state.comments || [])); } catch (e) { /* voll */ } }
   function fmtCommentTime(ts) {
     try { return new Date(ts).toLocaleString(state.lang === 'en' ? 'en-GB' : 'de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; }
   }
-  function createCommentAt(x, y) {
+  async function createCommentAt(x, y) {
     ensureComments();
+    if (state.commentsServer) {
+      try {
+        var sc = await Api.createComment(state.detail.id, { x: x, y: y });
+        state.comments.push(sc); state.commentsSig = commentsSig(state.comments);
+        state.openComment = sc.id; renderEditor();
+        setTimeout(function () { var i = $('cwText'); if (i) i.focus(); }, 30);
+      } catch (e) { toast(t('Speichern fehlgeschlagen.')); }
+      return;
+    }
     var c = { id: 'cm_' + Date.now(), x: x, y: y, messages: [], created: Date.now() };
     state.comments.push(c); saveComments();
     state.openComment = c.id; renderEditor();
@@ -2467,22 +2506,42 @@ const STATE_ICONS = {
       + '<button class="cw-send" data-act="comment-send" data-id="' + c.id + '" title="' + t('Senden') + '">➤</button></div>'
       + '</div>';
   }
-  function sendCommentMsg() {
+  async function sendCommentMsg() {
     var inp = $('cwText'); if (!inp) return;
     var text = inp.value.trim(); if (!text) return;
     var c = (state.comments || []).find(function (x) { return x.id === state.openComment; }); if (!c) return;
+    if (state.commentsServer) {
+      inp.value = '';
+      try {
+        var upd = await Api.addCommentMessage(c.id, text);
+        var idx = state.comments.findIndex(function (x) { return x.id === c.id; });
+        if (idx >= 0) { if (c.winX != null) { upd.winX = c.winX; upd.winY = c.winY; } state.comments[idx] = upd; }
+        state.commentsSig = commentsSig(state.comments); renderEditor();
+        setTimeout(function () { var b = $('cwBody'); if (b) b.scrollTop = b.scrollHeight; var i = $('cwText'); if (i) i.focus(); }, 20);
+      } catch (e) { toast(t('Speichern fehlgeschlagen.')); inp.value = text; }
+      return;
+    }
     c.messages.push({ author: (state.user && state.user.email) || 'Ich', ts: Date.now(), text: text });
     saveComments(); renderEditor();
     setTimeout(function () { var b = $('cwBody'); if (b) b.scrollTop = b.scrollHeight; var i = $('cwText'); if (i) i.focus(); }, 20);
   }
   function closeCommentWindow() {
     var c = (state.comments || []).find(function (x) { return x.id === state.openComment; });
-    if (c && (!c.messages || !c.messages.length)) { state.comments = state.comments.filter(function (x) { return x.id !== c.id; }); saveComments(); }
-    state.openComment = null; renderEditor();
+    state.openComment = null;
+    if (c && (!c.messages || !c.messages.length)) {
+      if (state.commentsServer) { Api.deleteComment(c.id).catch(function () {}); }
+      state.comments = state.comments.filter(function (x) { return x.id !== c.id; });
+      if (!state.commentsServer) saveComments();
+    }
+    renderEditor();
   }
-  function deleteComment(id) {
+  async function deleteComment(id) {
+    if (state.commentsServer) {
+      try { await Api.deleteComment(id); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
+    }
     state.comments = (state.comments || []).filter(function (x) { return x.id !== id; });
-    saveComments(); if (state.openComment === id) state.openComment = null; renderEditor();
+    if (!state.commentsServer) saveComments();
+    if (state.openComment === id) state.openComment = null; renderEditor();
   }
 
   async function placeFromDrop(clientX, clientY, sym, name, color) {
@@ -2640,7 +2699,7 @@ const STATE_ICONS = {
       var d = state.pinDrag; state.pinDrag = null;
       var c = (state.comments || []).find(function (x) { return x.id === d.id; });
       if (c) {
-        if (d.moved && d.x != null) { c.x = d.x; c.y = d.y; saveComments(); renderEditor(); }
+        if (d.moved && d.x != null) { c.x = d.x; c.y = d.y; if (state.commentsServer) { Api.moveComment(c.id, d.x, d.y).catch(function () {}); } else { saveComments(); } renderEditor(); }
         else { state.openComment = d.id; renderEditor(); setTimeout(function () { var i = $('cwText'); if (i) i.focus(); }, 30); }
       }
       return;
@@ -2648,7 +2707,7 @@ const STATE_ICONS = {
     if (state.cwDrag) {
       var d = state.cwDrag; state.cwDrag = null;
       var c = (state.comments || []).find(function (x) { return x.id === d.id; });
-      if (c && d.leftPct != null) { c.winX = d.leftPct / 100; c.winY = d.topPct / 100; saveComments(); }
+      if (c && d.leftPct != null) { c.winX = d.leftPct / 100; c.winY = d.topPct / 100; if (!state.commentsServer) saveComments(); }
       return;
     }
     if (state.iconDrag) { await endIconDrag(); return; }

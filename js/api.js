@@ -131,6 +131,11 @@
     deleteObject(id) { return this.request('/objects/' + id, { method: 'DELETE' }); },
     setMetatags(objectId, metatags) { return this.request('/objects/' + objectId + '/metatags', { method: 'PUT', body: { metatags } }); },
     getChanges(stationId, since) { return this.request('/stations/' + stationId + '/changes' + (since ? ('?since=' + encodeURIComponent(since)) : '')); },
+    getComments(stationId) { return this.request('/stations/' + stationId + '/comments'); },
+    createComment(stationId, c) { return this.request('/stations/' + stationId + '/comments', { method: 'POST', body: c }); },
+    addCommentMessage(commentId, text) { return this.request('/comments/' + commentId + '/messages', { method: 'POST', body: { text: text } }); },
+    moveComment(commentId, x, y) { return this.request('/comments/' + commentId, { method: 'PATCH', body: { x: x, y: y } }); },
+    deleteComment(commentId) { return this.request('/comments/' + commentId, { method: 'DELETE' }); },
     async uploadLayout(stationId, file) {
       const fd = new FormData();
       fd.append('file', file);
