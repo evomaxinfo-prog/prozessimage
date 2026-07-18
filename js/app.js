@@ -619,7 +619,7 @@
           + '<span class="lc-badge ' + (isDoc ? 'doc' : 'undoc') + '">' + (isDoc ? 'Dokumentiert' : 'Offen') + '</span>';
         const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
         const stName = full.anlagenname || n.name;
-        if (stComments.length) commentsByStation.push({ node: n.id, station: stName, comments: stComments });
+        if (stComments.length) commentsByStation.push({ node: n.id, station: stName, comments: stComments, layers: full.layers || [] });
         (full.layers || []).forEach((l) => {
           if (!layerAgg[l.name]) layerAgg[l.name] = { objects: 0, stations: new Set(), color: l.color, code: l.code, syms: {} };
           layerAgg[l.name].stations.add(n.id);
@@ -679,6 +679,7 @@
     const commentIc = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>';
     const me = (state.user && state.user.email) || '';
     return byStation.map(function (g) {
+      const lmap = {}; (g.layers || []).forEach(function (l) { lmap[l.id] = l; });
       const pins = (g.comments || []).map(function (c) {
         const clusters = [];
         (c.messages || []).forEach(function (m) {
@@ -694,7 +695,9 @@
           return '<div class="lco-turn' + own + '"><span class="lco-av" style="background-color:' + lcoColor(who) + '">' + esc(lcoInitials(who)) + '</span>'
             + '<div class="lco-col"><div class="lco-mhead"><span class="lco-author">' + esc(who) + '</span><span class="lco-time">' + fmtCommentTime(cl.msgs[0].ts) + '</span></div>' + bubbles + '</div></div>';
         }).join('') || '<div class="lco-empty">' + t('Noch keine Nachrichten – schreib den ersten Kommentar.') + '</div>';
-        return '<div class="lco-pin">' + turns + '</div>';
+        const ly = c.layerId && lmap[c.layerId];
+        const lyChip = ly ? '<div class="lco-pin-head"><span class="lco-lyr"><span class="lco-lyr-dot" style="background:' + esc(ly.color || '#0065A5') + '"></span><span class="lco-lyr-code">' + esc(ly.code || '') + '</span>' + (ly.name ? ' ' + esc(t(ly.name)) : '') + '</span></div>' : '';
+        return '<div class="lco-pin">' + lyChip + turns + '</div>';
       }).join('');
       return '<div class="lco-station"><div class="lco-st-head" data-act="open-station" data-id="' + esc(g.node) + '" title="Station öffnen">'
         + '<span class="lco-st-ic">' + commentIc + '</span>'
@@ -2513,7 +2516,7 @@ const STATE_ICONS = {
     ensureComments();
     if (state.commentsServer) {
       try {
-        var sc = await Api.createComment(state.detail.id, { x: x, y: y });
+        var sc = await Api.createComment(state.detail.id, { x: x, y: y, layerId: state.activeLayer || null });
         state.comments.push(sc); state.commentsSig = commentsSig(state.comments);
         state.openComment = sc.id; renderEditor();
         setTimeout(function () { var i = $('cwText'); if (i) i.focus(); }, 30);
