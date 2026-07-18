@@ -422,7 +422,7 @@
     const act = el.getAttribute('data-act');
     const id = el.getAttribute('data-id');
     if (act === 'toggle') { e.stopPropagation(); toggleNode(id); }
-    else if (act === 'select') { selectNode(id); }
+    else if (act === 'select') { selectNode(id); const a = document.querySelector('.app'); if (a) a.classList.remove('tree-open'); }
     else if (act === 'add') { e.stopPropagation(); addChild(id); }
     else if (act === 'rename') { e.stopPropagation(); startRename(id); }
     else if (act === 'del') { e.stopPropagation(); state.confirmDelete = id; state.editingNodeId = null; renderTree(); }
@@ -1128,6 +1128,7 @@
     else if (act === 'pick-layer') { state.linieActiveLayer = el.getAttribute('data-layer'); renderLinieFolders(); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
+    else if (act === 'tree-toggle') { const a = document.querySelector('.app'); if (a) a.classList.toggle('tree-open'); }
     else if (act === 'station-prev') { gotoStation(-1); }
     else if (act === 'station-next') { gotoStation(1); }
     else if (act === 'editor-upload') { triggerUpload(); }
@@ -2104,6 +2105,7 @@ const STATE_ICONS = {
       + stationNavHtml()
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
       + '<button class="btn" data-act="export-csv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>'
+      + '<button class="btn tree-toggle" data-act="tree-toggle" title="Anlagenstruktur"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg> Struktur</button>'
       + '<button class="btn" data-act="editor-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ' + t('ZURÜCK') + '</button>'
       + '</div></div></div>'
       + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'
@@ -4088,6 +4090,7 @@ const STATE_ICONS = {
     ts.addEventListener('click', onTreeClick);
     ts.addEventListener('keydown', onTreeKey);
     ts.addEventListener('blur', onTreeBlur, true);
+    document.addEventListener('click', (e) => { const a = document.querySelector('.app'); if (!a || !a.classList.contains('tree-open')) return; if (e.target.closest('aside.tree') || e.target.closest('[data-act="tree-toggle"]')) return; a.classList.remove('tree-open'); });
     // Objektnamen in der Objektliste inline umbenennen (fuer alle Rollen ausser Betrachter). Doppelklick wird im Klick-Handler per Zeitstempel erkannt (obj-name), da Einfachklick neu rendert.
     document.addEventListener('keydown', (e) => { const inp = e.target.closest('.oname-edit'); if (!inp) return; if (e.key === 'Enter') { e.preventDefault(); commitObjRename(inp.getAttribute('data-oedit'), inp.value); } else if (e.key === 'Escape') { e.preventDefault(); cancelObjRename(); } });
     document.addEventListener('focusout', (e) => { const inp = e.target.closest('.oname-edit'); if (inp) commitObjRename(inp.getAttribute('data-oedit'), inp.value); });
