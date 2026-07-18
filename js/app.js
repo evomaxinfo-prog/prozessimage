@@ -1567,7 +1567,8 @@ const STATE_ICONS = {
     // Kommentare mitpollen: bei Aenderung (neue Pins/Nachrichten anderer Nutzer) einspielen; Eingabe/Fokus bleiben erhalten.
     if (state.commentsServer && cmR && cmR.status === 'fulfilled' && Array.isArray(cmR.value)) {
       const csig = commentsSig(cmR.value);
-      if (csig !== state.commentsSig) { state.commentsSig = csig; applyCommentsUpdate(cmR.value); }
+      // Nur einspielen, wenn der Nutzer gerade nicht interagiert (Ziehen/Modal) - sonst wuerde renderEditor einen laufenden Drag abbrechen.
+      if (csig !== state.commentsSig && collabIdle() && !state.iconDrag && !state.pinDrag && !state.cwDrag) { state.commentsSig = csig; applyCommentsUpdate(cmR.value); }
     }
   }
   // Gleicht die komplette Objektliste vom Server gegen den lokalen Stand ab (Hinzufügen/Ändern/Entfernen).
