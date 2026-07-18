@@ -486,7 +486,7 @@
       await loadTree();
     } else { renderTree(); }
   }
-  function startObjRename(id) { state.editingObjId = id; renderEditor(); setTimeout(() => { const el = document.querySelector('.oname-edit[data-oedit="' + id + '"]'); if (el) { el.focus(); el.select(); } }, 30); }
+  function startObjRename(id) { if (!canEdit()) return; state.editingObjId = id; renderEditor(); setTimeout(() => { const el = document.querySelector('.oname-edit[data-oedit="' + id + '"]'); if (el) { el.focus(); el.select(); } }, 30); }
   async function commitObjRename(id, val) {
     if (state.editingObjId !== id) return;
     state.editingObjId = null;
@@ -2181,7 +2181,7 @@ const STATE_ICONS = {
   }
   function objCatBlock(name, list, color) {
     const tools = canEdit();
-    const rows = list.map((o) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span>' + (o.id === state.editingObjId ? '<input class="oname-edit" data-oedit="' + esc(o.id) + '" value="' + esc(o.name) + '">' : '<span class="oname" data-oname="' + esc(o.id) + '" title="Doppelklick zum Umbenennen">' + esc(o.name) + '</span>')
+    const rows = list.map((o) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span>' + (o.id === state.editingObjId ? '<input class="oname-edit" data-oedit="' + esc(o.id) + '" value="' + esc(o.name) + '">' : '<span class="oname"' + (tools ? ' data-oname="' + esc(o.id) + '" title="Doppelklick zum Umbenennen"' : '') + '>' + esc(o.name) + '</span>')
       + (tools ? ('<div class="obj-tools">'
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
