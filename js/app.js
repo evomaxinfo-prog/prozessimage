@@ -2446,7 +2446,7 @@ const STATE_ICONS = {
     } catch (e) { state.commentsServer = false; /* Backend (noch) nicht da -> lokaler Fallback bleibt aktiv */ }
   }
   function commentsSig(list) {
-    return (list || []).map(function (c) { return c.id + '#' + ((c.messages || []).length); }).join('|');
+    return (list || []).map(function (c) { return c.id + '#' + ((c.messages || []).length) + '@' + Math.round((c.x || 0) * 1000) + ',' + Math.round((c.y || 0) * 1000); }).join('|');
   }
   // Kommentare aus dem Poll uebernehmen, ohne die offene Eingabe/den Fokus zu verlieren.
   function applyCommentsUpdate(list) {
@@ -2699,7 +2699,7 @@ const STATE_ICONS = {
       var d = state.pinDrag; state.pinDrag = null;
       var c = (state.comments || []).find(function (x) { return x.id === d.id; });
       if (c) {
-        if (d.moved && d.x != null) { c.x = d.x; c.y = d.y; if (state.commentsServer) { Api.moveComment(c.id, d.x, d.y).catch(function () {}); } else { saveComments(); } renderEditor(); }
+        if (d.moved && d.x != null) { c.x = d.x; c.y = d.y; if (state.commentsServer) { Api.moveComment(c.id, d.x, d.y).catch(function () {}); state.commentsSig = commentsSig(state.comments); } else { saveComments(); } renderEditor(); }
         else { state.openComment = d.id; renderEditor(); setTimeout(function () { var i = $('cwText'); if (i) i.focus(); }, 30); }
       }
       return;
