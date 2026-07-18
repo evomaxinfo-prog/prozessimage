@@ -4210,6 +4210,34 @@ const STATE_ICONS = {
     $('btnAddWerk').addEventListener('click', addWerk);
     $('btnExpandAll').addEventListener('click', expandAll);
     $('btnCollapseAll').addEventListener('click', collapseAll);
+    // Baum-Breite per Zieh-Griff verstellen (persistiert in localStorage)
+    (function () {
+      var savedW = 0; try { savedW = parseInt(localStorage.getItem('tree_w') || '', 10); } catch (e) { /* noop */ }
+      if (savedW >= 200 && savedW <= 640) document.documentElement.style.setProperty('--tree-w', savedW + 'px');
+      var rz = document.getElementById('treeResize'); if (!rz) return;
+      var startX = 0, startW = 0, dragging = false;
+      function treeW() { var a = document.querySelector('aside.tree'); return a ? a.getBoundingClientRect().width : 262; }
+      rz.addEventListener('pointerdown', function (e) {
+        dragging = true; startX = e.clientX; startW = treeW();
+        rz.classList.add('drag'); document.body.classList.add('tree-resizing');
+        try { rz.setPointerCapture(e.pointerId); } catch (er) { /* noop */ }
+        e.preventDefault();
+      });
+      rz.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        var w = Math.max(200, Math.min(640, startW + (e.clientX - startX)));
+        document.documentElement.style.setProperty('--tree-w', w + 'px');
+      });
+      function endResize() {
+        if (!dragging) return; dragging = false;
+        rz.classList.remove('drag'); document.body.classList.remove('tree-resizing');
+        var m = /(\d+)px/.exec(document.documentElement.style.getPropertyValue('--tree-w'));
+        if (m) { try { localStorage.setItem('tree_w', m[1]); } catch (e) { /* noop */ } }
+      }
+      rz.addEventListener('pointerup', endResize);
+      rz.addEventListener('pointercancel', endResize);
+      rz.addEventListener('dblclick', function () { document.documentElement.style.setProperty('--tree-w', '262px'); try { localStorage.setItem('tree_w', '262'); } catch (e) { /* noop */ } });
+    })();
     const ts = $('treeScroll');
     ts.addEventListener('click', onTreeClick);
     ts.addEventListener('keydown', onTreeKey);
