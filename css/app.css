@@ -1,11 +1,11 @@
 /* Selbst gehostete Schriften (kein Google-Fonts-CDN) – Enterprise-Security: keine Drittanbieter-Verbindung */
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.25.88') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.25.88') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.25.88') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.25.88') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.25.88') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.25.88') format('woff')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.25.88') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.25.88') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.25.88') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.25.88') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.25.88') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.25.88') format('woff')}
-@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.25.88') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.25.88') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-400-normal.woff2?v=0.25.89') format('woff2'),url('../fonts/ibm-plex-sans-latin-400-normal.woff?v=0.25.89') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-500-normal.woff2?v=0.25.89') format('woff2'),url('../fonts/ibm-plex-sans-latin-500-normal.woff?v=0.25.89') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-600-normal.woff2?v=0.25.89') format('woff2'),url('../fonts/ibm-plex-sans-latin-600-normal.woff?v=0.25.89') format('woff')}
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:700;font-display:swap;src:url('../fonts/ibm-plex-sans-latin-700-normal.woff2?v=0.25.89') format('woff2'),url('../fonts/ibm-plex-sans-latin-700-normal.woff?v=0.25.89') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-400-normal.woff2?v=0.25.89') format('woff2'),url('../fonts/ibm-plex-mono-latin-400-normal.woff?v=0.25.89') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-500-normal.woff2?v=0.25.89') format('woff2'),url('../fonts/ibm-plex-mono-latin-500-normal.woff?v=0.25.89') format('woff')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url('../fonts/ibm-plex-mono-latin-600-normal.woff2?v=0.25.89') format('woff2'),url('../fonts/ibm-plex-mono-latin-600-normal.woff?v=0.25.89') format('woff')}
 :root{
     --brand-blue:#0065A5;
     --brand-blue-dark:#004E80;
@@ -273,15 +273,19 @@
   .lco-station{border:1px solid var(--border);border-radius:12px;background:var(--bg);overflow:hidden;box-shadow:var(--sh-sm)}
   .lco-st-head{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--panel);border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
   .lco-st-head:hover{background:var(--panel-2)}
+  .lco-st-ic{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--brand-blue-soft);color:var(--brand-blue)}
+  .lco-st-ic svg{width:15px;height:15px}
   .lco-st-name{font-weight:600;font-size:13.5px;color:var(--text)}
-  .lco-st-count{font-family:var(--font-mono);font-size:11px;color:var(--muted);background:var(--panel-2);border-radius:999px;padding:1px 8px}
+  .lco-st-count{font-family:var(--font-mono);font-size:11px;color:var(--brand-blue);background:var(--brand-blue-soft);border-radius:999px;padding:1px 9px;font-weight:500}
   .lco-open{margin-left:auto;font-size:11.5px;color:var(--brand-blue);font-weight:600}
-  .lco-card{padding:10px 14px;border-bottom:1px solid var(--border)}
-  .lco-card:last-child{border-bottom:none}
-  .lco-msg{padding:5px 0}
-  .lco-mhead{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
-  .lco-author{font-size:12px;font-weight:600;color:var(--text)}
-  .lco-time{font-family:var(--font-mono);font-size:10.5px;color:var(--muted)}
+  .lco-pin{padding:11px 14px 11px 15px;border-bottom:1px solid var(--border);border-left:3px solid var(--brand-blue-soft)}
+  .lco-pin:last-child{border-bottom:none}
+  .lco-msg{display:flex;gap:9px;padding:6px 0}
+  .lco-av{flex:none;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:10.5px;font-weight:600;letter-spacing:.3px}
+  .lco-mbody{min-width:0;flex:1}
+  .lco-mhead{display:flex;align-items:baseline;gap:8px;margin-bottom:1px}
+  .lco-author{font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lco-time{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);flex:none}
   .lco-text{font-size:13px;color:var(--text);white-space:pre-wrap;word-break:break-word;line-height:1.45}
   .lco-empty{font-size:12px;color:var(--muted);padding:4px 0}
   .ls-section-title{margin:30px 0 14px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--brand-blue);border-bottom:2px solid var(--border);padding-bottom:7px;display:flex;align-items:baseline;gap:10px}

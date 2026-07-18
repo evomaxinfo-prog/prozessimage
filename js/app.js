@@ -661,17 +661,37 @@
     const lcHost = $('linieComments'); if (lcHost) { const lcHtml = linieCommentsHtml(commentsByStation); lcHost.innerHTML = lcHtml; const lcT = $('linieCommentsTitle'); if (lcT) lcT.style.display = lcHtml ? '' : 'none'; }
   }
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
+  const LCO_AV_COLORS = ['#0065A5', '#7A3FA8', '#0E8A6E', '#D9822B', '#C0392B', '#2E7DB2', '#B0498B'];
+  function lcoInitials(who) {
+    const local = String(who || '?').split('@')[0];
+    const parts = local.split(/[._\-\s]+/).filter(Boolean);
+    const ini = parts.length >= 2 ? (parts[0][0] + parts[1][0]) : local.slice(0, 2);
+    return (ini || '?').toUpperCase();
+  }
+  function lcoColor(who) {
+    let h = 0; const s = String(who || '');
+    for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+    return LCO_AV_COLORS[h % LCO_AV_COLORS.length];
+  }
   function linieCommentsHtml(byStation) {
     if (!byStation || !byStation.length) return '';
     byStation.sort(function (a, b) { return String(a.station).localeCompare(String(b.station)); });
+    const commentIc = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>';
     return byStation.map(function (g) {
-      const cards = (g.comments || []).map(function (c) {
+      const pins = (g.comments || []).map(function (c) {
         const msgs = (c.messages || []).map(function (m) {
-          return '<div class="lco-msg"><div class="lco-mhead"><span class="lco-author">' + esc(m.author || '') + '</span><span class="lco-time">' + fmtCommentTime(m.ts) + '</span></div><div class="lco-text">' + esc(m.text) + '</div></div>';
+          const who = m.author || '—';
+          return '<div class="lco-msg"><span class="lco-av" style="background:' + lcoColor(who) + '">' + esc(lcoInitials(who)) + '</span>'
+            + '<div class="lco-mbody"><div class="lco-mhead"><span class="lco-author">' + esc(who) + '</span><span class="lco-time">' + fmtCommentTime(m.ts) + '</span></div>'
+            + '<div class="lco-text">' + esc(m.text) + '</div></div></div>';
         }).join('') || '<div class="lco-empty">' + t('Noch keine Nachrichten – schreib den ersten Kommentar.') + '</div>';
-        return '<div class="lco-card">' + msgs + '</div>';
+        return '<div class="lco-pin">' + msgs + '</div>';
       }).join('');
-      return '<div class="lco-station"><div class="lco-st-head" data-act="open-station" data-id="' + esc(g.node) + '" title="Station öffnen"><span class="lco-st-name">' + esc(g.station) + '</span><span class="lco-st-count">' + (g.comments || []).length + '</span><span class="lco-open">öffnen ›</span></div>' + cards + '</div>';
+      return '<div class="lco-station"><div class="lco-st-head" data-act="open-station" data-id="' + esc(g.node) + '" title="Station öffnen">'
+        + '<span class="lco-st-ic">' + commentIc + '</span>'
+        + '<span class="lco-st-name">' + esc(g.station) + '</span>'
+        + '<span class="lco-st-count">' + (g.comments || []).length + '</span>'
+        + '<span class="lco-open">öffnen ›</span></div>' + pins + '</div>';
     }).join('');
   }
   const LAYER_ORDER = ['Materialfluss', 'Funktionsgruppen', 'Steuerungstechnik', 'Saferobot / Technologie', 'Antriebstechnik / Ident', 'Not-Halt', 'Sicherheitslayout', 'Prozesstypen'];
