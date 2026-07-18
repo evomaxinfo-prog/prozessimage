@@ -588,14 +588,17 @@
       + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.doc + '</span><span class="stat-txt"><span class="k">…</span><span class="l">Dokumentiert</span></span></div></div>'
       + (stations.length ? '<div class="line-grid">' + stations.map(skel).join('') + '</div>'
         : '<div class="pad" style="color:var(--muted)">Keine Stationen unter dieser Linie.</div>')
+      + '<div class="ls-section-title" id="linieCommentsTitle" style="display:none">Kommentare <span>alle Stationen dieser Linie · mit Verlauf</span></div>'
+      + '<div id="linieComments" class="line-sec"></div>'
       + '<div class="ls-section-title" id="linieEbTitle" style="display:none">Ebenen <span>aufgeteilt nach Dokumentations-Ebene · je Ebene ein Folder</span></div>'
       + '<div id="linieFolders" class="line-sec"></div>'
       + '</div>';
     if (!stations.length) return;
-    let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {};
+    let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {}, commentsByStation = [];
     await Promise.all(stations.map(async (n) => {
       try {
-        const full = await Api.getStationFull(n.stationId);
+        const [full, stComments0] = await Promise.all([Api.getStationFull(n.stationId), Api.getComments(n.stationId).catch(function () { return []; })]);
+        const stComments = Array.isArray(stComments0) ? stComments0 : [];
         const nP = (full.plcs || []).length, nO = (full.objects || []).length, nL = (full.layers || []).length;
         const isDoc = nO > 0 || !!full.hasLayout;
         sps += nP; objs += nO; if (isDoc) docn++;
@@ -616,6 +619,7 @@
           + '<span class="lc-badge ' + (isDoc ? 'doc' : 'undoc') + '">' + (isDoc ? 'Dokumentiert' : 'Offen') + '</span>';
         const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
         const stName = full.anlagenname || n.name;
+        if (stComments.length) commentsByStation.push({ node: n.id, station: stName, comments: stComments });
         (full.layers || []).forEach((l) => {
           if (!layerAgg[l.name]) layerAgg[l.name] = { objects: 0, stations: new Set(), color: l.color, code: l.code, syms: {} };
           layerAgg[l.name].stations.add(n.id);
@@ -654,6 +658,21 @@
     state.linieData = { agg: layerAgg, ptkRows: ptkRows, roboRows: roboRows };
     const ebT = $('linieEbTitle'); if (ebT) ebT.style.display = names.length ? '' : 'none';
     renderLinieFolders();
+    const lcHost = $('linieComments'); if (lcHost) { const lcHtml = linieCommentsHtml(commentsByStation); lcHost.innerHTML = lcHtml; const lcT = $('linieCommentsTitle'); if (lcT) lcT.style.display = lcHtml ? '' : 'none'; }
+  }
+  // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
+  function linieCommentsHtml(byStation) {
+    if (!byStation || !byStation.length) return '';
+    byStation.sort(function (a, b) { return String(a.station).localeCompare(String(b.station)); });
+    return byStation.map(function (g) {
+      const cards = (g.comments || []).map(function (c) {
+        const msgs = (c.messages || []).map(function (m) {
+          return '<div class="lco-msg"><div class="lco-mhead"><span class="lco-author">' + esc(m.author || '') + '</span><span class="lco-time">' + fmtCommentTime(m.ts) + '</span></div><div class="lco-text">' + esc(m.text) + '</div></div>';
+        }).join('') || '<div class="lco-empty">' + t('Noch keine Nachrichten – schreib den ersten Kommentar.') + '</div>';
+        return '<div class="lco-card">' + msgs + '</div>';
+      }).join('');
+      return '<div class="lco-station"><div class="lco-st-head" data-act="open-station" data-id="' + esc(g.node) + '" title="Station öffnen"><span class="lco-st-name">' + esc(g.station) + '</span><span class="lco-st-count">' + (g.comments || []).length + '</span><span class="lco-open">öffnen ›</span></div>' + cards + '</div>';
+    }).join('');
   }
   const LAYER_ORDER = ['Materialfluss', 'Funktionsgruppen', 'Steuerungstechnik', 'Saferobot / Technologie', 'Antriebstechnik / Ident', 'Not-Halt', 'Sicherheitslayout', 'Prozesstypen'];
   const KPI_ICONS = {
