@@ -33,7 +33,7 @@
 
   const state = {
     tree: [], byId: {}, expanded: new Set(),
-    selected: null, editingNodeId: null, confirmDelete: null, user: null, lang: 'de',
+    selected: null, editingNodeId: null, editingObjId: null, confirmDelete: null, user: null, lang: 'de',
     drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, selectedObj: null, zoneDrag: null, flowType: 0, flowLegend: true,
     collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false, protect: {} },
     geomPending: {},
@@ -486,6 +486,18 @@
       await loadTree();
     } else { renderTree(); }
   }
+  function startObjRename(id) { state.editingObjId = id; renderEditor(); setTimeout(() => { const el = document.querySelector('.oname-edit[data-oedit="' + id + '"]'); if (el) { el.focus(); el.select(); } }, 30); }
+  async function commitObjRename(id, val) {
+    if (state.editingObjId !== id) return;
+    state.editingObjId = null;
+    const o = (state.detail && state.detail.objects || []).find((x) => x.id === id);
+    const v = (val || '').trim();
+    if (o && v && v !== o.name) {
+      try { await Api.updateObject(id, { name: v }); o.name = v; } catch (e) { toast(t('Umbenennen fehlgeschlagen')); }
+    }
+    renderEditor();
+  }
+  function cancelObjRename() { if (state.editingObjId) { state.editingObjId = null; renderEditor(); } }
   async function doDelete(id) {
     state.confirmDelete = null;
     try { await Api.deleteNode(id); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
@@ -1103,6 +1115,7 @@
         state.zoneDraft.push({ x, y }); renderEditor(); return;
       }
     }
+    if (e.target.closest('.oname-edit')) return;
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.getAttribute('data-act');
     if (act === 'toggle-edit') { state.detailEdit ? saveDetail() : enterEdit(); }
@@ -2168,7 +2181,7 @@ const STATE_ICONS = {
   }
   function objCatBlock(name, list, color) {
     const tools = canEdit();
-    const rows = list.map((o) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span><span class="oname">' + esc(o.name) + '</span>'
+    const rows = list.map((o) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span>' + (o.id === state.editingObjId ? '<input class="oname-edit" data-oedit="' + esc(o.id) + '" value="' + esc(o.name) + '">' : '<span class="oname" data-oname="' + esc(o.id) + '" title="Doppelklick zum Umbenennen">' + esc(o.name) + '</span>')
       + (tools ? ('<div class="obj-tools">'
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
@@ -4044,6 +4057,10 @@ const STATE_ICONS = {
     ts.addEventListener('click', onTreeClick);
     ts.addEventListener('keydown', onTreeKey);
     ts.addEventListener('blur', onTreeBlur, true);
+    // Objektnamen in der Objektliste inline umbenennen (fuer alle Rollen).
+    document.addEventListener('dblclick', (e) => { const n = e.target.closest('.oname[data-oname]'); if (n) { e.preventDefault(); startObjRename(n.getAttribute('data-oname')); } });
+    document.addEventListener('keydown', (e) => { const inp = e.target.closest('.oname-edit'); if (!inp) return; if (e.key === 'Enter') { e.preventDefault(); commitObjRename(inp.getAttribute('data-oedit'), inp.value); } else if (e.key === 'Escape') { e.preventDefault(); cancelObjRename(); } });
+    document.addEventListener('focusout', (e) => { const inp = e.target.closest('.oname-edit'); if (inp) commitObjRename(inp.getAttribute('data-oedit'), inp.value); });
 
     // Detailansicht (Schritt 2) + Editor (Schritt 3)
     const c = $('content');
