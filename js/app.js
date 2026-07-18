@@ -580,6 +580,11 @@
       + '<div class="lc-open">Station öffnen ›</div></div></div>';
     $('content').innerHTML = breadcrumb(node.id)
       + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1><p>' + t('Linien-Dashboard') + '</p></div></div>'
+      + '<div class="linie-tabs">'
+      +   '<button class="linie-tab active" data-act="linie-tab" data-tab="dash"><span class="lt-num">1.0</span> ' + esc(node.name) + ' Linie Dashboard</button>'
+      +   '<button class="linie-tab" data-act="linie-tab" data-tab="comments"><span class="lt-num">2.0</span> Kommentare Gesamtübersicht<span class="lt-badge" id="linieCommentsCount" hidden></span></button>'
+      + '</div>'
+      + '<div id="linieTabDash" class="linie-tabpanel">'
       + '<div class="ls-section-title">Übersicht <span>allgemeine Themen</span></div>'
       + '<div class="zone-stats rich" id="linieStats">'
       + '<div class="stat b"><span class="stat-ic">' + KPI_ICONS.stations + '</span><span class="stat-txt"><span class="k">' + stations.length + '</span><span class="l">' + t('Stationen') + '</span></span></div>'
@@ -588,12 +593,12 @@
       + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.doc + '</span><span class="stat-txt"><span class="k">…</span><span class="l">Dokumentiert</span></span></div></div>'
       + (stations.length ? '<div class="line-grid">' + stations.map(skel).join('') + '</div>'
         : '<div class="pad" style="color:var(--muted)">Keine Stationen unter dieser Linie.</div>')
-      + '<details class="lco-folder" id="linieCommentsFolder" open style="display:none">'
-      +   '<summary class="lco-folder-head"><span class="lco-folder-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span class="lco-folder-title">Kommentare Gesamtübersicht</span><span class="lco-folder-count" id="linieCommentsCount"></span><span class="lco-folder-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span></summary>'
-      +   '<div id="linieComments" class="lco-folder-body"></div>'
-      + '</details>'
       + '<div class="ls-section-title" id="linieEbTitle" style="display:none">Ebenen <span>aufgeteilt nach Dokumentations-Ebene · je Ebene ein Folder</span></div>'
       + '<div id="linieFolders" class="line-sec"></div>'
+      + '</div>'
+      + '<div id="linieTabComments" class="linie-tabpanel" hidden>'
+      +   '<div id="linieComments" class="linie-comments-panel"></div>'
+      + '</div>'
       + '</div>';
     if (!stations.length) return;
     let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {}, commentsByStation = [];
@@ -662,10 +667,9 @@
     renderLinieFolders();
     const lcHost = $('linieComments'); if (lcHost) {
       const lcHtml = linieCommentsHtml(commentsByStation);
-      lcHost.innerHTML = lcHtml;
+      lcHost.innerHTML = lcHtml || '<div class="pad" style="color:var(--muted)">Keine Kommentare in dieser Linie.</div>';
       const total = commentsByStation.reduce(function (s, x) { return s + (x.comments || []).length; }, 0);
-      const cc = $('linieCommentsCount'); if (cc) cc.textContent = total;
-      const fold = $('linieCommentsFolder'); if (fold) fold.style.display = lcHtml ? '' : 'none';
+      const cc = $('linieCommentsCount'); if (cc) { cc.textContent = total; cc.hidden = !total; }
     }
   }
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
@@ -1185,6 +1189,7 @@
     else if (act === 'open-station') { selectNode(el.getAttribute('data-id')); }
     else if (act === 'goto-obj') { e.stopPropagation(); gotoObject(el.getAttribute('data-node'), el.getAttribute('data-obj')); }
     else if (act === 'pick-layer') { state.linieActiveLayer = el.getAttribute('data-layer'); renderLinieFolders(); }
+    else if (act === 'linie-tab') { const tab = el.getAttribute('data-tab'); document.querySelectorAll('.linie-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); }); const d = $('linieTabDash'), c = $('linieTabComments'); if (d) d.hidden = tab !== 'dash'; if (c) c.hidden = tab !== 'comments'; }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
     else if (act === 'tree-toggle') { const a = document.querySelector('.app'); if (a) a.classList.toggle('tree-open'); }
