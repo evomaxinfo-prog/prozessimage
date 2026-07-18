@@ -2875,7 +2875,7 @@ const STATE_ICONS = {
       $('mBody').innerHTML = spsSelectField(o) + tagFieldInput('mTag1', gl1, v1, gl1, canManagePalette()) + tagFieldInput('mTag2', gl2, v2, gl2, canManagePalette());
     }
     $('tagModal').style.display = 'flex';
-    setTimeout(() => { const f = $('mBody').querySelector('input,select'); if (f) { f.focus(); if (f.tagName === 'INPUT') f.select(); } }, 60);
+    setTimeout(() => { const b = $('mBody'); if (!b) return; const f = b.querySelector('input:not(.m-lbl-edit):not([type=checkbox]):not([type=radio]), textarea') || b.querySelector('select'); if (f) { f.focus(); if (f.tagName === 'INPUT') f.select(); } }, 60);
   }
   async function saveTags() {
     const o = (state.detail.objects || []).find((x) => x.id === state.modalObjId);
@@ -3137,7 +3137,7 @@ const STATE_ICONS = {
   function onContentDblClick(e) {
     if (!canEdit() || state.drawZone) return;
     const pl = e.target.closest('.placed');
-    if (pl) { openTagModal(pl.getAttribute('data-obj')); }
+    if (pl) { e.preventDefault(); openTagModal(pl.getAttribute('data-obj')); }
   }
 
   function openZoneAssignModal(zoneId) {
