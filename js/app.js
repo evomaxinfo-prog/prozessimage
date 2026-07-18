@@ -579,7 +579,7 @@
       + '<div class="lc-meta" id="lcm-' + n.id + '"><span class="lc-load">lädt …</span></div>'
       + '<div class="lc-open">Station öffnen ›</div></div></div>';
     $('content').innerHTML = breadcrumb(node.id)
-      + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1><p>' + t('Linien-Dashboard') + '</p></div></div>'
+      + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1></div></div>'
       + '<div class="linie-tabs">'
       +   '<button class="linie-tab active" data-act="linie-tab" data-tab="dash"><span class="lt-num">1.0</span> Linie Dashboard</button>'
       +   '<button class="linie-tab" data-act="linie-tab" data-tab="comments"><span class="lt-num">2.0</span> Kommentare Gesamtübersicht<span class="lt-badge" id="linieCommentsCount" hidden></span></button>'
