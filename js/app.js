@@ -691,7 +691,7 @@
           const who = cl.author;
           const own = (me && who === me) ? ' own' : '';
           const bubbles = cl.msgs.map(function (m) { return '<div class="lco-bubble">' + esc(m.text) + '</div>'; }).join('');
-          return '<div class="lco-turn' + own + '"><span class="lco-av" style="background:' + lcoColor(who) + '">' + esc(lcoInitials(who)) + '</span>'
+          return '<div class="lco-turn' + own + '"><span class="lco-av" style="background-color:' + lcoColor(who) + '">' + esc(lcoInitials(who)) + '</span>'
             + '<div class="lco-col"><div class="lco-mhead"><span class="lco-author">' + esc(who) + '</span><span class="lco-time">' + fmtCommentTime(cl.msgs[0].ts) + '</span></div>' + bubbles + '</div></div>';
         }).join('') || '<div class="lco-empty">' + t('Noch keine Nachrichten – schreib den ersten Kommentar.') + '</div>';
         return '<div class="lco-pin">' + turns + '</div>';
