@@ -581,8 +581,8 @@
     $('content').innerHTML = breadcrumb(node.id)
       + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1><p>' + t('Linien-Dashboard') + '</p></div></div>'
       + '<div class="linie-tabs">'
-      +   '<button class="linie-tab active" data-act="linie-tab" data-tab="dash">' + esc(node.name) + ' Linie Dashboard</button>'
-      +   '<button class="linie-tab" data-act="linie-tab" data-tab="comments">Kommentare Gesamtübersicht<span class="lt-badge" id="linieCommentsCount" hidden></span></button>'
+      +   '<button class="linie-tab active" data-act="linie-tab" data-tab="dash"><span class="lt-num">1.0</span> Linie Dashboard</button>'
+      +   '<button class="linie-tab" data-act="linie-tab" data-tab="comments"><span class="lt-num">2.0</span> Kommentare Gesamtübersicht<span class="lt-badge" id="linieCommentsCount" hidden></span></button>'
       + '</div>'
       + '<div id="linieTabDash" class="linie-tabpanel">'
       + '<div class="ls-section-title">Übersicht <span>allgemeine Themen</span></div>'
