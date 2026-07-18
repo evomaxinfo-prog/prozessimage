@@ -2767,13 +2767,39 @@ const STATE_ICONS = {
     return '<div class="m-field">' + head + '<input id="' + id + '" data-label="' + esc(dataLabel || '') + '" placeholder="' + t('frei belegbar …') + '" value="' + esc(val) + '"></div>';
   }
 
+  // Objektname im Metatag-Dialog: Name + Stift (nur canEdit). Klick auf Stift -> Inline-Eingabe.
+  function renderModalTitle(oid) {
+    const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
+    const mt = $('mTitle'); if (!mt) return;
+    mt.innerHTML = '<span class="mtl-name">' + esc(o.name) + '</span>'
+      + (canEdit() ? '<button class="mtl-edit" title="' + t('Umbenennen') + '" aria-label="' + t('Umbenennen') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>' : '');
+    const eb = mt.querySelector('.mtl-edit');
+    if (eb) eb.addEventListener('click', () => startModalNameEdit(oid));
+  }
+  function startModalNameEdit(oid) {
+    if (!canEdit()) return;
+    const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
+    const mt = $('mTitle'); if (!mt) return;
+    mt.innerHTML = '<input class="mtl-input" id="mtlInput" maxlength="60" value="' + esc(o.name) + '">';
+    const inp = $('mtlInput'); if (!inp) return;
+    let done = false;
+    const commit = async () => {
+      if (done) return; done = true;
+      const v = (inp.value || '').trim();
+      if (v && v !== o.name) { try { await Api.updateObject(oid, { name: v }); o.name = v; renderEditor(); } catch (e) { toast(t('Umbenennen fehlgeschlagen')); } }
+      renderModalTitle(oid);
+    };
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } else if (e.key === 'Escape') { e.preventDefault(); done = true; renderModalTitle(oid); } });
+    inp.addEventListener('blur', commit);
+    setTimeout(() => { inp.focus(); inp.select(); }, 20);
+  }
   function openTagModal(oid) {
     const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
     o.metatags = o.metatags || [];
     state.modalObjId = oid;
     const L = layerById(o.layerId);
     const sym = $('mSym'); sym.style.color = o.color; sym.innerHTML = symInner(o.symbolType, 24);
-    $('mTitle').textContent = o.name;
+    renderModalTitle(oid);
     const _sub = L ? esc(L.code + ' · ' + L.name) : '';
     const _hsps = plcNameOf(o);
     $('mSub').innerHTML = _sub + (_hsps ? ' <span class="head-sps-chip"><span class="fgl-sps-k">SPS</span>' + esc(_hsps) + '</span>' : '');
