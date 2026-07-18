@@ -699,7 +699,7 @@
   // Symbol-Inhalt: eigenes Bild (custom:) oder Standard-SVG.
   function symInner(symbolType, px) {
     const c = state.customSyms && state.customSyms[symbolType];
-    if (c) return c.url ? '<img class="sym-img" src="' + c.url + '" alt="" style="width:' + px + 'px;height:' + px + 'px">' : '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + SYM.box + '</svg>';
+    if (c) return c.url ? '<img class="sym-img" draggable="false" src="' + c.url + '" alt="" style="width:' + px + 'px;height:' + px + 'px">' : '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + SYM.box + '</svg>';
     return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + (SYM[symbolType] || SYM.box) + '</svg>';
   }
   // Feld-Konfiguration eines eigenen Symbols (Überschrift + Typ text/select + Optionen).
