@@ -677,15 +677,24 @@
     if (!byStation || !byStation.length) return '';
     byStation.sort(function (a, b) { return String(a.station).localeCompare(String(b.station)); });
     const commentIc = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>';
+    const me = (state.user && state.user.email) || '';
     return byStation.map(function (g) {
       const pins = (g.comments || []).map(function (c) {
-        const msgs = (c.messages || []).map(function (m) {
+        const clusters = [];
+        (c.messages || []).forEach(function (m) {
           const who = m.author || '—';
-          return '<div class="lco-msg"><span class="lco-av" style="background:' + lcoColor(who) + '">' + esc(lcoInitials(who)) + '</span>'
-            + '<div class="lco-mbody"><div class="lco-mhead"><span class="lco-author">' + esc(who) + '</span><span class="lco-time">' + fmtCommentTime(m.ts) + '</span></div>'
-            + '<div class="lco-text">' + esc(m.text) + '</div></div></div>';
+          const last = clusters[clusters.length - 1];
+          if (last && last.author === who) last.msgs.push(m);
+          else clusters.push({ author: who, msgs: [m] });
+        });
+        const turns = clusters.map(function (cl) {
+          const who = cl.author;
+          const own = (me && who === me) ? ' own' : '';
+          const bubbles = cl.msgs.map(function (m) { return '<div class="lco-bubble">' + esc(m.text) + '</div>'; }).join('');
+          return '<div class="lco-turn' + own + '"><span class="lco-av" style="background:' + lcoColor(who) + '">' + esc(lcoInitials(who)) + '</span>'
+            + '<div class="lco-col"><div class="lco-mhead"><span class="lco-author">' + esc(who) + '</span><span class="lco-time">' + fmtCommentTime(cl.msgs[0].ts) + '</span></div>' + bubbles + '</div></div>';
         }).join('') || '<div class="lco-empty">' + t('Noch keine Nachrichten – schreib den ersten Kommentar.') + '</div>';
-        return '<div class="lco-pin">' + msgs + '</div>';
+        return '<div class="lco-pin">' + turns + '</div>';
       }).join('');
       return '<div class="lco-station"><div class="lco-st-head" data-act="open-station" data-id="' + esc(g.node) + '" title="Station öffnen">'
         + '<span class="lco-st-ic">' + commentIc + '</span>'
