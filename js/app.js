@@ -588,8 +588,10 @@
       + '<div class="stat"><span class="stat-ic">' + KPI_ICONS.doc + '</span><span class="stat-txt"><span class="k">…</span><span class="l">Dokumentiert</span></span></div></div>'
       + (stations.length ? '<div class="line-grid">' + stations.map(skel).join('') + '</div>'
         : '<div class="pad" style="color:var(--muted)">Keine Stationen unter dieser Linie.</div>')
-      + '<div class="ls-section-title" id="linieCommentsTitle" style="display:none">Kommentare <span>alle Stationen dieser Linie · mit Verlauf</span></div>'
-      + '<div id="linieComments" class="line-sec"></div>'
+      + '<details class="lco-folder" id="linieCommentsFolder" open style="display:none">'
+      +   '<summary class="lco-folder-head"><span class="lco-folder-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span class="lco-folder-title">Kommentare Gesamtübersicht</span><span class="lco-folder-count" id="linieCommentsCount"></span><span class="lco-folder-chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span></summary>'
+      +   '<div id="linieComments" class="lco-folder-body"></div>'
+      + '</details>'
       + '<div class="ls-section-title" id="linieEbTitle" style="display:none">Ebenen <span>aufgeteilt nach Dokumentations-Ebene · je Ebene ein Folder</span></div>'
       + '<div id="linieFolders" class="line-sec"></div>'
       + '</div>';
@@ -658,7 +660,13 @@
     state.linieData = { agg: layerAgg, ptkRows: ptkRows, roboRows: roboRows };
     const ebT = $('linieEbTitle'); if (ebT) ebT.style.display = names.length ? '' : 'none';
     renderLinieFolders();
-    const lcHost = $('linieComments'); if (lcHost) { const lcHtml = linieCommentsHtml(commentsByStation); lcHost.innerHTML = lcHtml; const lcT = $('linieCommentsTitle'); if (lcT) lcT.style.display = lcHtml ? '' : 'none'; }
+    const lcHost = $('linieComments'); if (lcHost) {
+      const lcHtml = linieCommentsHtml(commentsByStation);
+      lcHost.innerHTML = lcHtml;
+      const total = commentsByStation.reduce(function (s, x) { return s + (x.comments || []).length; }, 0);
+      const cc = $('linieCommentsCount'); if (cc) cc.textContent = total;
+      const fold = $('linieCommentsFolder'); if (fold) fold.style.display = lcHtml ? '' : 'none';
+    }
   }
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
   const LCO_AV_COLORS = ['#0065A5', '#7A3FA8', '#0E8A6E', '#D9822B', '#C0392B', '#2E7DB2', '#B0498B'];
