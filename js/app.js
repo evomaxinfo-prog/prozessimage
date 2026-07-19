@@ -2020,7 +2020,7 @@ const STATE_ICONS = {
       // Fadenkreuz-Hilfslinien am Cursor (orange, wenn auf einen Stützpunkt ausgerichtet)
       draft += '<line id="guide-v" x1="' + gx + '" y1="0" x2="' + gx + '" y2="100" stroke="' + (al.x ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       draft += '<line id="guide-h" x1="0" y1="' + gy + '" x2="100" y2="' + gy + '" stroke="' + (al.y ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
-      draft += '<circle id="snap-ring" cx="' + gx + '" cy="' + gy + '" r="1.3" fill="none" stroke="#16A34A" stroke-width="1.1" opacity="0.85" vector-effect="non-scaling-stroke" style="pointer-events:none;display:none"/>';
+      draft += '<circle id="snap-ring" cx="-20" cy="-20" r="1.7" fill="#16A34A" fill-opacity="0.12" stroke="#16A34A" stroke-width="1.2" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       if (state.zoneDraft.length) {
         const dots = state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
         if (state.drawShape === 'route') {
@@ -3956,7 +3956,7 @@ const STATE_ICONS = {
   function snapCursor(cx, cy) {
     const th = 0.012; let x = cx, y = cy, ax = false, ay = false;
     // 1) Direktes Andocken: naechste vorhandene Zonen-Ecke im Snap-Radius -> Position exakt uebernehmen.
-    const ar = docAspect(); const vth = 0.02; let best = null, bestD = vth;
+    const ar = docAspect(); const vth = 0.03; let best = null, bestD = vth;
     ((state.detail && state.detail.objects) || []).forEach((o) => {
       if (!/zone/.test(o.symbolType || '') || !o.points) return;
       o.points.forEach((p) => { const d = Math.hypot((cx - p.x) * ar, cy - p.y); if (d < bestD) { bestD = d; best = p; } });
@@ -3975,7 +3975,7 @@ const STATE_ICONS = {
     if (gv && cur) { gv.setAttribute('x1', cur.x * 100); gv.setAttribute('x2', cur.x * 100); gv.setAttribute('stroke', al.x ? '#E8663F' : '#0065A5'); }
     if (gh && cur) { gh.setAttribute('y1', cur.y * 100); gh.setAttribute('y2', cur.y * 100); gh.setAttribute('stroke', al.y ? '#E8663F' : '#0065A5'); }
     const ring = document.getElementById('snap-ring');
-    if (ring) { if (state.zoneSnap) { ring.setAttribute('cx', state.zoneSnap.x * 100); ring.setAttribute('cy', state.zoneSnap.y * 100); ring.style.display = 'block'; } else { ring.style.display = 'none'; } }
+    if (ring) { if (state.zoneSnap) { ring.setAttribute('cx', state.zoneSnap.x * 100); ring.setAttribute('cy', state.zoneSnap.y * 100); } else { ring.setAttribute('cx', -20); ring.setAttribute('cy', -20); } }
     const meas = document.getElementById('draw-measure');
     if (meas) {
       const pts = cur ? state.zoneDraft.concat([cur]) : state.zoneDraft;
