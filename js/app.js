@@ -1978,7 +1978,7 @@ const STATE_ICONS = {
       // Fadenkreuz-Hilfslinien am Cursor (orange, wenn auf einen Stützpunkt ausgerichtet)
       draft += '<line id="guide-v" x1="' + gx + '" y1="0" x2="' + gx + '" y2="100" stroke="' + (al.x ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       draft += '<line id="guide-h" x1="0" y1="' + gy + '" x2="100" y2="' + gy + '" stroke="' + (al.y ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
-      draft += '<circle id="snap-ring" cx="' + gx + '" cy="' + gy + '" r="1.8" fill="none" stroke="#E8663F" stroke-width="1.4" vector-effect="non-scaling-stroke" style="pointer-events:none;display:none"/>';
+      draft += '<circle id="snap-ring" cx="' + gx + '" cy="' + gy + '" r="1.3" fill="none" stroke="#16A34A" stroke-width="1.1" opacity="0.85" vector-effect="non-scaling-stroke" style="pointer-events:none;display:none"/>';
       if (state.zoneDraft.length) {
         const dots = state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
         if (state.drawShape === 'route') {
