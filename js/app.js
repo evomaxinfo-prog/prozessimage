@@ -2191,8 +2191,7 @@ const STATE_ICONS = {
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal
-        + (((meta.palette || []).some(function (pp) { return pp[1] === 'robot'; }) && state.layoutBlobUrl && window.RobotDetect) ? '<button class="pal-detect" data-act="detect-robots" title="' + t('Roboter im Layout automatisch finden') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> ' + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>'
-          + '<div class="tpl-lib"><button class="tpl-manage' + (state.tplPanel ? ' open' : '') + '" data-act="tpl-panel">' + t('Gelernte Vorlagen') + ': <b>' + posLib().length + '</b>' + (negLib().length ? ' · ' + t('Fehlbeispiele') + ': <b>' + negLib().length + '</b>' : '') + ' ▾</button>' + tplPanelHtml() + '</div>' : '')
+        + (((meta.palette || []).some(function (pp) { return pp[1] === 'robot'; }) && state.layoutBlobUrl && window.RobotDetect) ? '<div class="tpl-lib"><button class="tpl-manage' + (state.tplPanel ? ' open' : '') + '" data-act="tpl-panel">' + t('Gelernte Vorlagen') + ': <b>' + posLib().length + '</b>' + (negLib().length ? ' · ' + t('Fehlbeispiele') + ': <b>' + negLib().length + '</b>' : '') + ' ▾</button>' + tplPanelHtml() + '</div>' : '')
         + '</div>' : '')
       + '<div class="sat-ctl"><label>Layout-Sättigung <span id="satVal">' + (state.sat || 100) + '%</span></label><input id="satRange" type="range" min="10" max="100" value="' + (state.sat || 100) + '"></div>'
       + '<div class="exp-ctl">'
@@ -2217,8 +2216,9 @@ const STATE_ICONS = {
     const isFG = L && L.name === 'Funktionsgruppen';
     const isSteuer = L && (L.name === 'Steuerungstechnik' || String(L.code || '').indexOf('L2.0') === 0);
     const isNotHalt = L && L.name === 'Not-Halt';
+    const isRobotL = L && L.name === 'Saferobot / Technologie';
     // Zeichen-/Aktions-Werkzeuge nur fuer diese Ebenen. Auf allen anderen kein Werkzeug einblenden.
-    if (!isL0 && !isFG && !isSteuer && !isNotHalt) return '';
+    if (!isL0 && !isFG && !isSteuer && !isNotHalt && !isRobotL) return '';
     const zoneActive = state.drawShape === 'zone';
     const routeActive = state.drawShape === 'route';
     let btn, hint, extra = '';
@@ -2241,6 +2241,14 @@ const STATE_ICONS = {
       hint = nSb
         ? ('Erzeugt eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB). Erneutes Klicken aktualisiert sie.')
         : 'Noch keine Schutzbereiche (SB) vorhanden – zuerst SB einzeichnen, dann Not-Halt-Grenze erzeugen.';
+    } else if (isRobotL) {
+      const ready = state.layoutBlobUrl && window.RobotDetect;
+      btn = '<button class="btn zone-btn" data-act="detect-robots" style="width:100%;justify-content:center"' + (ready ? '' : ' disabled') + '>'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> '
+        + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>';
+      hint = ready
+        ? 'Findet Roboter im Layout automatisch und legt sie als Objekte an. Danach je Roboter „Safe Funktion" und „Technologie" setzen (Pflicht).'
+        : 'Erkennung benötigt ein hinterlegtes Layout-Bild.';
     } else {
       const spsActive = state.drawShape === 'spszone';
       const zsvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> ';
