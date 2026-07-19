@@ -3962,6 +3962,20 @@ const STATE_ICONS = {
       o.points.forEach((p) => { const d = Math.hypot((cx - p.x) * ar, cy - p.y); if (d < bestD) { bestD = d; best = p; } });
     });
     if (best) return { x: best.x, y: best.y, ax: true, ay: true, dock: true };
+    // 1b) Andocken an eine Zonen-KANTE (nicht nur Ecke): naechster Punkt auf einer Kante im Radius, aspektkorrigiert.
+    const eth = 0.025; let bestE = null, bestED = eth;
+    ((state.detail && state.detail.objects) || []).forEach((o) => {
+      if (!/zone/.test(o.symbolType || '') || !o.points || o.points.length < 3) return;
+      const pts = o.points, n = pts.length, px = cx * ar, py = cy;
+      for (let i = 0; i < n; i++) {
+        const a = pts[i], b = pts[(i + 1) % n];
+        const axx = a.x * ar, ayy = a.y, dxx = b.x * ar - axx, dyy = b.y - ayy, l2 = dxx * dxx + dyy * dyy;
+        let t = l2 ? ((px - axx) * dxx + (py - ayy) * dyy) / l2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const qx = axx + t * dxx, qy = ayy + t * dyy, d = Math.hypot(px - qx, py - qy);
+        if (d < bestED) { bestED = d; bestE = { x: qx / ar, y: qy }; }
+      }
+    });
+    if (bestE) return { x: bestE.x, y: bestE.y, ax: true, ay: true, dock: true };
     // 2) Achsen-Ausrichtung an bereits gesetzten Stuetzpunkten des aktuellen Polygons.
     (state.zoneDraft || []).forEach((p) => {
       if (Math.abs(cx - p.x) < th) { x = p.x; ax = true; }
