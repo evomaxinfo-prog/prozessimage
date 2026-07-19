@@ -3695,9 +3695,9 @@ const STATE_ICONS = {
     } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
     renderEditor();
   }
-  // ---- Not-Halt-Grenze: Umriss-Vereinigung der SB (Marching Squares + Vereinfachung), liegt an den SB an ----
-  function nhSignedArea(pts) { let a = 0; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += (pts[j].x + pts[i].x) * (pts[j].y - pts[i].y); return a / 2; }
-  function nhAvg(pts) { let x = 0, y = 0; for (const p of pts) { x += p.x; y += p.y; } return { x: x / pts.length, y: y / pts.length }; }
+  // ---- Not-Halt-Grenze: Umriss der SB-Vereinigung (Moore-Konturverfolgung auf Zellraster).
+  // Nicht verbundene SB-Gruppen werden per morphologischem Closing (kleinster verbindender Radius,
+  // leicht verbreitert) ueberbrueckt -> genau EINE Grenze je Layout.
   function nhRdp(pts, eps) {
     if (pts.length < 3) return pts.slice();
     const dl = (p, a, b) => { const dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy; if (!L) return Math.hypot(p.x - a.x, p.y - a.y); let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / L; t = t < 0 ? 0 : t > 1 ? 1 : t; return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy)); };
@@ -3714,52 +3714,86 @@ const STATE_ICONS = {
     const out = nhRdp(rot, eps); out.pop();
     return out;
   }
-  function nhPnp(pts, x, y) { let ins = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi)) ins = !ins; } return ins; }
   function sbUnionOutlines() {
     const sbs = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3);
     if (!sbs.length) return [];
     const polys = sbs.map((s) => s.points);
+    const pnp = (pts, x, y) => { let ins = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi)) ins = !ins; } return ins; };
     let minX = 1, minY = 1, maxX = 0, maxY = 0;
     polys.forEach((pts) => pts.forEach((p) => { if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y; if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y; }));
     const pad = 0.02; minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad); maxX = Math.min(1, maxX + pad); maxY = Math.min(1, maxY + pad);
     const W = maxX - minX, H = maxY - minY; if (W <= 0 || H <= 0) return [];
-    const N = 180, nx = Math.max(10, Math.round(N * (W >= H ? 1 : W / H))), ny = Math.max(10, Math.round(N * (H >= W ? 1 : H / W)));
+    const N = 200, nx = Math.max(12, Math.round(N * (W >= H ? 1 : W / H))), ny = Math.max(12, Math.round(N * (H >= W ? 1 : H / W)));
     const dx = W / nx, dy = H / ny;
-    const inAny = (x, y) => { for (let p = 0; p < polys.length; p++) if (nhPnp(polys[p], x, y)) return true; return false; };
-    const inside = []; for (let i = 0; i <= nx; i++) { const col = new Uint8Array(ny + 1); for (let j = 0; j <= ny; j++) col[j] = inAny(minX + i * dx, minY + j * dy) ? 1 : 0; inside[i] = col; }
-    const adj = {}, pt = {};
-    const link = (ka, ax, ay, kb, bx, by) => { pt[ka] = [ax, ay]; pt[kb] = [bx, by]; (adj[ka] = adj[ka] || []).push(kb); (adj[kb] = adj[kb] || []).push(ka); };
-    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
-      const TL = inside[i][j], TR = inside[i + 1][j], BR = inside[i + 1][j + 1], BL = inside[i][j + 1];
-      const nC = (TL !== TR) + (TR !== BR) + (BR !== BL) + (BL !== TL); if (!nC) continue;
-      const Tk = 'H' + i + '_' + j, Rk = 'V' + (i + 1) + '_' + j, Bk = 'H' + i + '_' + (j + 1), Lk = 'V' + i + '_' + j;
-      const Tx = i + 0.5, Ty = j, Rx = i + 1, Ry = j + 0.5, Bx = i + 0.5, By = j + 1, Lx = i, Ly = j + 0.5;
-      const cr = [];
-      if (TL !== TR) cr.push([Tk, Tx, Ty]); if (TR !== BR) cr.push([Rk, Rx, Ry]); if (BR !== BL) cr.push([Bk, Bx, By]); if (BL !== TL) cr.push([Lk, Lx, Ly]);
-      if (cr.length === 2) link(cr[0][0], cr[0][1], cr[0][2], cr[1][0], cr[1][1], cr[1][2]);
-      else if (cr.length === 4) { if (TL) { link(Tk, Tx, Ty, Lk, Lx, Ly); link(Rk, Rx, Ry, Bk, Bx, By); } else { link(Tk, Tx, Ty, Rk, Rx, Ry); link(Bk, Bx, By, Lk, Lx, Ly); } }
-    }
-    const loops = [], usedE = {}, eKey = (a, b) => a < b ? a + '#' + b : b + '#' + a;
-    for (const start in adj) {
-      const list = adj[start];
-      for (let f = 0; f < list.length; f++) {
-        const first = list[f]; if (usedE[eKey(start, first)]) continue;
-        const loop = [start]; let prev = start, cur = first; usedE[eKey(prev, cur)] = 1; let g = 0;
-        while (cur !== start && g++ < 300000) {
-          loop.push(cur); const nbs = adj[cur] || []; let nxt = null;
-          for (let n = 0; n < nbs.length; n++) { const k = nbs[n]; if (k !== prev && !usedE[eKey(cur, k)]) { nxt = k; break; } }
-          if (nxt === null) { for (let n = 0; n < nbs.length; n++) { const k = nbs[n]; if (!usedE[eKey(cur, k)]) { nxt = k; break; } } }
-          if (nxt === null) break;
-          usedE[eKey(cur, nxt)] = 1; prev = cur; cur = nxt;
+    const mask = []; for (let i = 0; i < nx; i++) { const col = new Uint8Array(ny); for (let j = 0; j < ny; j++) { const x = minX + (i + 0.5) * dx, y = minY + (j + 0.5) * dy; let v = 0; for (let p = 0; p < polys.length; p++) if (pnp(polys[p], x, y)) { v = 1; break; } col[j] = v; } mask[i] = col; }
+    const NN = nx * ny;
+    const inb = (i, j) => i >= 0 && i < nx && j >= 0 && j < ny;
+    const countComps = (m) => {
+      const seen = []; for (let i = 0; i < nx; i++) seen[i] = new Uint8Array(ny);
+      const qi = new Int32Array(NN), qj = new Int32Array(NN); let n = 0;
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+        if (!m[i][j] || seen[i][j]) continue; n++;
+        let h = 0, tq = 0; qi[tq] = i; qj[tq] = j; tq++; seen[i][j] = 1;
+        while (h < tq) {
+          const ci = qi[h], cj = qj[h]; h++;
+          for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+            if (!a && !b) continue; const ni = ci + a, nj = cj + b;
+            if (inb(ni, nj) && m[ni][nj] && !seen[ni][nj]) { seen[ni][nj] = 1; qi[tq] = ni; qj[tq] = nj; tq++; }
+          }
         }
-        if (loop.length >= 4) loops.push(loop.map((k) => ({ x: minX + pt[k][0] * dx, y: minY + pt[k][1] * dy })));
       }
+      return n;
+    };
+    const bfsDist = (seed) => {
+      const INF = 1 << 29; const d = []; for (let i = 0; i < nx; i++) d[i] = new Int32Array(ny).fill(INF);
+      const qi = new Int32Array(NN), qj = new Int32Array(NN); let tq = 0;
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) if (seed(i, j)) { d[i][j] = 0; qi[tq] = i; qj[tq] = j; tq++; }
+      let h = 0;
+      while (h < tq) {
+        const ci = qi[h], cj = qj[h]; h++; const nd = d[ci][cj] + 1;
+        for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+          if (!a && !b) continue; const ni = ci + a, nj = cj + b;
+          if (inb(ni, nj) && d[ni][nj] === INF) { d[ni][nj] = nd; qi[tq] = ni; qj[tq] = nj; tq++; }
+        }
+      }
+      return d;
+    };
+    if (countComps(mask) > 1) {
+      const dIn = bfsDist((i, j) => mask[i][j] === 1);
+      const closeMask = (r) => { const dOut = bfsDist((i, j) => dIn[i][j] > r); const cm = []; for (let i = 0; i < nx; i++) { const col = new Uint8Array(ny); for (let j = 0; j < ny; j++) col[j] = (mask[i][j] || dOut[i][j] > r) ? 1 : 0; cm[i] = col; } return cm; };
+      let lo = 1, hi = Math.max(nx, ny), bestR = -1;
+      while (lo <= hi) { const r = (lo + hi) >> 1; if (countComps(closeMask(r)) <= 1) { bestR = r; hi = r - 1; } else lo = r + 1; }
+      if (bestR > 0) { const cm = closeMask(Math.min(Math.max(nx, ny), bestR + 2)); for (let i = 0; i < nx; i++) mask[i].set(cm[i]); }
     }
-    const simp = loops.map((lp) => nhSimplifyClosed(lp, 0.0045)).filter((lp) => lp.length >= 3);
-    const wa = simp.map((lp) => ({ lp: lp, a: Math.abs(nhSignedArea(lp)) })).filter((o) => o.a > 0.0012).sort((a, b) => b.a - a.a);
-    const outer = [];
-    for (let i = 0; i < wa.length; i++) { const c = nhAvg(wa[i].lp); let inBig = false; for (let b = 0; b < outer.length; b++) if (nhPnp(outer[b], c.x, c.y)) { inBig = true; break; } if (!inBig) outer.push(wa[i].lp); }
-    return outer;
+    // Moore-Nachbarschafts-Konturverfolgung (im Uhrzeigersinn) -> eine geschlossene Aussenkontur
+    let si = -1, sj = -1;
+    for (let j = 0; j < ny && si < 0; j++) for (let i = 0; i < nx; i++) if (mask[i][j]) { si = i; sj = j; break; }
+    if (si < 0) return [];
+    const DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+    let loop = [[si, sj]];
+    let ci = si, cj = sj, bIdx = 6; // Start-Rueckrichtung: Norden (Zeile darueber ist sicher leer)
+    const seenSt = new Map(); let cut = -1; let guard = 0;
+    while (guard++ < NN * 8) {
+      const key = (ci * ny + cj) * 8 + bIdx;
+      const prev = seenSt.get(key);
+      if (prev !== undefined) { cut = prev; break; } // Zustand wiederholt -> genau ein voller Umlauf dazwischen
+      seenSt.set(key, loop.length - 1);
+      let found = -1;
+      for (let k = 1; k <= 8; k++) { const idx = (bIdx + k) % 8; const ni = ci + DIRS[idx][0], nj = cj + DIRS[idx][1]; if (inb(ni, nj) && mask[ni][nj]) { found = idx; break; } }
+      if (found < 0) break; // isolierte Einzelzelle
+      const pIdx = (found + 7) % 8; // zuletzt geprueft (aussen) -> neue Rueckrichtung
+      const px = ci + DIRS[pIdx][0], py = cj + DIRS[pIdx][1];
+      ci += DIRS[found][0]; cj += DIRS[found][1];
+      const rdx = px - ci, rdy = py - cj;
+      for (let k = 0; k < 8; k++) if (DIRS[k][0] === rdx && DIRS[k][1] === rdy) { bIdx = k; break; }
+      loop.push([ci, cj]);
+    }
+    if (cut >= 0) loop = loop.slice(cut, loop.length - 1);
+    if (loop.length < 3) return [];
+    const pts = loop.map((c) => ({ x: minX + (c[0] + 0.5) * dx, y: minY + (c[1] + 0.5) * dy }));
+    const ded = []; for (const p of pts) { const q = ded[ded.length - 1]; if (!q || Math.abs(q.x - p.x) > 1e-9 || Math.abs(q.y - p.y) > 1e-9) ded.push(p); }
+    const simp = nhSimplifyClosed(ded, 0.0045);
+    return simp.length >= 3 ? [simp] : [];
   }
   async function generateNotHaltBoundary() {
     if (!canEdit()) return;
