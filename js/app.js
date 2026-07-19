@@ -1927,9 +1927,11 @@ const STATE_ICONS = {
       const hl = z.id === hlFg || z.id === hlSps;
       const hlCol = z.id === hlSps ? '#0065A5' : '#16A34A';
       const col = hl ? hlCol : esc(zoneColor(z));
-      const sw = hl ? 3.4 : (sel ? 2.4 : 1.6);
+      const sw = hl ? 3.4 : (sel ? 2.6 : 1.6);
+      const fo = hl ? '0.22' : (sel ? '0.2' : '0.13');
       const dPath = roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 0.8);
-      return '<path id="zone-poly-' + z.id + '" d="' + dPath + '" fill="' + col + '" fill-opacity="' + (hl ? '0.22' : '0.13') + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : (sel ? 'stroke-dasharray="4 3" ' : '')) + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
+      const dash = z.symbolType === 'sb_zone' ? 'stroke-dasharray="6 4" ' : (z.symbolType === 'fg_zone' ? 'stroke-dasharray="1.5 4" stroke-linecap="round" ' : '');
+      return '<path id="zone-poly-' + z.id + '" d="' + dPath + '" fill="' + col + '" fill-opacity="' + fo + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : '') + dash + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
     }).join('');
     const ar = docAspect();
     const routes = (state.detail.objects || []).filter((o) => o.symbolType === 'mf_route' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
