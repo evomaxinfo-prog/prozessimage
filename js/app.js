@@ -563,7 +563,8 @@
     (full.objects || []).forEach((o) => {
       if (o.points && o.points.length >= 2) {
         const pts = o.points.map((p) => (p.x * vbW).toFixed(1) + ',' + (p.y * vbH).toFixed(1)).join(' ');
-        const col = o.color || '#8FA3B0';
+        let col = o.color || '#8FA3B0';
+        if (o.symbolType === 'sb_zone' || o.symbolType === 'fg_zone') { const p = o.plcConfigId && (full.plcs || []).find((x) => x.id === o.plcConfigId); col = (p && p.color) ? p.color : '#9AA7B2'; }
         if (/zone/.test(o.symbolType || '') && o.points.length >= 3) inner += '<polygon points="' + pts + '" fill="' + col + '" fill-opacity="0.16" stroke="' + col + '" stroke-width="1.4" vector-effect="non-scaling-stroke"/>';
         else inner += '<polyline points="' + pts + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
       } else if (o.x != null && o.y != null) {
@@ -3511,6 +3512,8 @@ const STATE_ICONS = {
       const p = (state.detail.plcs || []).find((x) => x.id === z.plcConfigId);
       if (p && p.color) return p.color;
     }
+    // SB/FG ohne SPS-Zuordnung: neutral grau - die Farbe kommt erst mit der Zuordnung vom SPS-Bereich.
+    if (z.symbolType === 'sb_zone' || z.symbolType === 'fg_zone') return '#9AA7B2';
     return z.color;
   }
 
