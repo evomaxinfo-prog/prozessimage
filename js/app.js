@@ -2879,6 +2879,7 @@ const STATE_ICONS = {
         protectObj(z.id);
         state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
         updateZoneDom(z);
+        const _rel = document.getElementById('zone-poly-' + z.id); if (_rel) _rel.setAttribute('stroke', esc(zoneColor(z))); // gruene Snap-Rueckmeldung nach dem Loslassen zuruecksetzen
         try {
           await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
         } catch (e2) { toast('Position nicht gespeichert'); }
