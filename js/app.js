@@ -1976,7 +1976,7 @@ const STATE_ICONS = {
       // Fadenkreuz-Hilfslinien am Cursor (orange, wenn auf einen Stützpunkt ausgerichtet)
       draft += '<line id="guide-v" x1="' + gx + '" y1="0" x2="' + gx + '" y2="100" stroke="' + (al.x ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       draft += '<line id="guide-h" x1="0" y1="' + gy + '" x2="100" y2="' + gy + '" stroke="' + (al.y ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
-      draft += '<circle id="snap-ring" cx="' + gx + '" cy="' + gy + '" r="1.8" fill="none" stroke="#E8663F" stroke-width="1.4" vector-effect="non-scaling-stroke" style="pointer-events:none;display:' + (state.zoneSnap ? 'block' : 'none') + '"/>';
+      draft += '<circle id="snap-ring" cx="' + gx + '" cy="' + gy + '" r="1.8" fill="none" stroke="#E8663F" stroke-width="1.4" vector-effect="non-scaling-stroke" style="pointer-events:none;display:none"/>';
       if (state.zoneDraft.length) {
         const dots = state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
         if (state.drawShape === 'route') {
@@ -2281,7 +2281,7 @@ const STATE_ICONS = {
   }
   function objRowsHtml(list) {
     const tools = canEdit();
-    const rows = list.map((o, i) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="onum">' + (i + 1) + '</span><span class="odot" style="background:' + esc(o.color) + '"></span>' + (o.id === state.editingObjId ? '<input class="oname-edit" data-oedit="' + esc(o.id) + '" value="' + esc(o.name) + '">' : '<span class="oname"' + (tools ? ' data-act="obj-name" data-obj="' + esc(o.id) + '" title="Doppelklick zum Umbenennen"' : '') + '>' + esc(o.name) + '</span>')
+    const rows = list.map((o, i) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="onum">' + (i + 1) + '</span><span class="odot" style="background:' + esc(isShape(o) ? zoneColor(o) : o.color) + '"></span>' + (o.id === state.editingObjId ? '<input class="oname-edit" data-oedit="' + esc(o.id) + '" value="' + esc(o.name) + '">' : '<span class="oname"' + (tools ? ' data-act="obj-name" data-obj="' + esc(o.id) + '" title="Doppelklick zum Umbenennen"' : '') + '>' + esc(o.name) + '</span>')
       + (tools ? ('<div class="obj-tools">'
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
