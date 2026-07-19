@@ -3504,6 +3504,11 @@ const STATE_ICONS = {
 
   function onContentPointerDown(e) {
     if (!canEdit()) return;
+    // Zonen zeichnen: schon beim Aufsetzen einrasten + Snap-Ring zeigen (auch Touch / Klick ohne vorherige Bewegung).
+    if (state.drawZone && e.target.closest('#canvasDoc')) {
+      const doc0 = document.getElementById('canvasDoc');
+      if (doc0) { const r = doc0.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
+    }
     // Kommentar-Fenster an der Kopfzeile verschieben (nicht auf X/Löschen)
     const cwh = e.target.closest('.cw-head');
     if (cwh && !e.target.closest('.cw-x, .cw-del')) {
