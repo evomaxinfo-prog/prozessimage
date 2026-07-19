@@ -2147,17 +2147,9 @@ const STATE_ICONS = {
         + '<button class="eye ' + (vis ? '' : 'off') + '" data-act="layer-eye" data-layer="' + l.id + '" title="Sichtbarkeit">' + eye + '</button></div>';
     }).join('');
 
-    // Objektliste der aktiven Ebene, nach Kategorie gruppiert
+    // Objektliste der aktiven Ebene (flach, ohne Kategorien)
     const objs = objectsOfLayer(L.id);
-    const cats = (L.categories || []).slice();
-    const byCat = {}; objs.forEach((o) => { const k = o.categoryId || '_'; (byCat[k] = byCat[k] || []).push(o); });
-    const catBlocks = [];
-    cats.forEach((cat) => {
-      const list = byCat[cat.id] || [];
-      catBlocks.push(objCatBlock(cat.name, list, L.color, cat.id));
-    });
-    if (byCat['_'] && byCat['_'].length) catBlocks.push(objCatBlock(t('Ohne Kategorie'), byCat['_'], L.color, '_'));
-    const objlist = catBlocks.length ? catBlocks.join('') : '<div style="color:var(--muted);font-size:13px;padding:4px 2px">Noch keine Objekte auf dieser Ebene.</div>';
+    const objlist = objs.length ? objRowsHtml(objs) : '<div style="color:var(--muted);font-size:13px;padding:4px 2px">Noch keine Objekte auf dieser Ebene.</div>';
 
     c.innerHTML = '<div class="editor-wrap"><div class="canvas-col">'
       + '<div class="editor-topbar"><div class="ttl">' + esc((state.detail.anlagenname || '').split(' · ')[0])
@@ -2185,7 +2177,7 @@ const STATE_ICONS = {
       + '<aside class="layers"><div class="lp-head"><h2>Ebenen-Stack</h2><p>Sichtbarkeit &amp; aktive Ebene</p></div>'
       + '<div class="layer-stack">' + layerStack + '</div>'
       + (canEdit() ? actionPanelHtml(L) : '')
-      + '<div class="objlist"><h4>Objektliste · ' + esc(L.code) + '</h4>' + objlist + '</div>'
+      + '<div class="objlist"><div class="objlist-head"><h4>Objektliste · ' + esc(L.code) + ' ' + esc(t(L.name)) + '</h4>' + (canEdit() && objs.length ? '<button class="cat-del-all" data-act="cat-del-all" data-cat="__all__" title="' + t('Alle Objekte dieser Ebene löschen') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>' : '') + '<span class="objlist-cnt">' + objs.length + '</span></div>' + objlist + '</div>'
       + '</aside></div>';
 
     applyZoomSat();
@@ -2260,15 +2252,14 @@ const STATE_ICONS = {
     doc.appendChild(ring);
     setTimeout(() => { ring.remove(); }, 1300);
   }
-  function objCatBlock(name, list, color, catKey) {
+  function objRowsHtml(list) {
     const tools = canEdit();
     const rows = list.map((o, i) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="onum">' + (i + 1) + '</span><span class="odot" style="background:' + esc(o.color) + '"></span>' + (o.id === state.editingObjId ? '<input class="oname-edit" data-oedit="' + esc(o.id) + '" value="' + esc(o.name) + '">' : '<span class="oname"' + (tools ? ' data-act="obj-name" data-obj="' + esc(o.id) + '" title="Doppelklick zum Umbenennen"' : '') + '>' + esc(o.name) + '</span>')
       + (tools ? ('<div class="obj-tools">'
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
       + '</div>') : '') + '</div>').join('');
-    const delAll = (tools && list.length) ? '<button class="cat-del-all" data-act="cat-del-all" data-cat="' + esc(catKey || '_') + '" title="' + t('Alle Objekte dieser Gruppe löschen') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>' : '';
-    return '<div class="obj-cat"><div class="obj-cat-head" style="color:' + esc(color) + '">' + esc(name) + '<span class="cnt">' + list.length + '</span>' + delAll + '</div>' + rows + '</div>';
+    return rows;
   }
 
   function applyZoomSat() { const doc = document.getElementById('canvasDoc'); if (doc) doc.style.transform = 'scale(' + (state.zoom || 1) + ')'; }
@@ -2924,21 +2915,6 @@ const STATE_ICONS = {
     inp.addEventListener('blur', commit);
     setTimeout(() => { inp.focus(); inp.select(); }, 20);
   }
-  // Kategorie-Auswahl im Metatag-Dialog: bietet die Kategorien der Ebene des Objekts an (plus "Ohne Kategorie").
-  function catSelectHtml(oid) {
-    const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o || !canEdit()) return '';
-    const L = layerById(o.layerId); const cats = (L && L.categories) || [];
-    if (!cats.length) return '';
-    const opts = '<option value="">' + t('Ohne Kategorie') + '</option>'
-      + cats.map((c) => '<option value="' + esc(c.id) + '"' + (o.categoryId === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
-    return '<span class="m-cat-lbl">' + t('Kategorie') + '</span><select class="m-cat-sel" id="mCat" data-obj="' + esc(oid) + '">' + opts + '</select>';
-  }
-  async function setObjectCategory(oid, catId) {
-    const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
-    if ((o.categoryId || null) === (catId || null)) return;
-    try { await Api.updateObject(oid, { categoryId: catId || null }); o.categoryId = catId || null; renderEditor(); }
-    catch (e) { toast(t('Speichern fehlgeschlagen.')); }
-  }
   function openTagModal(oid) {
     const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
     o.metatags = o.metatags || [];
@@ -2949,8 +2925,6 @@ const STATE_ICONS = {
     const _sub = L ? esc(L.code + ' · ' + L.name) : '';
     const _hsps = plcNameOf(o);
     $('mSub').innerHTML = _sub + (_hsps ? ' <span class="head-sps-chip"><span class="fgl-sps-k">SPS</span>' + esc(_hsps) + '</span>' : '');
-    $('mCatWrap').innerHTML = catSelectHtml(oid);
-    (function () { var mc = $('mCat'); if (mc) mc.addEventListener('change', function () { setObjectCategory(oid, mc.value || null); }); })();
     const v1 = (o.metatags.find((m) => m.position === 1) || {}).value || '';
     const v2 = (o.metatags.find((m) => m.position === 2) || {}).value || '';
     const pt = processTypeBySym(o.symbolType);
@@ -3096,9 +3070,9 @@ const STATE_ICONS = {
   async function deleteCategoryObjects(catKey) {
     if (!canEdit()) return;
     const L = layerById(state.activeLayer); if (!L) return;
-    const objs = objectsOfLayer(L.id).filter((o) => (o.categoryId || '_') === catKey);
+    const objs = (catKey === '__all__') ? objectsOfLayer(L.id) : objectsOfLayer(L.id).filter((o) => (o.categoryId || '_') === catKey);
     if (!objs.length) return;
-    const label = catKey === '_' ? t('Ohne Kategorie') : (((L.categories || []).find((c) => c.id === catKey) || {}).name || '');
+    const label = (catKey === '__all__') ? (L.code + ' ' + t(L.name)) : (catKey === '_' ? t('Ohne Kategorie') : (((L.categories || []).find((c) => c.id === catKey) || {}).name || ''));
     if (!window.confirm('Wirklich alle ' + objs.length + ' Objekte in „' + label + '" löschen?')) return;
     pushUndo();
     const ids = objs.map((o) => o.id);
