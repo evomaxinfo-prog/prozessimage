@@ -1918,29 +1918,25 @@ const STATE_ICONS = {
     }
     return d + 'Z';
   }
-  // Pfeil-Chevrons entlang der SB-Grenze (zwischen den Strichen). Aspektkorrigiert, damit sie nicht schief stehen.
-  function sbArrowMarks(z, ar, col) {
+  // Kleine Blitze entlang der SB-Grenze (statt Pfeilen). Aspektkorrigiert, in Zonenfarbe.
+  const BOLT_PTS = [[1, -10], [-9, 2], [0, 2], [-1, 10], [9, -2], [0, -2]];
+  function sbBoltMarks(z, ar, col) {
     const P = z.points; const n = P.length; if (n < 2) return '';
-    const step = 9, size = 1.7, ang = Math.PI * 0.7;
-    const rot = (vx, vy, a) => ({ x: vx * Math.cos(a) - vy * Math.sin(a), y: vx * Math.sin(a) + vy * Math.cos(a) });
+    const step = 10, s = 0.085;
     let out = '';
     for (let e = 0; e < n; e++) {
       const a = { x: P[e].x * 100, y: P[e].y * 100 };
       const b = { x: P[(e + 1) % n].x * 100, y: P[(e + 1) % n].y * 100 };
       const edx = b.x - a.x, edy = b.y - a.y;
       const sdx = edx * ar, sdy = edy; const slen = Math.hypot(sdx, sdy); if (slen < step) continue;
-      const sux = sdx / slen, suy = sdy / slen;
-      const w1 = rot(-sux, -suy, ang), w2 = rot(-sux, -suy, -ang);
-      for (let d = step * 0.6; d < slen; d += step) {
+      for (let d = step * 0.5; d < slen; d += step) {
         const f = d / slen;
         const px = a.x + edx * f, py = a.y + edy * f;
-        const p1x = px + w1.x * size / ar, p1y = py + w1.y * size;
-        const p2x = px + w2.x * size / ar, p2y = py + w2.y * size;
-        out += 'M' + p1x.toFixed(1) + ' ' + p1y.toFixed(1) + 'L' + px.toFixed(1) + ' ' + py.toFixed(1) + 'L' + p2x.toFixed(1) + ' ' + p2y.toFixed(1) + ' ';
+        out += 'M' + BOLT_PTS.map((pt) => (px + pt[0] * s / ar).toFixed(2) + ',' + (py + pt[1] * s).toFixed(2)).join('L') + 'Z';
       }
     }
     if (!out) return '';
-    return '<path d="' + out + '" fill="none" stroke="' + col + '" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+    return '<path d="' + out + '" fill="' + col + '" stroke="none" style="pointer-events:none"/>';
   }
   function zoneOverlaySvg(visible) {
     const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
@@ -1956,7 +1952,7 @@ const STATE_ICONS = {
       const fo = hl ? '0.22' : (sel ? '0.2' : '0.13');
       const dPath = roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 3);
       const dash = z.symbolType === 'sb_zone' ? 'stroke-dasharray="6 4" ' : (z.symbolType === 'fg_zone' ? 'stroke-dasharray="1.5 4" stroke-linecap="round" ' : '');
-      const marks = z.symbolType === 'sb_zone' ? sbArrowMarks(z, ar, col) : '';
+      const marks = z.symbolType === 'sb_zone' ? sbBoltMarks(z, ar, col) : '';
       return '<path id="zone-poly-' + z.id + '" d="' + dPath + '" fill="' + col + '" fill-opacity="' + fo + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : '') + dash + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />' + marks;
     }).join('');
     const routes = (state.detail.objects || []).filter((o) => o.symbolType === 'mf_route' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
