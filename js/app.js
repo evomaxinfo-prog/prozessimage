@@ -1241,6 +1241,7 @@
     }
     else if (act === 'toggle-zone') { const on = !(state.drawZone && state.drawShape === 'zone'); state.drawZone = on; state.drawShape = on ? 'zone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'toggle-spszone') { const on = !(state.drawZone && state.drawShape === 'spszone'); state.drawZone = on; state.drawShape = on ? 'spszone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
+    else if (act === 'gen-nothalt') { generateNotHaltBoundary(); }
     else if (act === 'undo') { doUndo(); }
     else if (act === 'redo') { doRedo(); }
     else if (act === 'toggle-route') { const on = !(state.drawZone && state.drawShape === 'route'); state.drawZone = on; state.drawShape = on ? 'route' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
@@ -1436,7 +1437,7 @@ const STATE_ICONS = {
   function objectsOfLayer(id) { return (state.detail.objects || []).filter((o) => o.layerId === id); }
 
   /* ---- Punkt-basierte Formen: Schutzbereich (geschlossen) + Materialfluss-Förderweg (offen) ---- */
-  function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'mf_route'); }
+  function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'mf_route' || o.symbolType === 'nh_zone'); }
   // Polygon-Art abhängig von der Ebene: "Funktionsgruppen" -> fg_zone, sonst Schutzbereich (sb_zone). Nach Namen, damit Umnummerieren nichts bricht.
   function zoneKind(layer) {
     if (state.drawShape === 'spszone') return { type: 'sps_zone', prefix: 'SPS-Bereich', noun: 'SPS-Bereich', label: 'SPS BEREICH' };
@@ -1941,7 +1942,7 @@ const STATE_ICONS = {
     return out;
   }
   function zoneOverlaySvg(visible) {
-    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
+    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'nh_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
     const hlFg = highlightedFgZoneId();
     const hlSps = highlightedSpsZoneId();
     const ar = docAspect();
@@ -1950,7 +1951,7 @@ const STATE_ICONS = {
       const hl = z.id === hlFg || z.id === hlSps;
       const hlCol = z.id === hlSps ? '#0065A5' : '#16A34A';
       const col = hl ? hlCol : esc(zoneColor(z));
-      const sw = hl ? 3.4 : (sel ? 2.6 : 1.6);
+      const sw = hl ? 3.4 : (sel ? 2.6 : (z.symbolType === 'nh_zone' ? 2.4 : 1.6));
       const fo = hl ? '0.22' : (sel ? '0.2' : '0.13');
       const dPath = roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 1.5);
       const dash = z.symbolType === 'sb_zone' ? 'stroke-dasharray="6 4" ' : (z.symbolType === 'fg_zone' ? 'stroke-dasharray="1.5 4" stroke-linecap="round" ' : '');
@@ -2215,9 +2216,9 @@ const STATE_ICONS = {
     const isL0 = L && L.name === 'Materialfluss';
     const isFG = L && L.name === 'Funktionsgruppen';
     const isSteuer = L && (L.name === 'Steuerungstechnik' || String(L.code || '').indexOf('L2.0') === 0);
-    // Zeichen-Werkzeuge nur für diese drei Ebenen: Materialfluss (Förderweg), Funktionsgruppen (FG-Zone),
-    // Steuerungstechnik L2.0 (Schutzbereich). Auf allen anderen Ebenen kein Werkzeug einblenden.
-    if (!isL0 && !isFG && !isSteuer) return '';
+    const isNotHalt = L && L.name === 'Not-Halt';
+    // Zeichen-/Aktions-Werkzeuge nur fuer diese Ebenen. Auf allen anderen kein Werkzeug einblenden.
+    if (!isL0 && !isFG && !isSteuer && !isNotHalt) return '';
     const zoneActive = state.drawShape === 'zone';
     const routeActive = state.drawShape === 'route';
     let btn, hint, extra = '';
@@ -2232,6 +2233,14 @@ const STATE_ICONS = {
       hint = routeActive
         ? 'Klicken setzt Wegpunkte · Klick auf den letzten Punkt oder <b>Enter</b> beendet · <b>Esc</b> bricht ab. Farbe = gewählter Materialfluss-Typ; Doppelklick öffnet Typ &amp; Förderart.'
         : 'Erst Typ oben wählen (Farbe), dann zeichnen. Wegpunkte danach verschiebbar. Weg anklicken: <b>Entf</b> löscht, <b>R</b> kehrt die Richtung um.';
+    } else if (isNotHalt) {
+      const nSb = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3).length;
+      btn = '<button class="btn zone-btn" data-act="gen-nothalt" style="width:100%;justify-content:center"' + (nSb ? '' : ' disabled') + '>'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg> '
+        + 'NOT-HALT-GRENZE ERZEUGEN</button>';
+      hint = nSb
+        ? ('Erzeugt eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB). Erneutes Klicken aktualisiert sie.')
+        : 'Noch keine Schutzbereiche (SB) vorhanden – zuerst SB einzeichnen, dann Not-Halt-Grenze erzeugen.';
     } else {
       const spsActive = state.drawShape === 'spszone';
       const zsvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> ';
@@ -3677,6 +3686,41 @@ const STATE_ICONS = {
       return;
     } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
     renderEditor();
+  }
+  // Konvexe Huelle (Andrew's monotone chain) in 0..1-Koordinaten.
+  function convexHull(pts) {
+    const P = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
+    if (P.length < 3) return P;
+    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const lower = [];
+    for (const p of P) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p); }
+    const upper = [];
+    for (let i = P.length - 1; i >= 0; i--) { const p = P[i]; while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p); }
+    lower.pop(); upper.pop();
+    return lower.concat(upper);
+  }
+  // Not-Halt-Grenze aus den SB-Zonen: umschliessende Umrisslinie (konvexe Huelle) mit kleinem Sicherheitsabstand.
+  async function generateNotHaltBoundary() {
+    if (!canEdit()) return;
+    const L = layerById(state.activeLayer); if (!L || L.name !== 'Not-Halt') return;
+    const sbs = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3);
+    if (!sbs.length) { toast('Keine Schutzbereiche vorhanden.'); return; }
+    const allPts = [];
+    sbs.forEach((s) => s.points.forEach((p) => allPts.push({ x: p.x, y: p.y })));
+    let hull = convexHull(allPts);
+    if (hull.length < 3) { toast('Umriss konnte nicht erzeugt werden.'); return; }
+    const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length, cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
+    const off = 0.012;
+    hull = hull.map((p) => { const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) || 1; return { x: clamp01(p.x + dx / d * off), y: clamp01(p.y + dy / d * off) }; });
+    pushUndo();
+    const old = (state.detail.objects || []).filter((o) => o.symbolType === 'nh_zone');
+    for (const o of old) { try { await Api.deleteObject(o.id); } catch (e) { /* ignore */ } state.detail.objects = state.detail.objects.filter((x) => x.id !== o.id); }
+    try {
+      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Not-Halt-Grenze', symbolType: 'nh_zone', color: '#D9534F', x: hull[0].x, y: hull[0].y, points: hull });
+      state.detail.objects.push(obj); state.selectedZone = obj.id; protectObj(obj.id);
+      toast('Not-Halt-Grenze erzeugt (' + sbs.length + ' SB umschlossen)');
+      renderEditor();
+    } catch (e) { toast('Erstellen fehlgeschlagen: ' + (e.message || '')); }
   }
 
   async function finishRoute() {
