@@ -451,13 +451,16 @@
   function expandAll() { state.expanded = new Set(allExpandableIds()); renderTree(); }
   function collapseAll() { state.expanded = new Set(); renderTree(); }
 
+  // Level-Router: welche Ansicht rechts erscheint, wenn ein Baumknoten gewaehlt wird.
+  // Nur Ebenen mit eigenem Dashboard hier eintragen; alles andere zeigt das leere Startfenster (Logo).
+  // Spaeter erweiterbar, z. B.: LEVEL_VIEW.werk = renderWerk; LEVEL_VIEW.kst = renderKstDashboard;
+  const LEVEL_VIEW = { linie: renderLinie };
   function selectNode(id) {
     const n = findNode(id); if (!n) return;
     state.selected = id; state.confirmDelete = null;
-    if (n.type === 'werk') { renderWerk(n); }
-    else if (n.type === 'linie') { renderLinie(n); }
-    else if (n.type === 'anlage') { openAnlage(n); }
-    else { toggleNode(id); return; }
+    if (n.type === 'anlage') { openAnlage(n); }
+    else if (LEVEL_VIEW[n.type]) { LEVEL_VIEW[n.type](n); }
+    else { renderWelcome(); }
     renderTree();
   }
 
