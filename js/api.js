@@ -110,6 +110,8 @@
     getTree() { return this.request('/tree'); },
     createNode(parentId, type, name) { return this.request('/nodes', { method: 'POST', body: { parentId, type, name } }); },
     updateNode(id, patch) { return this.request('/nodes/' + id, { method: 'PATCH', body: patch }); },
+    getProjectData(nodeId) { return this.request('/nodes/' + nodeId + '/project-data'); },
+    setProjectData(nodeId, data) { return this.request('/nodes/' + nodeId + '/project-data', { method: 'PUT', body: { data } }); },
     deleteNode(id) { return this.request('/nodes/' + id, { method: 'DELETE' }); },
     getWerkOverview(id) { return this.request('/nodes/' + id + '/overview'); },
 

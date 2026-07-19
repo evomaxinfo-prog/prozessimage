@@ -573,6 +573,44 @@
     });
     return '<svg class="lc-ov" viewBox="0 0 ' + vbW.toFixed(1) + ' ' + vbH.toFixed(1) + '" preserveAspectRatio="xMidYMid meet">' + inner + '</svg>';
   }
+  // ---- Projektdaten je Linie (Tab 1.0): Felder werden serverseitig je Node gespeichert ----
+  const PJ_FIELDS = [
+    ['projektname', 'Projektname', 'text'],
+    ['projektnummer', 'Projektnummer', 'text'],
+    ['kunde', 'Kunde', 'text'],
+    ['standort', 'Standort / Werk', 'text'],
+    ['ansprechpartner', 'Ansprechpartner', 'text'],
+    ['status', 'Status', 'select', ['', 'Angebot', 'Planung', 'Konstruktion', 'Aufbau', 'Inbetriebnahme', 'SOP / Produktion', 'Abgeschlossen']],
+    ['start', 'Starttermin', 'date'],
+    ['sop', 'SOP / Endtermin', 'date']
+  ];
+  async function loadLinieProjekt(nodeId) {
+    const host = $('linieProjekt'); if (!host) return;
+    let data = {}, meta = null, missing = false;
+    try { const res = await Api.getProjectData(nodeId); data = (res && res.data) || {}; meta = res || null; }
+    catch (e) { missing = true; }
+    const ro = !canEdit();
+    const field = (f) => {
+      const val = data[f[0]] != null ? String(data[f[0]]) : '';
+      const dis = (ro || missing) ? ' disabled' : '';
+      let inp;
+      if (f[2] === 'select') inp = '<select id="pj_' + f[0] + '"' + dis + '>' + f[3].map((o) => '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + (o || '—') + '</option>').join('') + '</select>';
+      else inp = '<input id="pj_' + f[0] + '" type="' + f[2] + '" value="' + esc(val) + '"' + dis + '>';
+      return '<div class="pj-field"><label>' + f[1] + '</label>' + inp + '</div>';
+    };
+    host.innerHTML = (missing ? '<div class="pj-note">Backend-Endpunkt „Projektdaten" ist noch nicht installiert – Anzeige ohne Speichern. (Dateien liegen bereit.)</div>' : '')
+      + '<div class="pj-grid">' + PJ_FIELDS.map(field).join('') + '</div>'
+      + '<div class="pj-field pj-notes"><label>Notizen</label><textarea id="pj_notizen" rows="4"' + ((ro || missing) ? ' disabled' : '') + '>' + esc(data.notizen != null ? String(data.notizen) : '') + '</textarea></div>'
+      + ((!ro && !missing) ? '<div class="pj-foot"><button class="btn pj-save" data-act="pj-save" data-node="' + esc(nodeId) + '">Speichern</button>'
+        + (meta && meta.updatedAt ? '<span class="pj-meta">Zuletzt gespeichert: ' + fmtDateTime(meta.updatedAt) + '</span>' : '') + '</div>' : '');
+  }
+  async function saveLinieProjekt(nodeId) {
+    const data = {};
+    PJ_FIELDS.forEach((f) => { const el = $('pj_' + f[0]); if (el) data[f[0]] = el.value || ''; });
+    const nz = $('pj_notizen'); if (nz) data.notizen = nz.value || '';
+    try { await Api.setProjectData(nodeId, data); toast('Projektdaten gespeichert'); loadLinieProjekt(nodeId); }
+    catch (e) { toast('Speichern fehlgeschlagen'); }
+  }
   async function renderLinie(node) {
     const stations = collectStationNodes(node);
     (state.linieBlobs || []).forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } });
@@ -585,9 +623,11 @@
     $('content').innerHTML = breadcrumb(node.id)
       + '<div class="werk-wrap"><div class="werk-head"><div><h1>' + esc(node.name) + '</h1></div></div>'
       + '<div class="linie-tabs">'
-      +   '<button class="linie-tab active" data-act="linie-tab" data-tab="dash"><span class="lt-num">1.0</span> Linie Dashboard</button>'
-      +   '<button class="linie-tab" data-act="linie-tab" data-tab="comments"><span class="lt-num">2.0</span> Kommentare Gesamtübersicht<span class="lt-badge" id="linieCommentsCount" hidden></span></button>'
+      +   '<button class="linie-tab" data-act="linie-tab" data-tab="projekt"><span class="lt-num">1.0</span> Projektdaten</button>'
+      +   '<button class="linie-tab active" data-act="linie-tab" data-tab="dash"><span class="lt-num">2.0</span> Linie Dashboard</button>'
+      +   '<button class="linie-tab" data-act="linie-tab" data-tab="comments"><span class="lt-num">3.0</span> Kommentare Gesamtübersicht<span class="lt-badge" id="linieCommentsCount" hidden></span></button>'
       + '</div>'
+      + '<div id="linieTabProjekt" class="linie-tabpanel" hidden><div id="linieProjekt" class="linie-projekt-panel"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>'
       + '<div id="linieTabDash" class="linie-tabpanel">'
       + '<div class="ls-section-title">Übersicht <span>allgemeine Themen</span></div>'
       + '<div class="zone-stats rich" id="linieStats">'
@@ -604,6 +644,7 @@
       +   '<div id="linieComments" class="linie-comments-panel"></div>'
       + '</div>'
       + '</div>';
+    loadLinieProjekt(node.id);
     if (!stations.length) return;
     let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {}, commentsByStation = [];
     await Promise.all(stations.map(async (n) => {
@@ -1193,7 +1234,8 @@
     else if (act === 'open-station') { selectNode(el.getAttribute('data-id')); }
     else if (act === 'goto-obj') { e.stopPropagation(); gotoObject(el.getAttribute('data-node'), el.getAttribute('data-obj')); }
     else if (act === 'pick-layer') { state.linieActiveLayer = el.getAttribute('data-layer'); renderLinieFolders(); }
-    else if (act === 'linie-tab') { const tab = el.getAttribute('data-tab'); document.querySelectorAll('.linie-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); }); const d = $('linieTabDash'), c = $('linieTabComments'); if (d) d.hidden = tab !== 'dash'; if (c) c.hidden = tab !== 'comments'; }
+    else if (act === 'linie-tab') { const tab = el.getAttribute('data-tab'); document.querySelectorAll('.linie-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); }); const d = $('linieTabDash'), c = $('linieTabComments'), p = $('linieTabProjekt'); if (d) d.hidden = tab !== 'dash'; if (c) c.hidden = tab !== 'comments'; if (p) p.hidden = tab !== 'projekt'; }
+    else if (act === 'pj-save') { saveLinieProjekt(el.getAttribute('data-node')); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
     else if (act === 'tree-toggle') { const a = document.querySelector('.app'); if (a) a.classList.toggle('tree-open'); }
