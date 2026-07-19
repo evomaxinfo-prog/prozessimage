@@ -3778,7 +3778,7 @@ const STATE_ICONS = {
     polys.forEach((pts) => pts.forEach((p) => { if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y; if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y; }));
     const pad = 0.02; minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad); maxX = Math.min(1, maxX + pad); maxY = Math.min(1, maxY + pad);
     const W = maxX - minX, H = maxY - minY; if (W <= 0 || H <= 0) return [];
-    const N = 240, nx = Math.max(12, Math.round(N * (W >= H ? 1 : W / H))), ny = Math.max(12, Math.round(N * (H >= W ? 1 : H / W)));
+    const N = 300, nx = Math.max(12, Math.round(N * (W >= H ? 1 : W / H))), ny = Math.max(12, Math.round(N * (H >= W ? 1 : H / W)));
     const dx = W / nx, dy = H / ny;
     const mask = []; for (let i = 0; i < nx; i++) { const col = new Uint8Array(ny); for (let j = 0; j < ny; j++) { const x = minX + (i + 0.5) * dx, y = minY + (j + 0.5) * dy; let v = 0; for (let p = 0; p < polys.length; p++) { const bb = pbb[p]; if (x < bb[0] || x > bb[2] || y < bb[1] || y > bb[3]) continue; if (pnp(polys[p], x, y)) { v = 1; break; } } col[j] = v; } mask[i] = col; }
     const NN = nx * ny;
@@ -3822,7 +3822,7 @@ const STATE_ICONS = {
     }
     // Leichter Aussen-Versatz (1 Zelle): die Grenze liegt knapp AUSSEN an den SB an,
     // statt deren Rand zu ueberdecken - und umschliesst die SB damit vollstaendig.
-    { const dM = bfsDist((i, j) => mask[i][j] === 1); for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) if (dM[i][j] <= 2) mask[i][j] = 1; }
+    { const dM = bfsDist((i, j) => mask[i][j] === 1); for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) if (dM[i][j] <= 1) mask[i][j] = 1; }
     // Moore-Nachbarschafts-Konturverfolgung (im Uhrzeigersinn) -> eine geschlossene Aussenkontur
     let si = -1, sj = -1;
     for (let j = 0; j < ny && si < 0; j++) for (let i = 0; i < nx; i++) if (mask[i][j]) { si = i; sj = j; break; }
@@ -3850,7 +3850,7 @@ const STATE_ICONS = {
     if (loop.length < 3) return [];
     const pts = loop.map((c) => ({ x: minX + (c[0] + 0.5) * dx, y: minY + (c[1] + 0.5) * dy }));
     const ded = []; for (const p of pts) { const q = ded[ded.length - 1]; if (!q || Math.abs(q.x - p.x) > 1e-9 || Math.abs(q.y - p.y) > 1e-9) ded.push(p); }
-    const simp = nhSimplifyClosed(ded, 0.0045);
+    const simp = nhSimplifyClosed(ded, 0.0032);
     return simp.length >= 3 ? [simp] : [];
   }
   // Fingerabdruck der SB-Geometrie: erkennt, ob sich SB seit der Grenz-Erzeugung geaendert haben.
