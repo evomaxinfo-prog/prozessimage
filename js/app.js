@@ -3687,40 +3687,89 @@ const STATE_ICONS = {
     } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
     renderEditor();
   }
-  // Konvexe Huelle (Andrew's monotone chain) in 0..1-Koordinaten.
-  function convexHull(pts) {
-    const P = pts.slice().sort((a, b) => (a.x - b.x) || (a.y - b.y));
-    if (P.length < 3) return P;
-    const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-    const lower = [];
-    for (const p of P) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p); }
-    const upper = [];
-    for (let i = P.length - 1; i >= 0; i--) { const p = P[i]; while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p); }
-    lower.pop(); upper.pop();
-    return lower.concat(upper);
+  // ---- Not-Halt-Grenze: Umriss-Vereinigung der SB (Marching Squares + Vereinfachung), liegt an den SB an ----
+  function nhSignedArea(pts) { let a = 0; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += (pts[j].x + pts[i].x) * (pts[j].y - pts[i].y); return a / 2; }
+  function nhAvg(pts) { let x = 0, y = 0; for (const p of pts) { x += p.x; y += p.y; } return { x: x / pts.length, y: y / pts.length }; }
+  function nhRdp(pts, eps) {
+    if (pts.length < 3) return pts.slice();
+    const dl = (p, a, b) => { const dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy; if (!L) return Math.hypot(p.x - a.x, p.y - a.y); let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / L; t = t < 0 ? 0 : t > 1 ? 1 : t; return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy)); };
+    const keep = new Array(pts.length).fill(false); keep[0] = keep[pts.length - 1] = true;
+    const st = [[0, pts.length - 1]];
+    while (st.length) { const seg = st.pop(); const a = seg[0], b = seg[1]; let idx = -1, dm = eps; for (let i = a + 1; i < b; i++) { const d = dl(pts[i], pts[a], pts[b]); if (d > dm) { dm = d; idx = i; } } if (idx !== -1) { keep[idx] = true; st.push([a, idx], [idx, b]); } }
+    const out = []; for (let i = 0; i < pts.length; i++) if (keep[i]) out.push(pts[i]);
+    return out;
   }
-  // Not-Halt-Grenze aus den SB-Zonen: umschliessende Umrisslinie (konvexe Huelle) mit kleinem Sicherheitsabstand.
+  function nhSimplifyClosed(loop, eps) {
+    if (loop.length < 4) return loop;
+    let s = 0; for (let i = 1; i < loop.length; i++) if (loop[i].x < loop[s].x || (loop[i].x === loop[s].x && loop[i].y < loop[s].y)) s = i;
+    const rot = loop.slice(s).concat(loop.slice(0, s)); rot.push(rot[0]);
+    const out = nhRdp(rot, eps); out.pop();
+    return out;
+  }
+  function nhPnp(pts, x, y) { let ins = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi)) ins = !ins; } return ins; }
+  function sbUnionOutlines() {
+    const sbs = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3);
+    if (!sbs.length) return [];
+    const polys = sbs.map((s) => s.points);
+    let minX = 1, minY = 1, maxX = 0, maxY = 0;
+    polys.forEach((pts) => pts.forEach((p) => { if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y; if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y; }));
+    const pad = 0.02; minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad); maxX = Math.min(1, maxX + pad); maxY = Math.min(1, maxY + pad);
+    const W = maxX - minX, H = maxY - minY; if (W <= 0 || H <= 0) return [];
+    const N = 180, nx = Math.max(10, Math.round(N * (W >= H ? 1 : W / H))), ny = Math.max(10, Math.round(N * (H >= W ? 1 : H / W)));
+    const dx = W / nx, dy = H / ny;
+    const inAny = (x, y) => { for (let p = 0; p < polys.length; p++) if (nhPnp(polys[p], x, y)) return true; return false; };
+    const inside = []; for (let i = 0; i <= nx; i++) { const col = new Uint8Array(ny + 1); for (let j = 0; j <= ny; j++) col[j] = inAny(minX + i * dx, minY + j * dy) ? 1 : 0; inside[i] = col; }
+    const adj = {}, pt = {};
+    const link = (ka, ax, ay, kb, bx, by) => { pt[ka] = [ax, ay]; pt[kb] = [bx, by]; (adj[ka] = adj[ka] || []).push(kb); (adj[kb] = adj[kb] || []).push(ka); };
+    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+      const TL = inside[i][j], TR = inside[i + 1][j], BR = inside[i + 1][j + 1], BL = inside[i][j + 1];
+      const nC = (TL !== TR) + (TR !== BR) + (BR !== BL) + (BL !== TL); if (!nC) continue;
+      const Tk = 'H' + i + '_' + j, Rk = 'V' + (i + 1) + '_' + j, Bk = 'H' + i + '_' + (j + 1), Lk = 'V' + i + '_' + j;
+      const Tx = i + 0.5, Ty = j, Rx = i + 1, Ry = j + 0.5, Bx = i + 0.5, By = j + 1, Lx = i, Ly = j + 0.5;
+      const cr = [];
+      if (TL !== TR) cr.push([Tk, Tx, Ty]); if (TR !== BR) cr.push([Rk, Rx, Ry]); if (BR !== BL) cr.push([Bk, Bx, By]); if (BL !== TL) cr.push([Lk, Lx, Ly]);
+      if (cr.length === 2) link(cr[0][0], cr[0][1], cr[0][2], cr[1][0], cr[1][1], cr[1][2]);
+      else if (cr.length === 4) { if (TL) { link(Tk, Tx, Ty, Lk, Lx, Ly); link(Rk, Rx, Ry, Bk, Bx, By); } else { link(Tk, Tx, Ty, Rk, Rx, Ry); link(Bk, Bx, By, Lk, Lx, Ly); } }
+    }
+    const loops = [], usedE = {}, eKey = (a, b) => a < b ? a + '#' + b : b + '#' + a;
+    for (const start in adj) {
+      const list = adj[start];
+      for (let f = 0; f < list.length; f++) {
+        const first = list[f]; if (usedE[eKey(start, first)]) continue;
+        const loop = [start]; let prev = start, cur = first; usedE[eKey(prev, cur)] = 1; let g = 0;
+        while (cur !== start && g++ < 300000) {
+          loop.push(cur); const nbs = adj[cur] || []; let nxt = null;
+          for (let n = 0; n < nbs.length; n++) { const k = nbs[n]; if (k !== prev && !usedE[eKey(cur, k)]) { nxt = k; break; } }
+          if (nxt === null) { for (let n = 0; n < nbs.length; n++) { const k = nbs[n]; if (!usedE[eKey(cur, k)]) { nxt = k; break; } } }
+          if (nxt === null) break;
+          usedE[eKey(cur, nxt)] = 1; prev = cur; cur = nxt;
+        }
+        if (loop.length >= 4) loops.push(loop.map((k) => ({ x: minX + pt[k][0] * dx, y: minY + pt[k][1] * dy })));
+      }
+    }
+    const simp = loops.map((lp) => nhSimplifyClosed(lp, 0.0045)).filter((lp) => lp.length >= 3);
+    const wa = simp.map((lp) => ({ lp: lp, a: Math.abs(nhSignedArea(lp)) })).filter((o) => o.a > 0.0012).sort((a, b) => b.a - a.a);
+    const outer = [];
+    for (let i = 0; i < wa.length; i++) { const c = nhAvg(wa[i].lp); let inBig = false; for (let b = 0; b < outer.length; b++) if (nhPnp(outer[b], c.x, c.y)) { inBig = true; break; } if (!inBig) outer.push(wa[i].lp); }
+    return outer;
+  }
   async function generateNotHaltBoundary() {
     if (!canEdit()) return;
     const L = layerById(state.activeLayer); if (!L || L.name !== 'Not-Halt') return;
     const sbs = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3);
     if (!sbs.length) { toast('Keine Schutzbereiche vorhanden.'); return; }
-    const allPts = [];
-    sbs.forEach((s) => s.points.forEach((p) => allPts.push({ x: p.x, y: p.y })));
-    let hull = convexHull(allPts);
-    if (hull.length < 3) { toast('Umriss konnte nicht erzeugt werden.'); return; }
-    const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length, cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
-    const off = 0.012;
-    hull = hull.map((p) => { const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) || 1; return { x: clamp01(p.x + dx / d * off), y: clamp01(p.y + dy / d * off) }; });
+    const outlines = sbUnionOutlines();
+    if (!outlines.length) { toast('Umriss konnte nicht erzeugt werden.'); return; }
     pushUndo();
     const old = (state.detail.objects || []).filter((o) => o.symbolType === 'nh_zone');
     for (const o of old) { try { await Api.deleteObject(o.id); } catch (e) { /* ignore */ } state.detail.objects = state.detail.objects.filter((x) => x.id !== o.id); }
-    try {
-      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Not-Halt-Grenze', symbolType: 'nh_zone', color: '#D9534F', x: hull[0].x, y: hull[0].y, points: hull });
-      state.detail.objects.push(obj); state.selectedZone = obj.id; protectObj(obj.id);
-      toast('Not-Halt-Grenze erzeugt (' + sbs.length + ' SB umschlossen)');
-      renderEditor();
-    } catch (e) { toast('Erstellen fehlgeschlagen: ' + (e.message || '')); }
+    let created = 0;
+    for (let k = 0; k < outlines.length; k++) {
+      const pts = outlines[k];
+      try { const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Not-Halt-Grenze' + (outlines.length > 1 ? ' ' + (k + 1) : ''), symbolType: 'nh_zone', color: '#D9534F', x: pts[0].x, y: pts[0].y, points: pts }); state.detail.objects.push(obj); if (k === 0) state.selectedZone = obj.id; protectObj(obj.id); created++; } catch (e) { /* ignore */ }
+    }
+    toast(created ? ('Not-Halt-Grenze erzeugt (' + sbs.length + ' SB umschlossen)') : 'Erstellen fehlgeschlagen');
+    renderEditor();
   }
 
   async function finishRoute() {
