@@ -3955,28 +3955,30 @@ const STATE_ICONS = {
   // Cursor/Stützpunkt an vorhandene Draft-Punkte ausrichten (gleiche x/y) -> gerade Kanten.
   function snapCursor(cx, cy) {
     const th = 0.012; let x = cx, y = cy, ax = false, ay = false;
-    // 1) Direktes Andocken: naechste vorhandene Zonen-Ecke im Snap-Radius -> Position exakt uebernehmen.
-    const ar = docAspect(); const vth = 0.03; let best = null, bestD = vth;
+    // Andocken an vorhandene Zonen: Ecke hat Vorrang, sonst naechster Punkt auf einer Kante. Aspektkorrigiert.
+    // Ziele: SB/SPS/FG-Zonen - NICHT die auto-erzeugte Not-Halt-Grenze und keine Foerderwege.
+    const ar = docAspect(); const px = cx * ar, py = cy;
+    const vth = 0.03, eth = 0.025;
+    let best = null, bestD = vth, bestE = null, bestED = eth;
     ((state.detail && state.detail.objects) || []).forEach((o) => {
-      if (!/zone/.test(o.symbolType || '') || !o.points) return;
-      o.points.forEach((p) => { const d = Math.hypot((cx - p.x) * ar, cy - p.y); if (d < bestD) { bestD = d; best = p; } });
-    });
-    if (best) return { x: best.x, y: best.y, ax: true, ay: true, dock: true };
-    // 1b) Andocken an eine Zonen-KANTE (nicht nur Ecke): naechster Punkt auf einer Kante im Radius, aspektkorrigiert.
-    const eth = 0.025; let bestE = null, bestED = eth;
-    ((state.detail && state.detail.objects) || []).forEach((o) => {
-      if (!/zone/.test(o.symbolType || '') || !o.points || o.points.length < 3) return;
-      const pts = o.points, n = pts.length, px = cx * ar, py = cy;
+      if (o.symbolType !== 'sb_zone' && o.symbolType !== 'sps_zone' && o.symbolType !== 'fg_zone') return;
+      const pts = o.points; if (!pts || pts.length < 2) return;
+      const n = pts.length;
       for (let i = 0; i < n; i++) {
-        const a = pts[i], b = pts[(i + 1) % n];
-        const axx = a.x * ar, ayy = a.y, dxx = b.x * ar - axx, dyy = b.y - ayy, l2 = dxx * dxx + dyy * dyy;
-        let t = l2 ? ((px - axx) * dxx + (py - ayy) * dyy) / l2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
-        const qx = axx + t * dxx, qy = ayy + t * dyy, d = Math.hypot(px - qx, py - qy);
-        if (d < bestED) { bestED = d; bestE = { x: qx / ar, y: qy }; }
+        const a = pts[i];
+        const dv = Math.hypot((cx - a.x) * ar, cy - a.y); if (dv < bestD) { bestD = dv; best = a; }
+        if (n >= 3) {
+          const b = pts[(i + 1) % n];
+          const axx = a.x * ar, ayy = a.y, dxx = b.x * ar - axx, dyy = b.y - ayy, l2 = dxx * dxx + dyy * dyy;
+          let t = l2 ? ((px - axx) * dxx + (py - ayy) * dyy) / l2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+          const qx = axx + t * dxx, qy = ayy + t * dyy, de = Math.hypot(px - qx, py - qy);
+          if (de < bestED) { bestED = de; bestE = { x: qx / ar, y: qy }; }
+        }
       }
     });
+    if (best) return { x: best.x, y: best.y, ax: true, ay: true, dock: true };
     if (bestE) return { x: bestE.x, y: bestE.y, ax: true, ay: true, dock: true };
-    // 2) Achsen-Ausrichtung an bereits gesetzten Stuetzpunkten des aktuellen Polygons.
+    // Achsen-Ausrichtung an bereits gesetzten Stuetzpunkten des aktuellen Polygons.
     (state.zoneDraft || []).forEach((p) => {
       if (Math.abs(cx - p.x) < th) { x = p.x; ax = true; }
       if (Math.abs(cy - p.y) < th) { y = p.y; ay = true; }
