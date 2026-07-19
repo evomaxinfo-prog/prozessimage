@@ -34,7 +34,7 @@
   const state = {
     tree: [], byId: {}, expanded: new Set(),
     selected: null, editingNodeId: null, editingObjId: null, confirmDelete: null, user: null, lang: 'de',
-    drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, selectedZone: null, selectedObj: null, zoneDrag: null, flowType: 0, flowLegend: true,
+    drawZone: false, drawShape: null, zoneDraft: [], zoneCursor: null, zoneSnap: null, selectedZone: null, selectedObj: null, zoneDrag: null, flowType: 0, flowLegend: true,
     collab: { since: null, viewers: [], enabled: true, inflight: false, status: 'connecting', detailsOpen: false, pendingRender: false, protect: {} },
     geomPending: {},
   };
@@ -1974,6 +1974,7 @@ const STATE_ICONS = {
       // Fadenkreuz-Hilfslinien am Cursor (orange, wenn auf einen Stützpunkt ausgerichtet)
       draft += '<line id="guide-v" x1="' + gx + '" y1="0" x2="' + gx + '" y2="100" stroke="' + (al.x ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       draft += '<line id="guide-h" x1="0" y1="' + gy + '" x2="100" y2="' + gy + '" stroke="' + (al.y ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      draft += '<circle id="snap-ring" cx="' + gx + '" cy="' + gy + '" r="1.8" fill="none" stroke="#E8663F" stroke-width="1.4" vector-effect="non-scaling-stroke" style="pointer-events:none;display:' + (state.zoneSnap ? 'block' : 'none') + '"/>';
       if (state.zoneDraft.length) {
         const dots = state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
         if (state.drawShape === 'route') {
@@ -2747,7 +2748,7 @@ const STATE_ICONS = {
     updateZoneHoverTitle(e);
     if (state.drawZone && state.zoneDraft.length) {
       const doc = document.getElementById('canvasDoc');
-      if (doc) { const r = doc.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; updateDraftDom(); }
+      if (doc) { const r = doc.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
     }
     if (!dragMove) return;
     if (!dragMove.moved && Math.hypot(e.clientX - dragMove.sx, e.clientY - dragMove.sy) < 4) return;
@@ -3728,6 +3729,14 @@ const STATE_ICONS = {
   // Cursor/Stützpunkt an vorhandene Draft-Punkte ausrichten (gleiche x/y) -> gerade Kanten.
   function snapCursor(cx, cy) {
     const th = 0.012; let x = cx, y = cy, ax = false, ay = false;
+    // 1) Direktes Andocken: naechste vorhandene Zonen-Ecke im Snap-Radius -> Position exakt uebernehmen.
+    const ar = docAspect(); const vth = 0.02; let best = null, bestD = vth;
+    ((state.detail && state.detail.objects) || []).forEach((o) => {
+      if (!/zone/.test(o.symbolType || '') || !o.points) return;
+      o.points.forEach((p) => { const d = Math.hypot((cx - p.x) * ar, cy - p.y); if (d < bestD) { bestD = d; best = p; } });
+    });
+    if (best) return { x: best.x, y: best.y, ax: true, ay: true, dock: true };
+    // 2) Achsen-Ausrichtung an bereits gesetzten Stuetzpunkten des aktuellen Polygons.
     (state.zoneDraft || []).forEach((p) => {
       if (Math.abs(cx - p.x) < th) { x = p.x; ax = true; }
       if (Math.abs(cy - p.y) < th) { y = p.y; ay = true; }
@@ -3739,6 +3748,8 @@ const STATE_ICONS = {
     const gv = document.getElementById('guide-v'), gh = document.getElementById('guide-h');
     if (gv && cur) { gv.setAttribute('x1', cur.x * 100); gv.setAttribute('x2', cur.x * 100); gv.setAttribute('stroke', al.x ? '#E8663F' : '#0065A5'); }
     if (gh && cur) { gh.setAttribute('y1', cur.y * 100); gh.setAttribute('y2', cur.y * 100); gh.setAttribute('stroke', al.y ? '#E8663F' : '#0065A5'); }
+    const ring = document.getElementById('snap-ring');
+    if (ring) { if (state.zoneSnap) { ring.setAttribute('cx', state.zoneSnap.x * 100); ring.setAttribute('cy', state.zoneSnap.y * 100); ring.style.display = 'block'; } else { ring.style.display = 'none'; } }
     const meas = document.getElementById('draw-measure');
     if (meas) {
       const pts = cur ? state.zoneDraft.concat([cur]) : state.zoneDraft;
