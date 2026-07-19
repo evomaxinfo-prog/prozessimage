@@ -2772,7 +2772,7 @@ const STATE_ICONS = {
     if (state.techDrag) { onTechDrag(e); return; }
     if (state.zoneDrag) { onZoneDrag(e); return; }
     updateZoneHoverTitle(e);
-    if (state.drawZone && state.zoneDraft.length) {
+    if (state.drawZone) {
       const doc = document.getElementById('canvasDoc');
       if (doc) { const r = doc.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
     }
