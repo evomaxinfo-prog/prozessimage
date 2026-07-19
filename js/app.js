@@ -2924,6 +2924,21 @@ const STATE_ICONS = {
     inp.addEventListener('blur', commit);
     setTimeout(() => { inp.focus(); inp.select(); }, 20);
   }
+  // Kategorie-Auswahl im Metatag-Dialog: bietet die Kategorien der Ebene des Objekts an (plus "Ohne Kategorie").
+  function catSelectHtml(oid) {
+    const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o || !canEdit()) return '';
+    const L = layerById(o.layerId); const cats = (L && L.categories) || [];
+    if (!cats.length) return '';
+    const opts = '<option value="">' + t('Ohne Kategorie') + '</option>'
+      + cats.map((c) => '<option value="' + esc(c.id) + '"' + (o.categoryId === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
+    return '<span class="m-cat-lbl">' + t('Kategorie') + '</span><select class="m-cat-sel" id="mCat" data-obj="' + esc(oid) + '">' + opts + '</select>';
+  }
+  async function setObjectCategory(oid, catId) {
+    const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
+    if ((o.categoryId || null) === (catId || null)) return;
+    try { await Api.updateObject(oid, { categoryId: catId || null }); o.categoryId = catId || null; renderEditor(); }
+    catch (e) { toast(t('Speichern fehlgeschlagen.')); }
+  }
   function openTagModal(oid) {
     const o = (state.detail.objects || []).find((x) => x.id === oid); if (!o) return;
     o.metatags = o.metatags || [];
@@ -2934,6 +2949,8 @@ const STATE_ICONS = {
     const _sub = L ? esc(L.code + ' · ' + L.name) : '';
     const _hsps = plcNameOf(o);
     $('mSub').innerHTML = _sub + (_hsps ? ' <span class="head-sps-chip"><span class="fgl-sps-k">SPS</span>' + esc(_hsps) + '</span>' : '');
+    $('mCatWrap').innerHTML = catSelectHtml(oid);
+    (function () { var mc = $('mCat'); if (mc) mc.addEventListener('change', function () { setObjectCategory(oid, mc.value || null); }); })();
     const v1 = (o.metatags.find((m) => m.position === 1) || {}).value || '';
     const v2 = (o.metatags.find((m) => m.position === 2) || {}).value || '';
     const pt = processTypeBySym(o.symbolType);
