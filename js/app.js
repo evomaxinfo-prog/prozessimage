@@ -1920,9 +1920,9 @@ const STATE_ICONS = {
   }
   // Kleine Blitze entlang der SB-Grenze (statt Pfeilen). Aspektkorrigiert, in Zonenfarbe.
   const BOLT_PTS = [[1, -10], [-9, 2], [0, 2], [-1, 10], [9, -2], [0, -2]];
-  function sbBoltMarks(z, ar, col) {
+  function sbBoltPath(z, ar) {
     const P = z.points; const n = P.length; if (n < 2) return '';
-    const step = 10, s = 0.085;
+    const step = 10, s = 0.075;
     let out = '';
     for (let e = 0; e < n; e++) {
       const a = { x: P[e].x * 100, y: P[e].y * 100 };
@@ -1935,8 +1935,7 @@ const STATE_ICONS = {
         out += 'M' + BOLT_PTS.map((pt) => (px + pt[0] * s / ar).toFixed(2) + ',' + (py + pt[1] * s).toFixed(2)).join('L') + 'Z';
       }
     }
-    if (!out) return '';
-    return '<path d="' + out + '" fill="' + col + '" stroke="none" style="pointer-events:none"/>';
+    return out;
   }
   function zoneOverlaySvg(visible) {
     const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
@@ -1952,7 +1951,7 @@ const STATE_ICONS = {
       const fo = hl ? '0.22' : (sel ? '0.2' : '0.13');
       const dPath = roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 1.5);
       const dash = z.symbolType === 'sb_zone' ? 'stroke-dasharray="6 4" ' : (z.symbolType === 'fg_zone' ? 'stroke-dasharray="1.5 4" stroke-linecap="round" ' : '');
-      const marks = z.symbolType === 'sb_zone' ? sbBoltMarks(z, ar, col) : '';
+      const marks = z.symbolType === 'sb_zone' ? ('<path id="sb-bolts-' + z.id + '" d="' + sbBoltPath(z, ar) + '" fill="' + col + '" fill-opacity="0.5" stroke="none" style="pointer-events:none"/>') : '';
       return '<path id="zone-poly-' + z.id + '" d="' + dPath + '" fill="' + col + '" fill-opacity="' + fo + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : '') + dash + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />' + marks;
     }).join('');
     const routes = (state.detail.objects || []).filter((o) => o.symbolType === 'mf_route' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
@@ -3705,6 +3704,7 @@ const STATE_ICONS = {
         el.setAttribute('d', roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 1.5));
       }
     }
+    if (z.symbolType === 'sb_zone') { const bp = document.getElementById('sb-bolts-' + z.id); if (bp) bp.setAttribute('d', sbBoltPath(z, docAspect())); }
     z.points.forEach((p, i) => {
       const h = document.querySelector('.zone-vertex[data-zone="' + z.id + '"][data-vidx="' + i + '"]');
       if (h) { h.style.left = (p.x * 100) + '%'; h.style.top = (p.y * 100) + '%'; }
