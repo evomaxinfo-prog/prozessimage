@@ -1888,13 +1888,14 @@ const STATE_ICONS = {
 
   // Metatags einer Funktionsgruppe/eines Schutzbereichs dauerhaft mittig im Polygon anzeigen (HTML-Overlay, damit kein Verzerren)
   function fgLabelLayer(visible) {
-    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'fg_zone' || o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone') && o.points && o.points.length >= 3 && visible[o.layerId] !== false);
+    const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'fg_zone' || o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'nh_zone') && o.points && o.points.length >= 3 && visible[o.layerId] !== false);
     if (!zones.length) return '';
     return '<div class="fg-label-layer">' + zones.map((z) => {
-      const cx = z.points.reduce((s, p) => s + p.x, 0) / z.points.length;
-      const cy = z.points.reduce((s, p) => s + p.y, 0) / z.points.length;
+      let cx = z.points.reduce((s, p) => s + p.x, 0) / z.points.length;
+      let cy = z.points.reduce((s, p) => s + p.y, 0) / z.points.length;
+      if (z.symbolType === 'nh_zone') { let ti = 0; z.points.forEach((p, i) => { if (p.y < z.points[ti].y) ti = i; }); cx = z.points[ti].x; cy = z.points[ti].y; }
       const tags = (z.metatags || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).map((m) => m.value).filter((v) => v !== null && v !== '');
-      const lines = z.symbolType === 'sps_zone' ? [spsZoneLabel(z)] : (tags.length ? tags : [z.name]);
+      const lines = z.symbolType === 'nh_zone' ? ['NOT-HALT'] : (z.symbolType === 'sps_zone' ? [spsZoneLabel(z)] : (tags.length ? tags : [z.name]));
       const abbrev = (t) => (z.symbolType === 'sb_zone' ? String(t).replace(/Schutzbereich/g, 'SB') : t);
       // SPS-Zuordnung als zusaetzlichen Meta-Tag anzeigen (Funktionsgruppe + Schutzbereich)
       const spsNm = (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone') ? plcNameOf(z) : '';
@@ -2235,12 +2236,18 @@ const STATE_ICONS = {
         : 'Erst Typ oben wählen (Farbe), dann zeichnen. Wegpunkte danach verschiebbar. Weg anklicken: <b>Entf</b> löscht, <b>R</b> kehrt die Richtung um.';
     } else if (isNotHalt) {
       const nSb = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3).length;
-      btn = '<button class="btn zone-btn" data-act="gen-nothalt" style="width:100%;justify-content:center"' + (nSb ? '' : ' disabled') + '>'
+      const nhz = (state.detail.objects || []).filter((o) => o.symbolType === 'nh_zone');
+      const fpNow = nSb ? sbFingerprint() : '';
+      const stale = nhz.length && nhz.some((o) => { const m = (o.metatags || []).find((x) => x.label === 'SB-Stand'); return !m || m.value !== fpNow; });
+      const busy = !!state.nhGenerating;
+      btn = '<button class="btn zone-btn" data-act="gen-nothalt" style="width:100%;justify-content:center"' + ((nSb && !busy) ? '' : ' disabled') + '>'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg> '
-        + 'NOT-HALT-GRENZE ERZEUGEN</button>';
-      hint = nSb
-        ? ('Erzeugt eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB). Erneutes Klicken aktualisiert sie.')
-        : 'Noch keine Schutzbereiche (SB) vorhanden – zuerst SB einzeichnen, dann Not-Halt-Grenze erzeugen.';
+        + (busy ? 'ERZEUGE …' : (nhz.length ? 'NOT-HALT-GRENZE AKTUALISIEREN' : 'NOT-HALT-GRENZE ERZEUGEN')) + '</button>';
+      hint = !nSb
+        ? 'Noch keine Schutzbereiche (SB) vorhanden – zuerst SB einzeichnen, dann Not-Halt-Grenze erzeugen.'
+        : (stale ? '<b>Schutzbereiche wurden seit der Erzeugung geändert</b> – klicken, um die Grenze zu aktualisieren.'
+          : (nhz.length ? 'Grenze ist aktuell (' + nSb + ' SB umschlossen). Erneutes Klicken erzeugt sie neu.'
+            : 'Erzeugt eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB).'));
     } else if (isRobotL) {
       const ready = state.layoutBlobUrl && window.RobotDetect;
       btn = '<button class="btn zone-btn" data-act="detect-robots" style="width:100%;justify-content:center"' + (ready ? '' : ' disabled') + '>'
@@ -3718,6 +3725,7 @@ const STATE_ICONS = {
     const sbs = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3);
     if (!sbs.length) return [];
     const polys = sbs.map((s) => s.points);
+    const pbb = polys.map((pts) => { let a = 1, b = 1, c = 0, d = 0; pts.forEach((p) => { if (p.x < a) a = p.x; if (p.y < b) b = p.y; if (p.x > c) c = p.x; if (p.y > d) d = p.y; }); return [a, b, c, d]; });
     const pnp = (pts, x, y) => { let ins = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi)) ins = !ins; } return ins; };
     let minX = 1, minY = 1, maxX = 0, maxY = 0;
     polys.forEach((pts) => pts.forEach((p) => { if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y; if (p.x > maxX) maxX = p.x; if (p.y > maxY) maxY = p.y; }));
@@ -3725,7 +3733,7 @@ const STATE_ICONS = {
     const W = maxX - minX, H = maxY - minY; if (W <= 0 || H <= 0) return [];
     const N = 240, nx = Math.max(12, Math.round(N * (W >= H ? 1 : W / H))), ny = Math.max(12, Math.round(N * (H >= W ? 1 : H / W)));
     const dx = W / nx, dy = H / ny;
-    const mask = []; for (let i = 0; i < nx; i++) { const col = new Uint8Array(ny); for (let j = 0; j < ny; j++) { const x = minX + (i + 0.5) * dx, y = minY + (j + 0.5) * dy; let v = 0; for (let p = 0; p < polys.length; p++) if (pnp(polys[p], x, y)) { v = 1; break; } col[j] = v; } mask[i] = col; }
+    const mask = []; for (let i = 0; i < nx; i++) { const col = new Uint8Array(ny); for (let j = 0; j < ny; j++) { const x = minX + (i + 0.5) * dx, y = minY + (j + 0.5) * dy; let v = 0; for (let p = 0; p < polys.length; p++) { const bb = pbb[p]; if (x < bb[0] || x > bb[2] || y < bb[1] || y > bb[3]) continue; if (pnp(polys[p], x, y)) { v = 1; break; } } col[j] = v; } mask[i] = col; }
     const NN = nx * ny;
     const inb = (i, j) => i >= 0 && i < nx && j >= 0 && j < ny;
     const countComps = (m) => {
@@ -3798,22 +3806,37 @@ const STATE_ICONS = {
     const simp = nhSimplifyClosed(ded, 0.0045);
     return simp.length >= 3 ? [simp] : [];
   }
+  // Fingerabdruck der SB-Geometrie: erkennt, ob sich SB seit der Grenz-Erzeugung geaendert haben.
+  function sbFingerprint() {
+    const sbs = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3);
+    const s = sbs.map((o) => o.id + ':' + o.points.map((p) => p.x.toFixed(4) + ',' + p.y.toFixed(4)).join(';')).sort().join('|');
+    let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return 'v' + (h >>> 0).toString(16) + '-' + sbs.length;
+  }
   async function generateNotHaltBoundary() {
-    if (!canEdit()) return;
+    if (!canEdit() || state.nhGenerating) return;
     const L = layerById(state.activeLayer); if (!L || L.name !== 'Not-Halt') return;
     const sbs = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3);
     if (!sbs.length) { toast('Keine Schutzbereiche vorhanden.'); return; }
-    const outlines = sbUnionOutlines();
-    if (!outlines.length) { toast('Umriss konnte nicht erzeugt werden.'); return; }
-    pushUndo();
-    const old = (state.detail.objects || []).filter((o) => o.symbolType === 'nh_zone');
-    for (const o of old) { try { await Api.deleteObject(o.id); } catch (e) { /* ignore */ } state.detail.objects = state.detail.objects.filter((x) => x.id !== o.id); }
+    state.nhGenerating = true; renderEditor();
     let created = 0;
-    for (let k = 0; k < outlines.length; k++) {
-      const pts = outlines[k];
-      try { const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Not-Halt-Grenze' + (outlines.length > 1 ? ' ' + (k + 1) : ''), symbolType: 'nh_zone', color: '#D9534F', x: pts[0].x, y: pts[0].y, points: pts }); state.detail.objects.push(obj); if (k === 0) state.selectedZone = obj.id; protectObj(obj.id); created++; } catch (e) { /* ignore */ }
-    }
-    toast(created ? ('Not-Halt-Grenze erzeugt (' + sbs.length + ' SB umschlossen)') : 'Erstellen fehlgeschlagen');
+    try {
+      const outlines = sbUnionOutlines();
+      if (!outlines.length) { toast('Umriss konnte nicht erzeugt werden.'); return; }
+      pushUndo();
+      const fp = sbFingerprint();
+      const old = (state.detail.objects || []).filter((o) => o.symbolType === 'nh_zone');
+      for (const o of old) { try { await Api.deleteObject(o.id); } catch (e) { /* ignore */ } state.detail.objects = state.detail.objects.filter((x) => x.id !== o.id); }
+      for (let k = 0; k < outlines.length; k++) {
+        const pts = outlines[k];
+        try {
+          const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Not-Halt-Grenze' + (outlines.length > 1 ? ' ' + (k + 1) : ''), symbolType: 'nh_zone', color: '#D9534F', x: pts[0].x, y: pts[0].y, points: pts });
+          try { await Api.setMetatags(obj.id, [{ label: 'SB-Stand', value: fp, position: 1 }]); obj.metatags = [{ label: 'SB-Stand', value: fp, position: 1 }]; } catch (e) { /* ignore */ }
+          state.detail.objects.push(obj); if (k === 0) state.selectedZone = obj.id; protectObj(obj.id); created++;
+        } catch (e) { /* ignore */ }
+      }
+      toast(created ? ('Not-Halt-Grenze erzeugt (' + sbs.length + ' SB umschlossen)') : 'Erstellen fehlgeschlagen');
+    } finally { state.nhGenerating = false; }
     renderEditor();
   }
 
