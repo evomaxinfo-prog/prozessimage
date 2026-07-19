@@ -3640,6 +3640,8 @@ const STATE_ICONS = {
       if (off) mpts = mpts.map((p) => ({ x: clamp01(p.x + off.x), y: clamp01(p.y + off.y) }));
       z.points = mpts;
       updateZoneDom(z); highlightDropTarget(z);
+      const _pel = document.getElementById('zone-poly-' + z.id);
+      if (_pel) _pel.setAttribute('stroke', off ? '#16A34A' : esc(zoneColor(z)));
     } else if (state.zoneDrag.type === 'select') {
       const dx = x - state.zoneDrag.sx, dy = y - state.zoneDrag.sy;
       if (Math.hypot(dx * r.width, dy * r.height) >= 4) state.zoneDrag.moved = true;
