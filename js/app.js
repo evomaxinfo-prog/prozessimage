@@ -3959,9 +3959,11 @@ const STATE_ICONS = {
     // Ziele: SB/SPS/FG-Zonen - NICHT die auto-erzeugte Not-Halt-Grenze und keine Foerderwege.
     const ar = docAspect(); const px = cx * ar, py = cy;
     const vth = 0.03, eth = 0.025;
+    // Nur an GLEICHARTIGE Polygone andocken: der Typ, der gerade gezeichnet wird (SB->SB, FG->FG, SPS->SPS).
+    const dt = (state.drawShape === 'zone' || state.drawShape === 'spszone') ? zoneKind(layerById(state.activeLayer)).type : null;
     let best = null, bestD = vth, bestE = null, bestED = eth;
-    ((state.detail && state.detail.objects) || []).forEach((o) => {
-      if (o.symbolType !== 'sb_zone' && o.symbolType !== 'sps_zone' && o.symbolType !== 'fg_zone') return;
+    if (dt) ((state.detail && state.detail.objects) || []).forEach((o) => {
+      if (o.symbolType !== dt) return;
       const pts = o.points; if (!pts || pts.length < 2) return;
       const n = pts.length;
       for (let i = 0; i < n; i++) {
