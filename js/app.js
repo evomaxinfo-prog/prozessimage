@@ -3090,11 +3090,21 @@ const STATE_ICONS = {
     state.detail.objects = state.detail.objects.filter((x) => x.id !== oid);
     toast('Objekt gelöscht'); renderEditor();
   }
+  // Wird ein SPS-Bereich geloescht, verlieren die daran haengenden FG/SB ihre Zuordnung (werden wieder grau).
+  async function unlinkDependentsOf(delObj) {
+    if (!delObj || delObj.symbolType !== 'sps_zone' || !delObj.plcConfigId) return 0;
+    const plc = delObj.plcConfigId;
+    const deps = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'fg_zone') && o.plcConfigId === plc);
+    for (const d of deps) { d.plcConfigId = null; try { await Api.updateObject(d.id, { plcConfigId: null }); } catch (e) { /* ignore */ } }
+    return deps.length;
+  }
   async function deleteObjectById(oid) {
+    const o = (state.detail.objects || []).find((x) => x.id === oid);
     pushUndo();
     try { await Api.deleteObject(oid); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     state.detail.objects = state.detail.objects.filter((x) => x.id !== oid);
-    toast('Objekt gelöscht'); renderEditor();
+    const freed = await unlinkDependentsOf(o);
+    toast('Objekt gelöscht' + (freed ? ' · ' + freed + ' Zuordnung(en) aufgehoben' : '')); renderEditor();
   }
   async function deleteCategoryObjects(catKey) {
     if (!canEdit()) return;
@@ -3108,6 +3118,7 @@ const STATE_ICONS = {
     await Promise.all(ids.map((id) => Api.deleteObject(id).catch(() => {})));
     const rm = {}; ids.forEach((id) => { rm[id] = true; });
     state.detail.objects = state.detail.objects.filter((x) => !rm[x.id]);
+    for (const del of objs) { await unlinkDependentsOf(del); }
     toast(ids.length + ' Objekte gelöscht'); renderEditor();
   }
   function closeTagModal() { $('tagModal').style.display = 'none'; state.modalObjId = null; }
@@ -3695,7 +3706,8 @@ const STATE_ICONS = {
     state.selectedZone = null;
     try { await Api.deleteObject(id); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     state.detail.objects = state.detail.objects.filter((o) => o.id !== id);
-    toast(isRoute ? 'Förderweg gelöscht' : 'Schutzbereich gelöscht'); renderEditor();
+    const freed = await unlinkDependentsOf(z);
+    toast((isRoute ? 'Förderweg gelöscht' : 'Bereich gelöscht') + (freed ? ' · ' + freed + ' Zuordnung(en) aufgehoben' : '')); renderEditor();
   }
 
   function updateZoneDom(z) {
