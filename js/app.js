@@ -1824,19 +1824,22 @@ const STATE_ICONS = {
       const isRobot = o.symbolType === 'robot';
       const fgm = isProc ? (o.metatags || []).find((m) => m.label === 'Funktionsgruppen' && m.value && String(m.value).trim()) : null;
       const fgAssigned = !!fgm;
+      const rSf = isRobot ? (o.metatags || []).find((m) => m.label === 'Safe Funktion' && m.value && String(m.value).trim()) : null;
+      const rTc = isRobot ? (o.metatags || []).find((m) => m.label === 'Technologie' && m.value && String(m.value).trim()) : null;
+      const robotIncomplete = isRobot && (!rSf || !rTc);
       // Prozesstyp: nur FG-Verknuepfung als Chip. Roboter: nur den Metatag "Safe Funktion". Sonstige Objekte: alle Metatags.
       let chipsHtml;
       if (isProc) {
         chipsHtml = fgm ? '<span class="ptag fg-chip"><span class="fg-k">FG</span>' + esc(String(fgm.value).trim()) + '</span>' : '';
       } else if (isRobot) {
-        const sf = (o.metatags || []).find((m) => m.label === 'Safe Funktion' && m.value && String(m.value).trim());
-        chipsHtml = sf ? '<span class="ptag">' + esc(String(sf.value).trim()) + '</span>' : '';
+        chipsHtml = rSf ? '<span class="ptag">' + esc(String(rSf.value).trim()) + '</span>' : '';
       } else {
         chipsHtml = (o.metatags || []).map((m) => m.value).filter(Boolean).map((t) => '<span class="ptag">' + esc(t) + '</span>').join('');
       }
       return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + (o.symbolType === 'robot' ? ' hover-tags' : '') + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
+        + (robotIncomplete ? '<span class="obj-warn" title="Safe Funktion und Technologie sind Pflicht">!</span>' : '')
         + (chipsHtml ? '<div class="ptags">' + chipsHtml + '</div>' : '')
         + '</div>';
     }).join('');
@@ -2887,11 +2890,13 @@ const STATE_ICONS = {
     return o.color;
   }
 
-  function tagFieldSelect(id, label, opts, val) {
+  function tagFieldSelect(id, label, opts, val, required) {
     const list = (val && !opts.includes(val)) ? [val].concat(opts) : opts;
     const options = '<option value="">' + t('— bitte wählen —') + '</option>'
       + list.map((o) => '<option value="' + esc(o) + '"' + (o === val ? ' selected' : '') + '>' + esc(o) + '</option>').join('');
-    return '<div class="m-field"><label>' + esc(label) + '</label><select id="' + id + '" data-label="' + esc(label) + '">' + options + '</select></div>';
+    const req = required ? '<span class="m-req" title="' + t('Pflichtfeld') + '">*</span>' : '';
+    const miss = (required && !(val && String(val).trim())) ? ' m-field-req' : '';
+    return '<div class="m-field' + miss + '"><label>' + esc(label) + req + '</label><select id="' + id + '" data-label="' + esc(label) + '">' + options + '</select></div>';
   }
   // SPS-Bereich-Auswahl (nur Funktionsgruppen) – gleiche Optik wie die Schutzbereich-Zuordnung.
   function spsSelectField(o) {
@@ -2990,7 +2995,7 @@ const STATE_ICONS = {
         });
       });
     } else if (o.symbolType === 'robot') {
-      $('mBody').innerHTML = tagFieldSelect('mTag1', 'Safe Funktion', ROBOT_RISK, v1) + tagFieldSelect('mTag2', 'Technologie', ROBOT_TECH, v2);
+      $('mBody').innerHTML = tagFieldSelect('mTag1', 'Safe Funktion', ROBOT_RISK, v1, true) + tagFieldSelect('mTag2', 'Technologie', ROBOT_TECH, v2, true);
     } else if (/^custom:/.test(o.symbolType)) {
       const fields = symFields(o.symbolType);
       const edit = canManagePalette();
