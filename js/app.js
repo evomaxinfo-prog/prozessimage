@@ -3598,6 +3598,32 @@ const STATE_ICONS = {
     }
   }
 
+  // Snapping beim Verschieben eines ganzen Polygons: liefert einen Offset, der den naechstliegenden
+  // Eckpunkt auf eine gleichartige Ecke (Vorrang) bzw. Kante legt - so rastet es z. B. wieder am Ursprung ein.
+  function snapMovedPolygon(z, pts) {
+    const dt = z.symbolType, ar = docAspect(), vth = 0.03, eth = 0.025;
+    const targets = (state.detail.objects || []).filter((o) => o.id !== z.id && o.symbolType === dt && o.points && o.points.length >= 2);
+    if (!targets.length) return null;
+    let bV = null, bVD = vth, bE = null, bED = eth;
+    pts.forEach((p) => {
+      const pxx = p.x * ar, pyy = p.y;
+      targets.forEach((o) => {
+        const tp = o.points, n = tp.length;
+        for (let i = 0; i < n; i++) {
+          const a = tp[i];
+          const dv = Math.hypot((p.x - a.x) * ar, p.y - a.y); if (dv < bVD) { bVD = dv; bV = { x: a.x - p.x, y: a.y - p.y }; }
+          if (n >= 3) {
+            const b = tp[(i + 1) % n];
+            const axx = a.x * ar, ayy = a.y, dxx = b.x * ar - axx, dyy = b.y - ayy, l2 = dxx * dxx + dyy * dyy;
+            let t = l2 ? ((pxx - axx) * dxx + (pyy - ayy) * dyy) / l2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+            const qx = (axx + t * dxx) / ar, qy = ayy + t * dyy, de = Math.hypot((p.x - qx) * ar, p.y - qy);
+            if (de < bED) { bED = de; bE = { x: qx - p.x, y: qy - p.y }; }
+          }
+        }
+      });
+    });
+    return bV || bE;
+  }
   function onZoneDrag(e) {
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
     const r = doc.getBoundingClientRect();
@@ -3609,7 +3635,10 @@ const STATE_ICONS = {
       const dx = x - state.zoneDrag.sx, dy = y - state.zoneDrag.sy;
       if (!state.zoneDrag.moved && Math.hypot(dx * r.width, dy * r.height) < 4) return;
       state.zoneDrag.moved = true;
-      z.points = state.zoneDrag.orig.map((p) => ({ x: clamp01(p.x + dx), y: clamp01(p.y + dy) }));
+      let mpts = state.zoneDrag.orig.map((p) => ({ x: clamp01(p.x + dx), y: clamp01(p.y + dy) }));
+      const off = snapMovedPolygon(z, mpts);
+      if (off) mpts = mpts.map((p) => ({ x: clamp01(p.x + off.x), y: clamp01(p.y + off.y) }));
+      z.points = mpts;
       updateZoneDom(z); highlightDropTarget(z);
     } else if (state.zoneDrag.type === 'select') {
       const dx = x - state.zoneDrag.sx, dy = y - state.zoneDrag.sy;
