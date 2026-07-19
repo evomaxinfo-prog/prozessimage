@@ -1918,10 +1918,35 @@ const STATE_ICONS = {
     }
     return d + 'Z';
   }
+  // Pfeil-Chevrons entlang der SB-Grenze (zwischen den Strichen). Aspektkorrigiert, damit sie nicht schief stehen.
+  function sbArrowMarks(z, ar, col) {
+    const P = z.points; const n = P.length; if (n < 2) return '';
+    const step = 9, size = 1.7, ang = Math.PI * 0.7;
+    const rot = (vx, vy, a) => ({ x: vx * Math.cos(a) - vy * Math.sin(a), y: vx * Math.sin(a) + vy * Math.cos(a) });
+    let out = '';
+    for (let e = 0; e < n; e++) {
+      const a = { x: P[e].x * 100, y: P[e].y * 100 };
+      const b = { x: P[(e + 1) % n].x * 100, y: P[(e + 1) % n].y * 100 };
+      const edx = b.x - a.x, edy = b.y - a.y;
+      const sdx = edx * ar, sdy = edy; const slen = Math.hypot(sdx, sdy); if (slen < step) continue;
+      const sux = sdx / slen, suy = sdy / slen;
+      const w1 = rot(-sux, -suy, ang), w2 = rot(-sux, -suy, -ang);
+      for (let d = step * 0.6; d < slen; d += step) {
+        const f = d / slen;
+        const px = a.x + edx * f, py = a.y + edy * f;
+        const p1x = px + w1.x * size / ar, p1y = py + w1.y * size;
+        const p2x = px + w2.x * size / ar, p2y = py + w2.y * size;
+        out += 'M' + p1x.toFixed(1) + ' ' + p1y.toFixed(1) + 'L' + px.toFixed(1) + ' ' + py.toFixed(1) + 'L' + p2x.toFixed(1) + ' ' + p2y.toFixed(1) + ' ';
+      }
+    }
+    if (!out) return '';
+    return '<path d="' + out + '" fill="none" stroke="' + col + '" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+  }
   function zoneOverlaySvg(visible) {
     const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
     const hlFg = highlightedFgZoneId();
     const hlSps = highlightedSpsZoneId();
+    const ar = docAspect();
     const polys = zones.map((z) => {
       const sel = state.selectedZone === z.id;
       const hl = z.id === hlFg || z.id === hlSps;
@@ -1931,9 +1956,9 @@ const STATE_ICONS = {
       const fo = hl ? '0.22' : (sel ? '0.2' : '0.13');
       const dPath = roundedPolyPath(z.points.map((p) => ({ x: p.x * 100, y: p.y * 100 })), 0.8);
       const dash = z.symbolType === 'sb_zone' ? 'stroke-dasharray="6 4" ' : (z.symbolType === 'fg_zone' ? 'stroke-dasharray="1.5 4" stroke-linecap="round" ' : '');
-      return '<path id="zone-poly-' + z.id + '" d="' + dPath + '" fill="' + col + '" fill-opacity="' + fo + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : '') + dash + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />';
+      const marks = z.symbolType === 'sb_zone' ? sbArrowMarks(z, ar, col) : '';
+      return '<path id="zone-poly-' + z.id + '" d="' + dPath + '" fill="' + col + '" fill-opacity="' + fo + '" stroke="' + col + '" stroke-width="' + sw + '" ' + (hl ? 'class="fg-hl" ' : '') + dash + 'vector-effect="non-scaling-stroke" style="pointer-events:none" />' + marks;
     }).join('');
-    const ar = docAspect();
     const routes = (state.detail.objects || []).filter((o) => o.symbolType === 'mf_route' && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
     const routeSvg = routes.map((r) => {
       const cv = buildRouteCurve(r.points);
