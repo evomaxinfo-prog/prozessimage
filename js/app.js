@@ -3658,6 +3658,7 @@ const STATE_ICONS = {
       toast(kind.noun + ' erstellt');
       renderEditor();
       if (kind.type === 'sps_zone') openZoneAssignModal(obj.id); // SPS-Bereich: sofort die (genau eine) SPS zuordnen
+      else if (kind.type === 'sb_zone' || kind.type === 'fg_zone') await autoLinkZoneToSps(obj); // SB/FG: automatisch dem umschliessenden SPS-Bereich zuordnen (wie beim Verschieben)
       return;
     } catch (e) { toast('Erstellen fehlgeschlagen: ' + e.message); }
     renderEditor();
