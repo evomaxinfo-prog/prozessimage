@@ -1222,6 +1222,7 @@
     else if (act === 'tpl-learn-no') { dismissLearnPrompt(); }
     else if (act === 'obj-edit') { e.stopPropagation(); openTagModal(el.getAttribute('data-obj')); }
     else if (act === 'obj-del') { e.stopPropagation(); deleteObjectById(el.getAttribute('data-obj')); }
+    else if (act === 'cat-del-all') { e.stopPropagation(); deleteCategoryObjects(el.getAttribute('data-cat')); }
     else if (act === 'obj-focus') { focusObjInLayout(el.getAttribute('data-obj')); }
     else if (act === 'obj-name') {
       const oid = el.getAttribute('data-obj'); const now = Date.now();
@@ -2153,9 +2154,9 @@ const STATE_ICONS = {
     const catBlocks = [];
     cats.forEach((cat) => {
       const list = byCat[cat.id] || [];
-      catBlocks.push(objCatBlock(cat.name, list, L.color));
+      catBlocks.push(objCatBlock(cat.name, list, L.color, cat.id));
     });
-    if (byCat['_'] && byCat['_'].length) catBlocks.push(objCatBlock(t('Ohne Kategorie'), byCat['_'], L.color));
+    if (byCat['_'] && byCat['_'].length) catBlocks.push(objCatBlock(t('Ohne Kategorie'), byCat['_'], L.color, '_'));
     const objlist = catBlocks.length ? catBlocks.join('') : '<div style="color:var(--muted);font-size:13px;padding:4px 2px">Noch keine Objekte auf dieser Ebene.</div>';
 
     c.innerHTML = '<div class="editor-wrap"><div class="canvas-col">'
@@ -2259,14 +2260,15 @@ const STATE_ICONS = {
     doc.appendChild(ring);
     setTimeout(() => { ring.remove(); }, 1300);
   }
-  function objCatBlock(name, list, color) {
+  function objCatBlock(name, list, color, catKey) {
     const tools = canEdit();
-    const rows = list.map((o) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="odot" style="background:' + esc(o.color) + '"></span>' + (o.id === state.editingObjId ? '<input class="oname-edit" data-oedit="' + esc(o.id) + '" value="' + esc(o.name) + '">' : '<span class="oname"' + (tools ? ' data-act="obj-name" data-obj="' + esc(o.id) + '" title="Doppelklick zum Umbenennen"' : '') + '>' + esc(o.name) + '</span>')
+    const rows = list.map((o, i) => '<div class="obj' + ((o.id === state.selectedObj || o.id === state.selectedZone) ? ' sel' : '') + '" data-act="obj-focus" data-obj="' + esc(o.id) + '"><span class="onum">' + (i + 1) + '</span><span class="odot" style="background:' + esc(o.color) + '"></span>' + (o.id === state.editingObjId ? '<input class="oname-edit" data-oedit="' + esc(o.id) + '" value="' + esc(o.name) + '">' : '<span class="oname"' + (tools ? ' data-act="obj-name" data-obj="' + esc(o.id) + '" title="Doppelklick zum Umbenennen"' : '') + '>' + esc(o.name) + '</span>')
       + (tools ? ('<div class="obj-tools">'
       + '<button data-act="obj-edit" data-obj="' + o.id + '" title="Metatags"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l8-8h6v6l-8 8z"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg></button>'
       + '<button class="del" data-act="obj-del" data-obj="' + o.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
       + '</div>') : '') + '</div>').join('');
-    return '<div class="obj-cat"><div class="obj-cat-head" style="color:' + esc(color) + '">' + esc(name) + '<span class="cnt">' + list.length + '</span></div>' + rows + '</div>';
+    const delAll = (tools && list.length) ? '<button class="cat-del-all" data-act="cat-del-all" data-cat="' + esc(catKey || '_') + '" title="' + t('Alle Objekte dieser Gruppe löschen') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>' : '';
+    return '<div class="obj-cat"><div class="obj-cat-head" style="color:' + esc(color) + '">' + esc(name) + '<span class="cnt">' + list.length + '</span>' + delAll + '</div>' + rows + '</div>';
   }
 
   function applyZoomSat() { const doc = document.getElementById('canvasDoc'); if (doc) doc.style.transform = 'scale(' + (state.zoom || 1) + ')'; }
@@ -3073,6 +3075,20 @@ const STATE_ICONS = {
     try { await Api.deleteObject(oid); } catch (e) { toast(t('Löschen fehlgeschlagen')); return; }
     state.detail.objects = state.detail.objects.filter((x) => x.id !== oid);
     toast('Objekt gelöscht'); renderEditor();
+  }
+  async function deleteCategoryObjects(catKey) {
+    if (!canEdit()) return;
+    const L = layerById(state.activeLayer); if (!L) return;
+    const objs = objectsOfLayer(L.id).filter((o) => (o.categoryId || '_') === catKey);
+    if (!objs.length) return;
+    const label = catKey === '_' ? t('Ohne Kategorie') : (((L.categories || []).find((c) => c.id === catKey) || {}).name || '');
+    if (!window.confirm('Wirklich alle ' + objs.length + ' Objekte in „' + label + '" löschen?')) return;
+    pushUndo();
+    const ids = objs.map((o) => o.id);
+    await Promise.all(ids.map((id) => Api.deleteObject(id).catch(() => {})));
+    const rm = {}; ids.forEach((id) => { rm[id] = true; });
+    state.detail.objects = state.detail.objects.filter((x) => !rm[x.id]);
+    toast(ids.length + ' Objekte gelöscht'); renderEditor();
   }
   function closeTagModal() { $('tagModal').style.display = 'none'; state.modalObjId = null; }
   // ---- Eigenes Palette-Symbol: Upload-Dialog ----
