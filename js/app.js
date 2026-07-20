@@ -1969,6 +1969,8 @@ const STATE_ICONS = {
         chipsHtml = fgm ? '<span class="ptag fg-chip"><span class="fg-k">FG</span>' + esc(String(fgm.value).trim()) + '</span>' : '';
       } else if (isRobot) {
         chipsHtml = rSf ? '<span class="ptag">' + esc(String(rSf.value).trim()) + '</span>' : '';
+      } else if (/^custom:/.test(o.symbolType)) {
+        chipsHtml = ''; // Selbst erzeugte Icons: keine Metatag-Chips auf der Canvas anzeigen
       } else {
         chipsHtml = (o.metatags || []).map((m) => m.value).filter(Boolean).map((t) => '<span class="ptag">' + esc(t) + '</span>').join('');
       }
@@ -3458,7 +3460,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.156';
+      sc.src = 'js/html2canvas.min.js?v=0.25.157';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
