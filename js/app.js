@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -2267,6 +2267,61 @@ const STATE_ICONS = {
     state._preDrag = null;
     renderEditor();
   }
+  function copySelectedObjects() {
+    const ids = (state.selObjs && state.selObjs.length) ? state.selObjs : (state.selectedObj ? [state.selectedObj] : []);
+    const objs = (state.detail.objects || []).filter((o) => ids.indexOf(o.id) >= 0 && !isShape(o));
+    if (!objs.length) return;
+    state.clipboard = objs.map((o) => ({
+      srcStation: state.detail.id,
+      layerId: o.layerId, categoryId: o.categoryId || null, name: o.name, symbolType: o.symbolType,
+      color: o.color, x: o.x, y: o.y, rotation: o.rotation || 0,
+      points: (o.points || []).map((p) => ({ x: p.x, y: p.y })),
+      plcConfigId: o.plcConfigId || null, scale: o.scale || 1,
+      metatags: (o.metatags || []).map((m) => ({ position: m.position, label: m.label, value: m.value })),
+    }));
+    toast(objs.length === 1 ? t('Icon kopiert') : (objs.length + ' ' + t('Icons kopiert')));
+  }
+  async function pasteObjects() {
+    const cb = state.clipboard || [];
+    if (!cb.length || !state.detail) return;
+    const dx = 0.03, dy = 0.03;
+    pushUndo();
+    const newIds = [];
+    for (const c of cb) {
+      const sameStation = c.srcStation === state.detail.id;
+      const body = {
+        layerId: c.layerId, categoryId: c.categoryId, name: c.name, symbolType: c.symbolType,
+        color: c.color, x: clamp01(c.x + dx), y: clamp01(c.y + dy), rotation: c.rotation,
+        points: (c.points || []).map((p) => ({ x: clamp01(p.x + dx), y: clamp01(p.y + dy) })),
+        plcConfigId: sameStation ? c.plcConfigId : null,
+      };
+      let no;
+      try { no = await Api.createObject(state.detail.id, body); } catch (e) { continue; }
+      if (!no || !no.id) continue;
+      if (c.scale && c.scale !== 1) { try { await Api.updateObject(no.id, { scale: c.scale }); } catch (e) { /* ignore */ } no.scale = c.scale; }
+      if (c.metatags && c.metatags.length) { try { await Api.setMetatags(no.id, c.metatags); } catch (e) { /* ignore */ } no.metatags = c.metatags; }
+      state.detail.objects.push(no);
+      newIds.push(no.id);
+    }
+    // Klemmbrett fuer erneutes Einfuegen weiter versetzen (Kaskade)
+    state.clipboard = cb.map((c) => Object.assign({}, c, { x: clamp01(c.x + dx), y: clamp01(c.y + dy), points: (c.points || []).map((p) => ({ x: clamp01(p.x + dx), y: clamp01(p.y + dy) })) }));
+    state.selObjs = newIds; state.selectedObj = newIds.length === 1 ? newIds[0] : null; state.selectedZone = null;
+    renderEditor();
+    if (newIds.length) toast(newIds.length === 1 ? t('Icon eingefügt') : (newIds.length + ' ' + t('Icons eingefügt')));
+  }
+  async function deleteSelectedObjects() {
+    const ids = (state.selObjs && state.selObjs.length) ? state.selObjs.slice() : (state.selectedObj ? [state.selectedObj] : []);
+    const objs = (state.detail.objects || []).filter((o) => ids.indexOf(o.id) >= 0 && !isShape(o));
+    if (!objs.length) return;
+    pushUndo();
+    state.selObjs = []; state.selectedObj = null;
+    for (const o of objs) {
+      try { await Api.deleteObject(o.id); } catch (e) { /* ignore */ }
+      state.detail.objects = (state.detail.objects || []).filter((x) => x.id !== o.id);
+    }
+    renderEditor();
+    toast(objs.length === 1 ? t('Icon gelöscht') : (objs.length + ' ' + t('Icons gelöscht')));
+  }
   function zoneHandleLayer() {
     if (state.drawZone || !state.selectedZone) return '';
     const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && isShape(o) && o.points);
@@ -3599,7 +3654,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.169';
+      sc.src = 'js/html2canvas.min.js?v=0.25.170';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4500,6 +4555,8 @@ const STATE_ICONS = {
       const k = (e.key || '').toLowerCase();
       if (k === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); return; }
       if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); doRedo(); return; }
+      if (k === 'c') { e.preventDefault(); copySelectedObjects(); return; }
+      if (k === 'v') { e.preventDefault(); pasteObjects(); return; }
     }
     if (state.drawZone) {
       if (e.key === 'Enter') { e.preventDefault(); state.drawShape === 'route' ? finishRoute() : finishZone(); }
@@ -4525,6 +4582,9 @@ const STATE_ICONS = {
         updateZoneDom(z); nudgeZonePersist(z);
         return;
       }
+    }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !inField && (state.selectedObj || (state.selObjs && state.selObjs.length))) {
+      e.preventDefault(); deleteSelectedObjects(); return;
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedZone && !inField) {
       e.preventDefault(); deleteSelectedZone();
