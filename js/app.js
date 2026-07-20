@@ -2215,12 +2215,16 @@ const STATE_ICONS = {
     objs.forEach((o) => { minx = Math.min(minx, o.x); miny = Math.min(miny, o.y); maxx = Math.max(maxx, o.x); maxy = Math.max(maxy, o.y); maxS = Math.max(maxS, o.scale || 1); });
     return { minx: minx, miny: miny, maxx: maxx, maxy: maxy, cx: (minx + maxx) / 2, cy: (miny + maxy) / 2, objs: objs, maxS: maxS };
   }
+  function handleOff(scale) { return 0.014 * (scale || 1) + 0.012; }
   function selResizeLayer() {
     const bb = selBBox();
     if (!bb) return '';
-    const pad = 0.02 + 0.02 * bb.maxS;
-    const x1 = clamp01(bb.maxx + pad), y1 = clamp01(bb.maxy + pad);
-    return '<div class="sel-resize" data-scalehandle="1" style="left:' + (x1 * 100) + '%;top:' + (y1 * 100) + '%" title="' + t('Symbolgröße ziehen') + '"></div>';
+    const arrow = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8 L16 16 M8 8 L8 12 M8 8 L12 8 M16 16 L16 12 M16 16 L12 16"/></svg>';
+    return bb.objs.map(function (o) {
+      const off = handleOff(o.scale || 1);
+      const hx = clamp01(o.x + off), hy = clamp01(o.y + off);
+      return '<div class="sel-resize" data-scalehandle="1" data-obj="' + o.id + '" style="left:' + (hx * 100) + '%;top:' + (hy * 100) + '%" title="' + t('Symbolgröße ziehen') + '">' + arrow + '</div>';
+    }).join('');
   }
   function startScaleDrag(e) {
     const bb = selBBox(); if (!bb) return;
@@ -2228,10 +2232,10 @@ const STATE_ICONS = {
     const r = doc.getBoundingClientRect();
     const px = clamp01((e.clientX - r.left) / r.width), py = clamp01((e.clientY - r.top) / r.height);
     const startDist = Math.max(0.04, Math.hypot(px - bb.cx, py - bb.cy));
-    const start = {};
-    bb.objs.forEach((o) => { start[o.id] = o.scale || 1; });
+    const start = {}, pos = {};
+    bb.objs.forEach((o) => { start[o.id] = o.scale || 1; pos[o.id] = { x: o.x, y: o.y }; });
     state._preDrag = snapObjects();
-    state.scaleDrag = { ids: bb.objs.map((o) => o.id), cx: bb.cx, cy: bb.cy, startDist: startDist, start: start, last: {} };
+    state.scaleDrag = { ids: bb.objs.map((o) => o.id), cx: bb.cx, cy: bb.cy, startDist: startDist, start: start, pos: pos, last: {} };
     try { e.target.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
     e.preventDefault();
   }
@@ -2246,8 +2250,10 @@ const STATE_ICONS = {
       sd.last[id] = ns;
       const el = document.querySelector('.placed[data-obj="' + id + '"]');
       if (el) el.style.setProperty('--osc', ns.toFixed(2));
+      const p = sd.pos[id];
+      const h = document.querySelector('.sel-resize[data-obj="' + id + '"]');
+      if (p && h) { const off = handleOff(ns); h.style.left = (clamp01(p.x + off) * 100) + '%'; h.style.top = (clamp01(p.y + off) * 100) + '%'; }
     });
-    const h = document.querySelector('.sel-resize'); if (h) { h.style.left = (px * 100) + '%'; h.style.top = (py * 100) + '%'; }
   }
   async function endScaleDrag() {
     const sd = state.scaleDrag; state.scaleDrag = null; if (!sd) return;
@@ -3593,7 +3599,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.168';
+      sc.src = 'js/html2canvas.min.js?v=0.25.169';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
