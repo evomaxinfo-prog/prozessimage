@@ -3593,7 +3593,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.167';
+      sc.src = 'js/html2canvas.min.js?v=0.25.168';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3920,7 +3920,7 @@ const STATE_ICONS = {
           state.zoneDrag = { type: 'move', id: z.id, sx: x, sy: y, moved: false, orig: z.points.map((p) => ({ x: p.x, y: p.y })) };
           try { doc.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
           if (state.selectedObj || (state.selObjs && state.selObjs.length)) { state.selectedObj = null; state.selObjs = []; renderEditor(); }
-        } else if (state.selectedZone || state.selectedObj) {
+        } else if (state.selectedZone || state.selectedObj || (state.selObjs && state.selObjs.length)) {
           state.selectedZone = null; state.selectedObj = null; state.selObjs = []; renderEditor();
         }
       }
