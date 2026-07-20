@@ -3430,7 +3430,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.148';
+      sc.src = 'js/html2canvas.min.js?v=0.25.149';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3448,40 +3448,40 @@ const STATE_ICONS = {
     try {
       const rect = el.getBoundingClientRect();
       const scale = Math.max(1, Math.min(3, 1600 / Math.max(1, rect.width)));
-      // Roboter-Maske (weisse Form auf Schwarz) in ein TRANSPARENTES Icon umwandeln: weiss deckend, Rest transparent
-      // (sonst ueberdeckt der schwarze Masken-Hintergrund das farbige Kaestchen).
-      let robotData = null;
+      // Roboter-Maske (grau: weisse Form auf schwarz = Luminanz-Maske) einmalig in eine Alpha-Maske umwandeln.
+      let alphaMask = null, mw = 24, mh = 24;
       try {
-        const maskImg = await new Promise((res, rej) => {
-          const im = new Image(); im.crossOrigin = 'anonymous';
-          im.onload = () => res(im); im.onerror = () => rej(new Error('mask'));
-          im.src = new URL('img/robot-mask.png', location.href).href;
-        });
-        const w = maskImg.naturalWidth || 24, h = maskImg.naturalHeight || 24;
-        const cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
-        const cx = cvs.getContext('2d'); cx.drawImage(maskImg, 0, 0, w, h);
-        const id = cx.getImageData(0, 0, w, h); const dd = id.data;
-        let hasAlpha = false;
-        for (let i = 3; i < dd.length; i += 4) { if (dd[i] < 250) { hasAlpha = true; break; } }
-        for (let i = 0; i < dd.length; i += 4) {
-          const a = hasAlpha ? dd[i + 3] : ((dd[i] + dd[i + 1] + dd[i + 2]) / 3);
-          dd[i] = 255; dd[i + 1] = 255; dd[i + 2] = 255; dd[i + 3] = a;
-        }
-        cx.putImageData(id, 0, 0);
-        robotData = cvs.toDataURL('image/png');
-      } catch (e) { robotData = null; }
+        const maskImg = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('mask')); im.src = new URL('img/robot-mask.png', location.href).href; });
+        mw = maskImg.naturalWidth || 24; mh = maskImg.naturalHeight || 24;
+        const mc = document.createElement('canvas'); mc.width = mw; mc.height = mh;
+        const mx = mc.getContext('2d'); mx.drawImage(maskImg, 0, 0, mw, mh);
+        const mid = mx.getImageData(0, 0, mw, mh); const md = mid.data;
+        for (let i = 0; i < md.length; i += 4) { const lum = (md[i] + md[i + 1] + md[i + 2]) / 3; md[i] = 255; md[i + 1] = 255; md[i + 2] = 255; md[i + 3] = lum; }
+        mx.putImageData(mid, 0, 0); alphaMask = mc;
+      } catch (e) { alphaMask = null; }
+      const tintCache = {};
+      const tintedRobot = function (color) {
+        if (!alphaMask) return null;
+        if (tintCache[color]) return tintCache[color];
+        const c = document.createElement('canvas'); c.width = mw; c.height = mh;
+        const cc = c.getContext('2d');
+        cc.fillStyle = color; cc.fillRect(0, 0, mw, mh);
+        cc.globalCompositeOperation = 'destination-in'; cc.drawImage(alphaMask, 0, 0);
+        return (tintCache[color] = c.toDataURL('image/png'));
+      };
       const canvas = await h2c(el, {
         scale: scale, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false,
         onclone: function (doc) {
-          if (!robotData) return;
           try {
+            const vw = doc.defaultView || window;
             doc.querySelectorAll('rect').forEach(function (r) {
               if ((r.getAttribute('mask') || '').indexOf('robotMask') < 0) return;
+              let col = '#ffffff';
+              try { const cs = vw.getComputedStyle(r); col = (cs.fill && cs.fill !== 'none' && cs.fill !== 'currentcolor') ? cs.fill : (cs.color || '#ffffff'); } catch (e) { /* ignore */ }
+              const data = tintedRobot(col); if (!data) return;
               const img = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
-              img.setAttribute('x', '0'); img.setAttribute('y', '0');
-              img.setAttribute('width', '24'); img.setAttribute('height', '24');
-              img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', robotData);
-              img.setAttribute('href', robotData);
+              img.setAttribute('x', '0'); img.setAttribute('y', '0'); img.setAttribute('width', '24'); img.setAttribute('height', '24');
+              img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', data); img.setAttribute('href', data);
               if (r.parentNode) r.parentNode.replaceChild(img, r);
             });
           } catch (e) { /* ignore */ }
