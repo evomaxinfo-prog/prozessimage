@@ -1969,12 +1969,10 @@ const STATE_ICONS = {
         chipsHtml = fgm ? '<span class="ptag fg-chip"><span class="fg-k">FG</span>' + esc(String(fgm.value).trim()) + '</span>' : '';
       } else if (isRobot) {
         chipsHtml = rSf ? '<span class="ptag">' + esc(String(rSf.value).trim()) + '</span>' : '';
-      } else if (/^custom:/.test(o.symbolType)) {
-        chipsHtml = ''; // Selbst erzeugte Icons: keine Metatag-Chips auf der Canvas anzeigen
       } else {
         chipsHtml = (o.metatags || []).map((m) => m.value).filter(Boolean).map((t) => '<span class="ptag">' + esc(t) + '</span>').join('');
       }
-      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + (o.symbolType === 'robot' ? ' hover-tags' : '') + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
+      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + ' hover-tags' + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
         + (robotIncomplete ? '<span class="obj-warn" title="Safe Funktion und Technologie sind Pflicht">!</span>' : '')
@@ -3460,7 +3458,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.157';
+      sc.src = 'js/html2canvas.min.js?v=0.25.158';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
