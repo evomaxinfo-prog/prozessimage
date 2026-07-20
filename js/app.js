@@ -3440,20 +3440,21 @@ const STATE_ICONS = {
   // Nimmt die gerenderte Modellierung (#canvasDoc) 1:1 als PNG auf – fuer ein PDF, das exakt der App-Ansicht entspricht.
   async function captureMapImage() {
     const el = document.getElementById('canvasDoc');
-    if (!el) return null;
+    if (!el) throw new Error('Editor-Ansicht (canvasDoc) nicht gefunden');
     const h2c = await loadHtml2Canvas();
+    if (typeof h2c !== 'function') throw new Error('html2canvas nicht verfuegbar');
     const prevTransform = el.style.transform;
     el.style.transform = 'none'; // Zoom fuer die Aufnahme neutralisieren
-    let dataUrl = null;
     try {
       const rect = el.getBoundingClientRect();
       const scale = Math.max(1, Math.min(3, 1600 / Math.max(1, rect.width)));
       const canvas = await h2c(el, { scale: scale, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false });
-      dataUrl = canvas.toDataURL('image/png');
+      const dataUrl = canvas.toDataURL('image/png');
+      if (!dataUrl || dataUrl.length < 100) throw new Error('leeres Bild erzeugt');
+      return dataUrl;
     } finally {
       el.style.transform = prevTransform;
     }
-    return dataUrl;
   }
   async function exportFile(kind) {
     try {
@@ -3461,8 +3462,7 @@ const STATE_ICONS = {
         toast('PDF wird erstellt …');
         let mapImage = null;
         try { mapImage = await captureMapImage(); }
-        catch (e) { toast('Ansicht-Aufnahme fehlgeschlagen: ' + (e && e.message ? e.message : e)); }
-        if (!mapImage) { toast('Hinweis: Ansicht nicht aufgenommen – PDF nutzt Ersatzdarstellung'); }
+        catch (e) { toast('Modellierung nicht aufgenommen: ' + (e && e.message ? e.message : e)); }
         const res = await Api.raw('/stations/' + state.detail.id + '/export.pdf', { method: 'POST', body: { mapImage: mapImage } });
         if (!res.ok) { toast(t('Export fehlgeschlagen')); return; }
         const url = URL.createObjectURL(await res.blob());
