@@ -77,13 +77,16 @@
       const rMethod = opts.method || 'GET';
       let rUrl = API_BASE + path;
       if (rMethod === 'GET') rUrl += (rUrl.indexOf('?') >= 0 ? '&' : '?') + '_=' + Date.now();
+      const hasBody = opts.body != null;
       const res = await fetch(rUrl, {
         method: rMethod,
         headers: Object.assign(
           { 'Accept': '*/*' },
+          hasBody ? { 'Content-Type': 'application/json' } : {},
           this.token ? { 'Authorization': 'Bearer ' + this.token } : {},
           opts.headers || {}
         ),
+        body: hasBody ? (typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)) : undefined,
       });
       if (res.status === 401) {
         this.token = null;

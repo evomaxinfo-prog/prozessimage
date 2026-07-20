@@ -3424,13 +3424,54 @@ const STATE_ICONS = {
     } catch (e2) { toast('Upload fehlgeschlagen: ' + e2.message); }
   }
 
+  let _h2cPromise = null;
+  function loadHtml2Canvas() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    if (_h2cPromise) return _h2cPromise;
+    _h2cPromise = new Promise((resolve, reject) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      sc.onload = () => resolve(window.html2canvas);
+      sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
+      document.head.appendChild(sc);
+    });
+    return _h2cPromise;
+  }
+  // Nimmt die gerenderte Modellierung (#canvasDoc) 1:1 als PNG auf – fuer ein PDF, das exakt der App-Ansicht entspricht.
+  async function captureMapImage() {
+    const el = document.getElementById('canvasDoc');
+    if (!el) return null;
+    const h2c = await loadHtml2Canvas();
+    const prevTransform = el.style.transform;
+    el.style.transform = 'none'; // Zoom fuer die Aufnahme neutralisieren
+    let dataUrl = null;
+    try {
+      const rect = el.getBoundingClientRect();
+      const scale = Math.max(1, Math.min(3, 1600 / Math.max(1, rect.width)));
+      const canvas = await h2c(el, { scale: scale, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false });
+      dataUrl = canvas.toDataURL('image/png');
+    } finally {
+      el.style.transform = prevTransform;
+    }
+    return dataUrl;
+  }
   async function exportFile(kind) {
     try {
+      if (kind === 'pdf') {
+        toast('PDF wird erstellt …');
+        let mapImage = null;
+        try { mapImage = await captureMapImage(); } catch (e) { mapImage = null; }
+        const res = await Api.raw('/stations/' + state.detail.id + '/export.pdf', { method: 'POST', body: { mapImage: mapImage } });
+        if (!res.ok) { toast(t('Export fehlgeschlagen')); return; }
+        const url = URL.createObjectURL(await res.blob());
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        return;
+      }
       const res = await Api.raw('/stations/' + state.detail.id + '/export.' + kind);
       if (!res.ok) { toast(t('Export fehlgeschlagen')); return; }
       const url = URL.createObjectURL(await res.blob());
-      if (kind === 'pdf') { window.open(url, '_blank'); }
-      else { const a = document.createElement('a'); a.href = url; a.download = (state.detail.anlagenname || 'anlage').replace(/[^A-Za-z0-9_\-]+/g, '_') + '.csv'; document.body.appendChild(a); a.click(); a.remove(); }
+      const a = document.createElement('a'); a.href = url; a.download = (state.detail.anlagenname || 'anlage').replace(/[^A-Za-z0-9_\-]+/g, '_') + '.csv'; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch (e) { toast(t('Export fehlgeschlagen')); }
   }
