@@ -3460,7 +3460,9 @@ const STATE_ICONS = {
       if (kind === 'pdf') {
         toast('PDF wird erstellt …');
         let mapImage = null;
-        try { mapImage = await captureMapImage(); } catch (e) { mapImage = null; }
+        try { mapImage = await captureMapImage(); }
+        catch (e) { toast('Ansicht-Aufnahme fehlgeschlagen: ' + (e && e.message ? e.message : e)); }
+        if (!mapImage) { toast('Hinweis: Ansicht nicht aufgenommen – PDF nutzt Ersatzdarstellung'); }
         const res = await Api.raw('/stations/' + state.detail.id + '/export.pdf', { method: 'POST', body: { mapImage: mapImage } });
         if (!res.ok) { toast(t('Export fehlgeschlagen')); return; }
         const url = URL.createObjectURL(await res.blob());
