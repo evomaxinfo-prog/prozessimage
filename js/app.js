@@ -3430,7 +3430,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.145';
+      sc.src = 'js/html2canvas.min.js?v=0.25.146';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3448,19 +3448,24 @@ const STATE_ICONS = {
     try {
       const rect = el.getBoundingClientRect();
       const scale = Math.max(1, Math.min(3, 1600 / Math.max(1, rect.width)));
-      const robotHref = new URL('img/robot-mask.png', location.href).href;
+      // Roboter-PNG vorab als data-URL laden (html2canvas rendert dynamisch verlinkte SVG-Bilder unzuverlaessig)
+      let robotData = null;
+      try {
+        const rr = await fetch(new URL('img/robot-mask.png', location.href).href, { cache: 'force-cache' });
+        if (rr.ok) { const bl = await rr.blob(); robotData = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(bl); }); }
+      } catch (e) { robotData = null; }
       const canvas = await h2c(el, {
         scale: scale, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false,
         onclone: function (doc) {
-          // html2canvas kann SVG-Masken nicht -> maskiertes Roboter-Rechteck durch das Roboter-PNG ersetzen.
+          if (!robotData) return;
           try {
             doc.querySelectorAll('rect').forEach(function (r) {
               if ((r.getAttribute('mask') || '').indexOf('robotMask') < 0) return;
               const img = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
               img.setAttribute('x', '0'); img.setAttribute('y', '0');
               img.setAttribute('width', '24'); img.setAttribute('height', '24');
-              img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', robotHref);
-              img.setAttribute('href', robotHref);
+              img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', robotData);
+              img.setAttribute('href', robotData);
               if (r.parentNode) r.parentNode.replaceChild(img, r);
             });
           } catch (e) { /* ignore */ }
