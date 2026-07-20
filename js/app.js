@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -1241,9 +1241,14 @@
       + '<div class="card-body"><div class="journal-list">' + jlist + '</div>'
       + (canEdit() ? '<div class="j-add"><input id="jInput" placeholder="' + t('Neuer Eintrag …') + '"><button data-act="journal-add" aria-label="' + t('Eintrag hinzufügen') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' : '')
       + '</div></div>'
+      + '<div class="card"><div class="card-head"><h3>' + t('Dokumente') + '</h3><span class="badge" id="docCount">…</span></div>'
+      + '<div class="card-body"><div class="doc-list" id="docList"><div class="doc-empty">' + t('Wird geladen …') + '</div></div>'
+      + (state.isAdmin ? '<div class="doc-add"><button class="btn" data-act="doc-upload"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + t('Dokument hochladen') + '</button></div>' : '')
+      + '</div></div>'
       + '</div>';
 
     $('content').innerHTML = breadcrumb(s.nodeId) + html;
+    loadDocuments(s.id);
   }
 
   function enterEdit() {
@@ -1293,6 +1298,57 @@
     renderDetail();
   }
 
+  // ---- Dokumente je Anlage (PDF/Word/Excel) ----
+  function fmtBytes(n) { n = Number(n) || 0; if (n < 1024) return n + ' B'; if (n < 1048576) return (n / 1024).toFixed(0) + ' KB'; return (n / 1048576).toFixed(1) + ' MB'; }
+  function docExt(name) { const m = /\.([a-z0-9]+)$/i.exec(name || ''); return m ? m[1].toLowerCase() : ''; }
+  async function loadDocuments(stationId) {
+    const host = $('docList'); if (!host) return;
+    let docs = [];
+    try { docs = await Api.getDocuments(stationId); } catch (e) { host.innerHTML = '<div class="doc-empty">' + t('Dokumente konnten nicht geladen werden.') + '</div>'; return; }
+    if ($('docCount')) $('docCount').textContent = docs.length;
+    if (!docs.length) { host.innerHTML = '<div class="doc-empty">' + t('Noch keine Dokumente.') + '</div>'; return; }
+    host.innerHTML = docs.map(function (d) {
+      const ext = docExt(d.filename);
+      const meta = fmtBytes(d.byteSize) + (d.createdAt ? ' · ' + fmtDate(d.createdAt) : '') + (d.uploadedBy ? ' · ' + esc(d.uploadedBy) : '');
+      return '<div class="doc-row">'
+        + '<span class="doc-ext ext-' + esc(ext || 'dat') + '">' + esc((ext || 'dat').toUpperCase()) + '</span>'
+        + '<button class="doc-name" data-act="doc-open" data-id="' + esc(d.id) + '" data-name="' + esc(d.filename) + '" data-mime="' + esc(d.mimeType || '') + '" title="' + t('Öffnen / Herunterladen') + '"><span class="doc-fn">' + esc(d.filename) + '</span><small>' + esc(meta) + '</small></button>'
+        + (state.isAdmin ? '<button class="doc-del" data-act="doc-del" data-id="' + esc(d.id) + '" data-name="' + esc(d.filename) + '" title="' + t('Löschen') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg></button>' : '')
+        + '</div>';
+    }).join('');
+  }
+  function triggerDocUpload() { const el = $('docFile'); if (el) el.click(); }
+  async function onDocFile(e) {
+    const f = e.target.files && e.target.files[0]; e.target.value = '';
+    if (!f || !state.detail) return;
+    const ext = docExt(f.name);
+    if (['pdf', 'doc', 'docx', 'xls', 'xlsx'].indexOf(ext) < 0) { toast(t('Nur PDF, Word oder Excel erlaubt.')); return; }
+    if (f.size > 25 * 1024 * 1024) { toast(t('Datei zu groß (max. 25 MB).')); return; }
+    if (state.uploadingDoc) return;
+    state.uploadingDoc = true;
+    toast(t('Dokument wird hochgeladen …'));
+    try { await Api.uploadDocument(state.detail.id, f); toast(t('Dokument hochgeladen')); loadDocuments(state.detail.id); }
+    catch (e2) { toast((e2 && e2.message) ? e2.message : t('Upload fehlgeschlagen')); }
+    finally { state.uploadingDoc = false; }
+  }
+  async function openDoc(id, name, mime) {
+    if (!state.detail) return;
+    try {
+      const res = await Api.documentResponse(state.detail.id, id);
+      if (!res.ok) { toast(t('Download fehlgeschlagen')); return; }
+      const url = URL.createObjectURL(await res.blob());
+      if (/pdf/i.test(mime || '') || /\.pdf$/i.test(name || '')) { window.open(url, '_blank'); }
+      else { const a = document.createElement('a'); a.href = url; a.download = name || 'dokument'; document.body.appendChild(a); a.click(); a.remove(); }
+      setTimeout(() => URL.revokeObjectURL(url), 20000);
+    } catch (e) { toast(t('Download fehlgeschlagen')); }
+  }
+  async function deleteDoc(id, name) {
+    if (!state.detail) return;
+    if (!window.confirm(t('Dokument wirklich löschen?') + '\n\n' + (name || ''))) return;
+    try { await Api.deleteDocument(state.detail.id, id); toast(t('Dokument gelöscht')); loadDocuments(state.detail.id); }
+    catch (e) { toast(t('Löschen fehlgeschlagen')); }
+  }
+
   function onContentClick(e) {
     // Schutzbereich zeichnen: Klick auf die Zeichenfläche setzt Stützpunkte
     if (state.drawZone) {
@@ -1335,6 +1391,9 @@
     else if (act === 'station-next') { gotoStation(1); }
     else if (act === 'editor-upload') { triggerUpload(); }
     else if (act === 'detail-upload') { triggerUpload(); }
+    else if (act === 'doc-upload') { triggerDocUpload(); }
+    else if (act === 'doc-open') { openDoc(el.getAttribute('data-id'), el.getAttribute('data-name'), el.getAttribute('data-mime')); }
+    else if (act === 'doc-del') { deleteDoc(el.getAttribute('data-id'), el.getAttribute('data-name')); }
     else if (act === 'zoom-in') { zoomStep(0.1); }
     else if (act === 'zoom-out') { zoomStep(-0.1); }
     else if (act === 'toggle-snap') { state.snapGrid = !state.snapGrid; try { localStorage.setItem('promodx_snapgrid', state.snapGrid ? '1' : '0'); } catch (e) { /* noop */ } renderEditor(); }
@@ -3458,7 +3517,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.159';
+      sc.src = 'js/html2canvas.min.js?v=0.25.160';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4779,6 +4838,7 @@ const STATE_ICONS = {
 
     // Layout-Upload + Metatag-Modal
     $('layoutFile').addEventListener('change', onLayoutFile);
+    { const df = $('docFile'); if (df) df.addEventListener('change', onDocFile); }
     $('mSave').addEventListener('click', saveTags);
     // SPS-Bereich-Auswahl (Swatch-Liste im FG-Tag-Fenster): Zeile waehlen
     $('mBody').addEventListener('click', (e) => {

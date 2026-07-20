@@ -162,7 +162,30 @@
       return data;
     },
 
-    // ---- Konfigurierbare Palette (eigene Symbole je Werk & Ebene) ----
+    // ---- Dokumente je Anlage (PDF/Office) ----
+    getDocuments(stationId) { return this.request('/stations/' + stationId + '/documents'); },
+    async uploadDocument(stationId, file) {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(API_BASE + '/stations/' + stationId + '/documents', {
+        method: 'POST',
+        headers: Object.assign(
+          { 'Accept': 'application/json' },
+          this.token ? { 'Authorization': 'Bearer ' + this.token } : {}
+        ),
+        body: fd,
+      });
+      if (res.status === 401) {
+        this.token = null;
+        global.dispatchEvent(new CustomEvent('promodx:unauthorized'));
+        throw new ApiError(401, 'Nicht angemeldet.');
+      }
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new ApiError(res.status, (data && data.message) || 'Upload fehlgeschlagen.', data);
+      return data;
+    },
+    documentResponse(stationId, docId) { return this.raw('/stations/' + stationId + '/documents/' + docId); },
+    deleteDocument(stationId, docId) { return this.request('/stations/' + stationId + '/documents/' + docId, { method: 'DELETE' }); },
     getPaletteSymbols(werkId) { return this.request('/werke/' + werkId + '/palette'); },
     async createPaletteSymbol(werkId, name, layerCode, file, fields) {
       const fd = new FormData();
