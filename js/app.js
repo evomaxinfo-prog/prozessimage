@@ -2267,6 +2267,58 @@ const STATE_ICONS = {
     state._preDrag = null;
     renderEditor();
   }
+  function startGroupDrag(e) {
+    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const el = e.target.closest('.placed'); if (!el) return;
+    const ids = (state.selObjs || []).slice();
+    const objs = (state.detail.objects || []).filter((o) => ids.indexOf(o.id) >= 0 && !isShape(o));
+    if (objs.length < 2) return;
+    const start = {};
+    objs.forEach((o) => { start[o.id] = { x: o.x, y: o.y, points: (o.points || []).map((p) => ({ x: p.x, y: p.y })), scale: o.scale || 1 }; });
+    state._preDrag = snapObjects();
+    state.groupDrag = { ids: objs.map((o) => o.id), start: start, sx: e.clientX, sy: e.clientY, doc: doc, moved: false, dx: 0, dy: 0 };
+    try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+  }
+  function onGroupDrag(e) {
+    const gd = state.groupDrag; if (!gd) return;
+    if (!gd.moved && Math.hypot(e.clientX - gd.sx, e.clientY - gd.sy) < 4) return;
+    gd.moved = true;
+    const r = gd.doc.getBoundingClientRect();
+    let dx = (e.clientX - gd.sx) / r.width, dy = (e.clientY - gd.sy) / r.height;
+    if (state.snapGrid) { dx = snapToGrid(dx); dy = snapToGrid(dy); }
+    gd.dx = dx; gd.dy = dy;
+    gd.ids.forEach((id) => {
+      const s = gd.start[id];
+      const nx = clamp01(s.x + dx), ny = clamp01(s.y + dy);
+      const el = document.querySelector('.placed[data-obj="' + id + '"]');
+      if (el) { el.style.left = (nx * 100) + '%'; el.style.top = (ny * 100) + '%'; el.style.cursor = 'grabbing'; }
+      const h = document.querySelector('.sel-resize[data-obj="' + id + '"]');
+      if (h) { const off = handleOff(s.scale); h.style.left = (clamp01(nx + off) * 100) + '%'; h.style.top = (clamp01(ny + off) * 100) + '%'; }
+    });
+  }
+  async function endGroupDrag() {
+    const gd = state.groupDrag; state.groupDrag = null; if (!gd) return;
+    if (!gd.moved) { renderEditor(); return; }
+    let changed = false;
+    for (const id of gd.ids) {
+      const o = (state.detail.objects || []).find((z) => z.id === id); if (!o) continue;
+      const s = gd.start[id];
+      const nx = clamp01(s.x + gd.dx), ny = clamp01(s.y + gd.dy);
+      if (o.x !== nx || o.y !== ny) {
+        o.x = nx; o.y = ny;
+        const patch = { x: nx, y: ny };
+        if (s.points && s.points.length) {
+          o.points = s.points.map((p) => ({ x: clamp01(p.x + gd.dx), y: clamp01(p.y + gd.dy) }));
+          patch.points = o.points;
+        }
+        changed = true; protectObj(o.id);
+        Api.updateObject(id, patch).catch(() => { /* ignore */ });
+      }
+    }
+    if (changed && state._preDrag) { pushUndoSnap(state._preDrag); }
+    state._preDrag = null;
+    renderEditor();
+  }
   function copySelectedObjects() {
     const ids = (state.selObjs && state.selObjs.length) ? state.selObjs : (state.selectedObj ? [state.selectedObj] : []);
     const objs = (state.detail.objects || []).filter((o) => ids.indexOf(o.id) >= 0 && !isShape(o));
@@ -3100,6 +3152,7 @@ const STATE_ICONS = {
   }
   function onMove(e) {
     if (state.scaleDrag) { onScaleDrag(e); return; }
+    if (state.groupDrag) { onGroupDrag(e); return; }
     if (state.cwDrag) { onCwDrag(e); return; }
     if (state.pinDrag) { onPinDrag(e); return; }
     if (state.iconDrag) { onIconDrag(e); return; }
@@ -3158,6 +3211,7 @@ const STATE_ICONS = {
       return;
     }
     if (state.scaleDrag) { await endScaleDrag(); return; }
+    if (state.groupDrag) { await endGroupDrag(); return; }
     if (state.iconDrag) { await endIconDrag(); return; }
     if (state.techDrag) {
       const td = state.techDrag; state.techDrag = null;
@@ -3656,7 +3710,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.171';
+      sc.src = 'js/html2canvas.min.js?v=0.25.172';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3967,6 +4021,7 @@ const STATE_ICONS = {
     if (pl) {
       const oid = pl.getAttribute('data-obj');
       if (e.shiftKey || e.ctrlKey || e.metaKey) { toggleSelObj(oid); renderEditor(); return; }
+      if (state.selObjs && state.selObjs.length > 1 && state.selObjs.indexOf(oid) >= 0) { startGroupDrag(e); return; }
       if (state.selObjs && state.selObjs.length) { state.selObjs = []; }
       startMove(e, oid); return;
     }
