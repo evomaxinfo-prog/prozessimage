@@ -2492,7 +2492,7 @@ const STATE_ICONS = {
     let x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
     if (state.snapGrid) { x = clamp01(snapToGrid(x)); y = clamp01(snapToGrid(y)); }
     const o = (state.detail.objects || []).find((z) => z.id === state.techDrag.id); if (!o) return;
-    o.points = [{ x, y }]; state.techDrag.moved = true;
+    o.points = [{ x, y }]; state.techDrag.moved = true; state.techDrag.fx = x; state.techDrag.fy = y; protectObj(o.id);
     const line = document.getElementById('tech-line-' + o.id);
     if (line) { const e = techLineEnds(o.x, o.y, x, y); line.setAttribute('x1', e.x1.toFixed(3)); line.setAttribute('y1', e.y1.toFixed(3)); line.setAttribute('x2', e.x2.toFixed(3)); line.setAttribute('y2', e.y2.toFixed(3)); }
     const badge = document.querySelector('.tech-badge[data-tech="' + o.id + '"]');
@@ -3216,7 +3216,7 @@ const STATE_ICONS = {
     if (state.techDrag) {
       const td = state.techDrag; state.techDrag = null;
       const o = (state.detail.objects || []).find((z) => z.id === td.id);
-      if (td.moved && o) { if (state._preDrag) { pushUndoSnap(state._preDrag); state._preDrag = null; } protectObj(o.id); try { await Api.updateObject(o.id, { points: o.points }); } catch (e2) { toast('Position nicht gespeichert'); } }
+      if (td.moved && o) { o.points = [{ x: td.fx, y: td.fy }]; if (state._preDrag) { pushUndoSnap(state._preDrag); state._preDrag = null; } protectObj(o.id); try { await Api.updateObject(o.id, { points: o.points }); } catch (e2) { toast('Position nicht gespeichert'); } }
       renderEditor(); return;
     }
     if (state.zoneDrag) {
@@ -3710,7 +3710,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.172';
+      sc.src = 'js/html2canvas.min.js?v=0.25.173';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3976,7 +3976,7 @@ const STATE_ICONS = {
     if (e.target.closest('.comment-window, .comment-pin, .robot-sugg-layer, .learn-prompt, .pt-sugg-layer, .tpl-panel')) return;
     // Technologie-Blase greifen
     const td = e.target.closest('[data-techdrag]');
-    if (td) { e.preventDefault(); state._preDrag = snapObjects(); state.techDrag = { id: td.getAttribute('data-techdrag'), moved: false }; try { td.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } return; }
+    if (td) { e.preventDefault(); state._preDrag = snapObjects(); state.techDrag = { id: td.getAttribute('data-techdrag'), moved: false }; protectObj(td.getAttribute('data-techdrag')); try { td.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } return; }
     // Mittelpunkt-Handle: neuen Stützpunkt an der Kante einfügen (danach frei ziehbar)
     const mid = e.target.closest('.zone-midpoint');
     if (mid) {
