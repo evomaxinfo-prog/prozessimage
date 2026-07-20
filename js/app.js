@@ -2219,9 +2219,8 @@ const STATE_ICONS = {
     const bb = selBBox();
     if (!bb) return '';
     const pad = 0.02 + 0.02 * bb.maxS;
-    const x0 = clamp01(bb.minx - pad), y0 = clamp01(bb.miny - pad), x1 = clamp01(bb.maxx + pad), y1 = clamp01(bb.maxy + pad);
-    return '<div class="sel-box" style="left:' + (x0 * 100) + '%;top:' + (y0 * 100) + '%;width:' + ((x1 - x0) * 100) + '%;height:' + ((y1 - y0) * 100) + '%"></div>'
-      + '<div class="sel-resize" data-scalehandle="1" style="left:' + (x1 * 100) + '%;top:' + (y1 * 100) + '%" title="' + t('Symbolgröße ziehen') + '"></div>';
+    const x1 = clamp01(bb.maxx + pad), y1 = clamp01(bb.maxy + pad);
+    return '<div class="sel-resize" data-scalehandle="1" style="left:' + (x1 * 100) + '%;top:' + (y1 * 100) + '%" title="' + t('Symbolgröße ziehen') + '"></div>';
   }
   function startScaleDrag(e) {
     const bb = selBBox(); if (!bb) return;
@@ -3594,7 +3593,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.166';
+      sc.src = 'js/html2canvas.min.js?v=0.25.167';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
