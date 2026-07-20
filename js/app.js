@@ -546,13 +546,22 @@
             if (no && no.id && o.metatags && o.metatags.length) { try { await Api.setMetatags(no.id, o.metatags); } catch (e) { /* ignore */ } }
           } catch (e) { /* ignore */ }
         }
-        // Layout-Bild kopieren (Blob laden -> als Datei neu hochladen)
-        if (full.hasLayout) {
-          try {
-            const res = await Api.raw('/stations/' + src + '/layout');
-            if (res && res.ok) { const blob = await res.blob(); const file = new File([blob], 'layout.png', { type: blob.type || 'image/png' }); await Api.uploadLayout(nsid, file); }
-          } catch (e) { /* ignore */ }
-        }
+        // Layout-Bild kopieren: unabhaengig vom hasLayout-Flag versuchen; nur bei echten Bild-Bytes hochladen.
+        try {
+          const res = await Api.raw('/stations/' + src + '/layout');
+          if (res && res.ok) {
+            const blob = await res.blob();
+            if (blob && blob.size > 0) {
+              const ct = (res.headers && res.headers.get && res.headers.get('content-type')) || blob.type || 'image/png';
+              const ext = /jpe?g/i.test(ct) ? 'jpg' : (/webp/i.test(ct) ? 'webp' : (/gif/i.test(ct) ? 'gif' : 'png'));
+              const mime = /image\//i.test(ct) ? ct : 'image/png';
+              let file;
+              try { file = new File([blob], 'layout.' + ext, { type: mime }); }
+              catch (e) { file = blob; file.name = 'layout.' + ext; } // Fallback fuer aeltere Browser
+              await Api.uploadLayout(nsid, file);
+            }
+          } else if (full.hasLayout) { toast('Layout-Bild laden fehlgeschlagen (' + (res ? res.status : '?') + ')'); }
+        } catch (e) { toast('Layout-Bild nicht kopiert: ' + (e && e.message ? e.message : e)); }
       }
       if (parentId) state.expanded.add(parentId);
       await loadTree();
