@@ -3430,7 +3430,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.149';
+      sc.src = 'js/html2canvas.min.js?v=0.25.150';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3504,7 +3504,8 @@ const STATE_ICONS = {
         const res = await Api.raw('/stations/' + state.detail.id + '/export.pdf', { method: 'POST', body: { mapImage: mapImage } });
         if (!res.ok) { toast(t('Export fehlgeschlagen')); return; }
         const url = URL.createObjectURL(await res.blob());
-        window.open(url, '_blank');
+        const fn = (state.detail.anlagenname || 'Anlage').replace(/[\/\\:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim() || 'Anlage';
+        const a = document.createElement('a'); a.href = url; a.download = fn + '.pdf'; document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 5000);
         return;
       }
