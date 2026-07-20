@@ -2292,9 +2292,11 @@ const STATE_ICONS = {
       const body = {
         layerId: c.layerId, categoryId: c.categoryId, name: c.name, symbolType: c.symbolType,
         color: c.color, x: clamp01(c.x + dx), y: clamp01(c.y + dy), rotation: c.rotation,
-        points: (c.points || []).map((p) => ({ x: clamp01(p.x + dx), y: clamp01(p.y + dy) })),
         plcConfigId: sameStation ? c.plcConfigId : null,
       };
+      if (c.points && c.points.length) {
+        body.points = c.points.map((p) => ({ x: clamp01(p.x + dx), y: clamp01(p.y + dy) }));
+      }
       let no;
       try { no = await Api.createObject(state.detail.id, body); } catch (e) { continue; }
       if (!no || !no.id) continue;
@@ -3654,7 +3656,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.170';
+      sc.src = 'js/html2canvas.min.js?v=0.25.171';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
