@@ -1112,6 +1112,7 @@
       return;
     }
     const seq = (state.navSeq = (state.navSeq || 0) + 1);
+    state.view = 'detail'; // Beim Wechsel auf eine Anlage immer zuerst die Stammdaten-Ansicht (nie direkt in die Modellierung)
     const sid = node.stationId;
     const cached = state.stationCache && state.stationCache[sid];
     // Layout-Grafik liegt NICHT im kritischen Pfad: Detail sofort zeigen, Vorschau laedt nach.
@@ -3430,7 +3431,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.150';
+      sc.src = 'js/html2canvas.min.js?v=0.25.151';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
