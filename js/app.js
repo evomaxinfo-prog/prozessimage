@@ -3430,7 +3430,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.146';
+      sc.src = 'js/html2canvas.min.js?v=0.25.147';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3448,11 +3448,22 @@ const STATE_ICONS = {
     try {
       const rect = el.getBoundingClientRect();
       const scale = Math.max(1, Math.min(3, 1600 / Math.max(1, rect.width)));
-      // Roboter-PNG vorab als data-URL laden (html2canvas rendert dynamisch verlinkte SVG-Bilder unzuverlaessig)
+      // Roboter-Maske (weisse Form auf Schwarz) in ein TRANSPARENTES Icon umwandeln: weiss deckend, Rest transparent
+      // (sonst ueberdeckt der schwarze Masken-Hintergrund das farbige Kaestchen).
       let robotData = null;
       try {
-        const rr = await fetch(new URL('img/robot-mask.png', location.href).href, { cache: 'force-cache' });
-        if (rr.ok) { const bl = await rr.blob(); robotData = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(bl); }); }
+        const maskImg = await new Promise((res, rej) => {
+          const im = new Image(); im.crossOrigin = 'anonymous';
+          im.onload = () => res(im); im.onerror = () => rej(new Error('mask'));
+          im.src = new URL('img/robot-mask.png', location.href).href;
+        });
+        const w = maskImg.naturalWidth || 24, h = maskImg.naturalHeight || 24;
+        const cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
+        const cx = cvs.getContext('2d'); cx.drawImage(maskImg, 0, 0, w, h);
+        const id = cx.getImageData(0, 0, w, h); const dd = id.data;
+        for (let i = 0; i < dd.length; i += 4) { const lum = (dd[i] + dd[i + 1] + dd[i + 2]) / 3; dd[i] = 255; dd[i + 1] = 255; dd[i + 2] = 255; dd[i + 3] = lum; }
+        cx.putImageData(id, 0, 0);
+        robotData = cvs.toDataURL('image/png');
       } catch (e) { robotData = null; }
       const canvas = await h2c(el, {
         scale: scale, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false,
