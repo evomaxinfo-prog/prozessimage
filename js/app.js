@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -1245,10 +1245,16 @@
       + '<div class="card-body"><div class="doc-list" id="docList"><div class="doc-empty">' + t('Wird geladen …') + '</div></div>'
       + (state.isAdmin ? '<div class="doc-add"><button class="btn" data-act="doc-upload"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4M5 20h14"/></svg> ' + t('Dokument hochladen') + '</button></div>' : '')
       + '</div></div>'
+      + '<div class="card"><div class="card-head"><h3>' + t('Versionen') + '</h3><span class="badge" id="verCount">…</span></div>'
+      + '<div class="card-body">'
+      + (canEdit() ? '<div class="ver-save"><input id="verLabel" placeholder="' + t('Bezeichnung (optional)') + '" maxlength="120"><button class="btn" data-act="ver-save"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h11l3 3v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M8 3v6h7M8 21v-6h8v6"/></svg> ' + t('Version speichern') + '</button></div>' : '')
+      + '<div class="ver-list" id="verList"><div class="doc-empty">' + t('Wird geladen …') + '</div></div>'
+      + '</div></div>'
       + '</div>';
 
     $('content').innerHTML = breadcrumb(s.nodeId) + html;
     loadDocuments(s.id);
+    loadVersions(s.id);
   }
 
   function enterEdit() {
@@ -1359,6 +1365,52 @@
     catch (e) { toast(t('Löschen fehlgeschlagen')); }
   }
 
+  // ---- Versionierung je Anlage (Snapshots) ----
+  async function loadVersions(stationId) {
+    const host = $('verList'); if (!host) return;
+    let list = [];
+    try { list = await Api.getVersions(stationId); } catch (e) { host.innerHTML = '<div class="doc-empty">' + t('Versionen konnten nicht geladen werden.') + '</div>'; return; }
+    if ($('verCount')) $('verCount').textContent = list.length;
+    if (!list.length) { host.innerHTML = '<div class="doc-empty">' + t('Noch keine Versionen gespeichert.') + '</div>'; return; }
+    host.innerHTML = list.map(function (v) {
+      const meta = fmtDateTime(v.createdAt) + (v.createdBy ? ' · ' + esc(v.createdBy) : '') + ' · ' + v.objectCount + ' ' + t('Objekte');
+      return '<div class="ver-row">'
+        + '<span class="ver-no">v' + v.versionNo + '</span>'
+        + '<div class="ver-info"><span class="ver-label">' + esc(v.label || (t('Version') + ' ' + v.versionNo)) + '</span><small>' + esc(meta) + (v.comment ? ' — ' + esc(v.comment) : '') + '</small></div>'
+        + (canEdit() ? '<button class="ver-btn" data-act="ver-restore" data-id="' + esc(v.id) + '" data-no="' + v.versionNo + '" title="' + t('Wiederherstellen') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>' : '')
+        + (state.isAdmin ? '<button class="doc-del" data-act="ver-del" data-id="' + esc(v.id) + '" data-no="' + v.versionNo + '" title="' + t('Löschen') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/></svg></button>' : '')
+        + '</div>';
+    }).join('');
+  }
+  async function saveVersion() {
+    if (!state.detail || state.savingVersion) return;
+    const inp = $('verLabel');
+    const label = inp ? inp.value.trim() : '';
+    state.savingVersion = true;
+    toast(t('Version wird gespeichert …'));
+    try { await Api.createVersion(state.detail.id, { label: label || null }); if (inp) inp.value = ''; toast(t('Version gespeichert')); loadVersions(state.detail.id); }
+    catch (e) { toast((e && e.message) ? e.message : t('Speichern fehlgeschlagen')); }
+    finally { state.savingVersion = false; }
+  }
+  async function restoreVersionUi(id, no) {
+    if (!state.detail) return;
+    if (!window.confirm(t('Diese Version wiederherstellen?') + '\n\n' + t('Version') + ' ' + no + '\n' + t('Der aktuelle Stand wird vorher automatisch gesichert.'))) return;
+    const sid = state.detail.id;
+    toast(t('Version wird wiederhergestellt …'));
+    try {
+      await Api.restoreVersion(sid, id);
+      const full = await Api.getStationFull(sid); full.nodeId = state.detail.nodeId; state.detail = full; cacheStation(sid, full);
+      toast(t('Version wiederhergestellt'));
+      renderDetail();
+    } catch (e) { toast((e && e.message) ? e.message : t('Wiederherstellen fehlgeschlagen')); }
+  }
+  async function deleteVersionUi(id, no) {
+    if (!state.detail) return;
+    if (!window.confirm(t('Version wirklich löschen?') + '\n\n' + t('Version') + ' ' + no)) return;
+    try { await Api.deleteVersion(state.detail.id, id); toast(t('Version gelöscht')); loadVersions(state.detail.id); }
+    catch (e) { toast(t('Löschen fehlgeschlagen')); }
+  }
+
   function onContentClick(e) {
     // Schutzbereich zeichnen: Klick auf die Zeichenfläche setzt Stützpunkte
     if (state.drawZone) {
@@ -1404,6 +1456,9 @@
     else if (act === 'doc-upload') { triggerDocUpload(); }
     else if (act === 'doc-open') { openDoc(el.getAttribute('data-id'), el.getAttribute('data-name'), el.getAttribute('data-mime')); }
     else if (act === 'doc-del') { deleteDoc(el.getAttribute('data-id'), el.getAttribute('data-name')); }
+    else if (act === 'ver-save') { saveVersion(); }
+    else if (act === 'ver-restore') { restoreVersionUi(el.getAttribute('data-id'), el.getAttribute('data-no')); }
+    else if (act === 'ver-del') { deleteVersionUi(el.getAttribute('data-id'), el.getAttribute('data-no')); }
     else if (act === 'zoom-in') { zoomStep(0.1); }
     else if (act === 'zoom-out') { zoomStep(-0.1); }
     else if (act === 'toggle-snap') { state.snapGrid = !state.snapGrid; try { localStorage.setItem('promodx_snapgrid', state.snapGrid ? '1' : '0'); } catch (e) { /* noop */ } renderEditor(); }
@@ -3710,7 +3765,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.173';
+      sc.src = 'js/html2canvas.min.js?v=0.25.174';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);

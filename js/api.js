@@ -186,6 +186,13 @@
     },
     documentResponse(stationId, docId) { return this.raw('/stations/' + stationId + '/documents/' + docId); },
     deleteDocument(stationId, docId) { return this.request('/stations/' + stationId + '/documents/' + docId, { method: 'DELETE' }); },
+
+    // ---- Versionierung je Anlage (Snapshots) ----
+    getVersions(stationId) { return this.request('/stations/' + stationId + '/versions'); },
+    createVersion(stationId, body) { return this.request('/stations/' + stationId + '/versions', { method: 'POST', body: body || {} }); },
+    getVersion(stationId, versionId) { return this.request('/stations/' + stationId + '/versions/' + versionId); },
+    restoreVersion(stationId, versionId) { return this.request('/stations/' + stationId + '/versions/' + versionId + '/restore', { method: 'POST', body: {} }); },
+    deleteVersion(stationId, versionId) { return this.request('/stations/' + stationId + '/versions/' + versionId, { method: 'DELETE' }); },
     getPaletteSymbols(werkId) { return this.request('/werke/' + werkId + '/palette'); },
     async createPaletteSymbol(werkId, name, layerCode, file, fields) {
       const fd = new FormData();
