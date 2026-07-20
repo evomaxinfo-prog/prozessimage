@@ -2208,18 +2208,17 @@ const STATE_ICONS = {
     state.selectedObj = null; state.selectedZone = null;
   }
   function selBBox() {
-    const ids = state.selObjs || [];
+    const ids = (state.selObjs && state.selObjs.length) ? state.selObjs : (state.selectedObj ? [state.selectedObj] : []);
     const objs = (state.detail.objects || []).filter((o) => ids.indexOf(o.id) >= 0 && !isShape(o));
     if (!objs.length) return null;
-    let minx = 1, miny = 1, maxx = 0, maxy = 0;
-    objs.forEach((o) => { minx = Math.min(minx, o.x); miny = Math.min(miny, o.y); maxx = Math.max(maxx, o.x); maxy = Math.max(maxy, o.y); });
-    return { minx: minx, miny: miny, maxx: maxx, maxy: maxy, cx: (minx + maxx) / 2, cy: (miny + maxy) / 2, objs: objs };
+    let minx = 1, miny = 1, maxx = 0, maxy = 0, maxS = 1;
+    objs.forEach((o) => { minx = Math.min(minx, o.x); miny = Math.min(miny, o.y); maxx = Math.max(maxx, o.x); maxy = Math.max(maxy, o.y); maxS = Math.max(maxS, o.scale || 1); });
+    return { minx: minx, miny: miny, maxx: maxx, maxy: maxy, cx: (minx + maxx) / 2, cy: (miny + maxy) / 2, objs: objs, maxS: maxS };
   }
   function selResizeLayer() {
-    if (state.scaleDrag) return ''; // waehrend des Ziehens wird direkt am DOM manipuliert
     const bb = selBBox();
     if (!bb) return '';
-    const pad = 0.025;
+    const pad = 0.02 + 0.02 * bb.maxS;
     const x0 = clamp01(bb.minx - pad), y0 = clamp01(bb.miny - pad), x1 = clamp01(bb.maxx + pad), y1 = clamp01(bb.maxy + pad);
     return '<div class="sel-box" style="left:' + (x0 * 100) + '%;top:' + (y0 * 100) + '%;width:' + ((x1 - x0) * 100) + '%;height:' + ((y1 - y0) * 100) + '%"></div>'
       + '<div class="sel-resize" data-scalehandle="1" style="left:' + (x1 * 100) + '%;top:' + (y1 * 100) + '%" title="' + t('Symbolgröße ziehen') + '"></div>';
@@ -3595,7 +3594,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.165';
+      sc.src = 'js/html2canvas.min.js?v=0.25.166';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
