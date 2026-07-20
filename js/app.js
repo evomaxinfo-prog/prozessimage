@@ -393,6 +393,7 @@
     } else if (canEdit()) {
       right = '<div class="node-tools">'
         + (ct ? '<button data-act="add" data-id="' + n.id + '" title="' + TYPE_LABEL[ct] + ' hinzufügen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button>' : '')
+        + (n.type === 'anlage' ? '<button data-act="dup" data-id="' + n.id + '" title="Anlage duplizieren"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="1.6"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg></button>' : '')
         + '<button data-act="rename" data-id="' + n.id + '" title="Umbenennen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
         + '<button class="del" data-act="del" data-id="' + n.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
         + '</div>';
@@ -424,6 +425,7 @@
     if (act === 'toggle') { e.stopPropagation(); toggleNode(id); }
     else if (act === 'select') { selectNode(id); const a = document.querySelector('.app'); if (a) a.classList.remove('tree-open'); }
     else if (act === 'add') { e.stopPropagation(); addChild(id); }
+    else if (act === 'dup') { e.stopPropagation(); duplicateAnlage(findNode(id)); }
     else if (act === 'rename') { e.stopPropagation(); startRename(id); }
     else if (act === 'del') { e.stopPropagation(); state.confirmDelete = id; state.editingNodeId = null; renderTree(); }
     else if (act === 'del-yes') { e.stopPropagation(); doDelete(id); }
@@ -507,6 +509,56 @@
     if (state.selected === id) { state.selected = null; renderWelcome(); }
     await loadTree();
     toast(t('Gelöscht'));
+  }
+
+  // Anlage duplizieren: neuer Node + tiefe Kopie der Station (Meta, SPS mit ID-Remap, Objekte inkl.
+  // plcConfigId-Remap + Metatags, Layout-Bild). Ebenen sind global -> layerId bleibt unveraendert.
+  async function duplicateAnlage(node) {
+    if (!canEdit() || !node || node.type !== 'anlage' || state.dupBusy) return;
+    const parentId = node._parent ? node._parent.id : null;
+    state.dupBusy = true;
+    toast('Anlage wird dupliziert …');
+    try {
+      const src = node.stationId;
+      const full = src ? await Api.getStationFull(src) : null;
+      const newNode = await Api.createNode(parentId, 'anlage', (node.name || 'Anlage') + ' (Kopie)');
+      const nsid = newNode && newNode.stationId;
+      if (full && nsid) {
+        const patch = {}; ['bereich', 'oem', 'anlagenversion', 'beschreibung'].forEach((k) => { if (full[k]) patch[k] = full[k]; });
+        if (Object.keys(patch).length) { try { await Api.updateStation(nsid, patch); } catch (e) { /* ignore */ } }
+        // SPS kopieren -> alte auf neue ID abbilden
+        const plcMap = {};
+        for (const p of (full.plcs || [])) {
+          try { const np = await Api.addPlc(nsid, { name: p.name, cycleTimeMs: +p.cycleTimeMs || 0, retentiveBytes: +p.retentiveBytes || 0, codeMemoryKb: +p.codeMemoryKb || 0, color: p.color }); if (np && np.id) plcMap[p.id] = np.id; } catch (e) { /* ignore */ }
+        }
+        // Falls addPlc keine IDs liefert: Station neu laden und per Reihenfolge zuordnen
+        if ((full.plcs || []).length && Object.keys(plcMap).length < full.plcs.length) {
+          try { const nf = await Api.getStationFull(nsid); (nf.plcs || []).forEach((np, i) => { if (full.plcs[i] && np) plcMap[full.plcs[i].id] = np.id; }); } catch (e) { /* ignore */ }
+        }
+        // Objekte kopieren (plcConfigId neu mappen, layerId global unveraendert), Metatags uebernehmen
+        for (const o of (full.objects || [])) {
+          const body = { layerId: o.layerId, name: o.name, symbolType: o.symbolType, color: o.color, x: o.x, y: o.y };
+          if (o.points) body.points = o.points;
+          if (o.categoryId) body.categoryId = o.categoryId;
+          body.plcConfigId = o.plcConfigId ? (plcMap[o.plcConfigId] || null) : null;
+          try {
+            const no = await Api.createObject(nsid, body);
+            if (no && no.id && o.metatags && o.metatags.length) { try { await Api.setMetatags(no.id, o.metatags); } catch (e) { /* ignore */ } }
+          } catch (e) { /* ignore */ }
+        }
+        // Layout-Bild kopieren (Blob laden -> als Datei neu hochladen)
+        if (full.hasLayout) {
+          try {
+            const res = await Api.raw('/stations/' + src + '/layout');
+            if (res && res.ok) { const blob = await res.blob(); const file = new File([blob], 'layout.png', { type: blob.type || 'image/png' }); await Api.uploadLayout(nsid, file); }
+          } catch (e) { /* ignore */ }
+        }
+      }
+      if (parentId) state.expanded.add(parentId);
+      await loadTree();
+      toast('Anlage dupliziert');
+    } catch (e) { toast('Duplizieren fehlgeschlagen: ' + (e.message || '')); }
+    finally { state.dupBusy = false; }
   }
 
   /* ---------------- Inhalt ---------------- */
