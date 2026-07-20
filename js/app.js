@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -2041,7 +2041,7 @@ const STATE_ICONS = {
       } else {
         chipsHtml = (o.metatags || []).map((m) => m.value).filter(Boolean).map((t) => '<span class="ptag">' + esc(t) + '</span>').join('');
       }
-      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + ' hover-tags' + (o.id === state.selectedObj ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + '"'
+      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + ' hover-tags' + (isSelObj(o.id) ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + ';--osc:' + (o.scale || 1) + '"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
         + (robotIncomplete ? '<span class="obj-warn" title="Safe Funktion und Technologie sind Pflicht">!</span>' : '')
@@ -2054,7 +2054,7 @@ const STATE_ICONS = {
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + (state.snapGrid && !state.drawZone ? '<div class="snap-grid"></div>' : '') + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + learnPromptLayer() + commentPinLayer() + commentWindowLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + (state.snapGrid && !state.drawZone ? '<div class="snap-grid"></div>' : '') + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + learnPromptLayer() + commentPinLayer() + commentWindowLayer() + zoneHandleLayer() + selResizeLayer() + badge + '</div>';
   }
 
   // Frei platzierbare Zustands-Icons mit Verbindungslinie zum Prozesstyp
@@ -2198,6 +2198,71 @@ const STATE_ICONS = {
     return '<svg class="zone-overlay" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2">' + techLinesSvg(visible) + polys + routeSvg + draft + '</svg>';
   }
 
+  function isSelObj(id) { return (state.selObjs && state.selObjs.indexOf(id) >= 0) || state.selectedObj === id; }
+  function toggleSelObj(id) {
+    const o = (state.detail.objects || []).find((z) => z.id === id);
+    if (!o || isShape(o)) return; // nur Punkt-Objekte/Icons, keine Zonen
+    state.selObjs = state.selObjs || [];
+    const i = state.selObjs.indexOf(id);
+    if (i >= 0) state.selObjs.splice(i, 1); else state.selObjs.push(id);
+    state.selectedObj = null; state.selectedZone = null;
+  }
+  function selBBox() {
+    const ids = state.selObjs || [];
+    const objs = (state.detail.objects || []).filter((o) => ids.indexOf(o.id) >= 0 && !isShape(o));
+    if (!objs.length) return null;
+    let minx = 1, miny = 1, maxx = 0, maxy = 0;
+    objs.forEach((o) => { minx = Math.min(minx, o.x); miny = Math.min(miny, o.y); maxx = Math.max(maxx, o.x); maxy = Math.max(maxy, o.y); });
+    return { minx: minx, miny: miny, maxx: maxx, maxy: maxy, cx: (minx + maxx) / 2, cy: (miny + maxy) / 2, objs: objs };
+  }
+  function selResizeLayer() {
+    if (state.scaleDrag) return ''; // waehrend des Ziehens wird direkt am DOM manipuliert
+    const bb = selBBox();
+    if (!bb) return '';
+    const pad = 0.025;
+    const x0 = clamp01(bb.minx - pad), y0 = clamp01(bb.miny - pad), x1 = clamp01(bb.maxx + pad), y1 = clamp01(bb.maxy + pad);
+    return '<div class="sel-box" style="left:' + (x0 * 100) + '%;top:' + (y0 * 100) + '%;width:' + ((x1 - x0) * 100) + '%;height:' + ((y1 - y0) * 100) + '%"></div>'
+      + '<div class="sel-resize" data-scalehandle="1" style="left:' + (x1 * 100) + '%;top:' + (y1 * 100) + '%" title="' + t('Symbolgröße ziehen') + '"></div>';
+  }
+  function startScaleDrag(e) {
+    const bb = selBBox(); if (!bb) return;
+    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const r = doc.getBoundingClientRect();
+    const px = clamp01((e.clientX - r.left) / r.width), py = clamp01((e.clientY - r.top) / r.height);
+    const startDist = Math.max(0.04, Math.hypot(px - bb.cx, py - bb.cy));
+    const start = {};
+    bb.objs.forEach((o) => { start[o.id] = o.scale || 1; });
+    state._preDrag = snapObjects();
+    state.scaleDrag = { ids: bb.objs.map((o) => o.id), cx: bb.cx, cy: bb.cy, startDist: startDist, start: start, last: {} };
+    try { e.target.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+    e.preventDefault();
+  }
+  function onScaleDrag(e) {
+    const sd = state.scaleDrag; if (!sd) return;
+    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const r = doc.getBoundingClientRect();
+    const px = clamp01((e.clientX - r.left) / r.width), py = clamp01((e.clientY - r.top) / r.height);
+    const factor = Math.hypot(px - sd.cx, py - sd.cy) / sd.startDist;
+    sd.ids.forEach((id) => {
+      const ns = Math.min(3, Math.max(0.4, (sd.start[id] || 1) * factor));
+      sd.last[id] = ns;
+      const el = document.querySelector('.placed[data-obj="' + id + '"]');
+      if (el) el.style.setProperty('--osc', ns.toFixed(2));
+    });
+    const h = document.querySelector('.sel-resize'); if (h) { h.style.left = (px * 100) + '%'; h.style.top = (py * 100) + '%'; }
+  }
+  async function endScaleDrag() {
+    const sd = state.scaleDrag; state.scaleDrag = null; if (!sd) return;
+    let changed = false;
+    Object.keys(sd.last).forEach((id) => {
+      const o = (state.detail.objects || []).find((z) => z.id === id); if (!o) return;
+      const ns = Math.round(sd.last[id] * 100) / 100;
+      if ((o.scale || 1) !== ns) { o.scale = ns; changed = true; protectObj(o.id); Api.updateObject(id, { scale: ns }).catch(() => { /* ignore */ }); }
+    });
+    if (changed && state._preDrag) { pushUndoSnap(state._preDrag); }
+    state._preDrag = null;
+    renderEditor();
+  }
   function zoneHandleLayer() {
     if (state.drawZone || !state.selectedZone) return '';
     const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && isShape(o) && o.points);
@@ -2973,6 +3038,7 @@ const STATE_ICONS = {
     if (d.moved) { var pin = document.querySelector('.comment-pin[data-id="' + d.id + '"]'); if (pin) { pin.style.left = x * 100 + '%'; pin.style.top = y * 100 + '%'; } }
   }
   function onMove(e) {
+    if (state.scaleDrag) { onScaleDrag(e); return; }
     if (state.cwDrag) { onCwDrag(e); return; }
     if (state.pinDrag) { onPinDrag(e); return; }
     if (state.iconDrag) { onIconDrag(e); return; }
@@ -3030,6 +3096,7 @@ const STATE_ICONS = {
       if (c && d.leftPct != null) { c.winX = d.leftPct / 100; c.winY = d.topPct / 100; if (!state.commentsServer) saveComments(); }
       return;
     }
+    if (state.scaleDrag) { await endScaleDrag(); return; }
     if (state.iconDrag) { await endIconDrag(); return; }
     if (state.techDrag) {
       const td = state.techDrag; state.techDrag = null;
@@ -3528,7 +3595,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.164';
+      sc.src = 'js/html2canvas.min.js?v=0.25.165';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3832,8 +3899,16 @@ const STATE_ICONS = {
       return;
     }
     // Symbol verschieben
+    // Skalier-Anfasser der Mehrfachauswahl
+    const sh = e.target.closest('[data-scalehandle]');
+    if (sh) { startScaleDrag(e); return; }
     const pl = e.target.closest('.placed');
-    if (pl) { startMove(e, pl.getAttribute('data-obj')); return; }
+    if (pl) {
+      const oid = pl.getAttribute('data-obj');
+      if (e.shiftKey || e.ctrlKey || e.metaKey) { toggleSelObj(oid); renderEditor(); return; }
+      if (state.selObjs && state.selObjs.length) { state.selObjs = []; }
+      startMove(e, oid); return;
+    }
     // Schutzbereich auswählen / verschieben (nicht im Zeichenmodus)
     if (!state.drawZone) {
       const doc = e.target.closest('#canvasDoc');
@@ -3846,9 +3921,9 @@ const STATE_ICONS = {
           state._preDrag = snapObjects();
           state.zoneDrag = { type: 'move', id: z.id, sx: x, sy: y, moved: false, orig: z.points.map((p) => ({ x: p.x, y: p.y })) };
           try { doc.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
-          if (state.selectedObj) { state.selectedObj = null; renderEditor(); }
+          if (state.selectedObj || (state.selObjs && state.selObjs.length)) { state.selectedObj = null; state.selObjs = []; renderEditor(); }
         } else if (state.selectedZone || state.selectedObj) {
-          state.selectedZone = null; state.selectedObj = null; renderEditor();
+          state.selectedZone = null; state.selectedObj = null; state.selObjs = []; renderEditor();
         }
       }
     }
