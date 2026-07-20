@@ -1319,17 +1319,27 @@
   }
   function triggerDocUpload() { const el = $('docFile'); if (el) el.click(); }
   async function onDocFile(e) {
-    const f = e.target.files && e.target.files[0]; e.target.value = '';
-    if (!f || !state.detail) return;
-    const ext = docExt(f.name);
-    if (['pdf', 'doc', 'docx', 'xls', 'xlsx'].indexOf(ext) < 0) { toast(t('Nur PDF, Word oder Excel erlaubt.')); return; }
-    if (f.size > 25 * 1024 * 1024) { toast(t('Datei zu groß (max. 25 MB).')); return; }
+    const files = e.target.files ? Array.prototype.slice.call(e.target.files) : []; e.target.value = '';
+    if (!files.length || !state.detail) return;
     if (state.uploadingDoc) return;
+    const valid = [];
+    files.forEach(function (f) {
+      const ext = docExt(f.name);
+      if (['pdf', 'doc', 'docx', 'xls', 'xlsx'].indexOf(ext) < 0) { toast('„' + f.name + '": ' + t('Nur PDF, Word oder Excel erlaubt.')); return; }
+      if (f.size > 25 * 1024 * 1024) { toast('„' + f.name + '": ' + t('Datei zu groß (max. 25 MB).')); return; }
+      valid.push(f);
+    });
+    if (!valid.length) return;
     state.uploadingDoc = true;
-    toast(t('Dokument wird hochgeladen …'));
-    try { await Api.uploadDocument(state.detail.id, f); toast(t('Dokument hochgeladen')); loadDocuments(state.detail.id); }
-    catch (e2) { toast((e2 && e2.message) ? e2.message : t('Upload fehlgeschlagen')); }
-    finally { state.uploadingDoc = false; }
+    let ok = 0, fail = 0;
+    try {
+      for (let i = 0; i < valid.length; i++) {
+        toast(valid.length > 1 ? (t('Dokumente werden hochgeladen …') + ' (' + (i + 1) + '/' + valid.length + ')') : t('Dokument wird hochgeladen …'));
+        try { await Api.uploadDocument(state.detail.id, valid[i]); ok++; } catch (e2) { fail++; }
+      }
+      toast(fail ? (ok + ' ' + t('hochgeladen') + ', ' + fail + ' ' + t('fehlgeschlagen')) : (ok === 1 ? t('Dokument hochgeladen') : ok + ' ' + t('Dokumente hochgeladen')));
+      loadDocuments(state.detail.id);
+    } finally { state.uploadingDoc = false; }
   }
   async function openDoc(id, name, mime) {
     if (!state.detail) return;
@@ -3517,7 +3527,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.160';
+      sc.src = 'js/html2canvas.min.js?v=0.25.161';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
