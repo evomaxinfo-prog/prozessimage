@@ -2311,7 +2311,8 @@ const STATE_ICONS = {
   function onTechDrag(e) {
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
     const r = doc.getBoundingClientRect();
-    const x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+    let x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
+    if (state.snapGrid) { x = clamp01(snapToGrid(x)); y = clamp01(snapToGrid(y)); }
     const o = (state.detail.objects || []).find((z) => z.id === state.techDrag.id); if (!o) return;
     o.points = [{ x, y }]; state.techDrag.moved = true;
     const line = document.getElementById('tech-line-' + o.id);
@@ -3527,7 +3528,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.163';
+      sc.src = 'js/html2canvas.min.js?v=0.25.164';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
