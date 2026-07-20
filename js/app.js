@@ -3430,7 +3430,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.144';
+      sc.src = 'js/html2canvas.min.js?v=0.25.145';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3448,7 +3448,24 @@ const STATE_ICONS = {
     try {
       const rect = el.getBoundingClientRect();
       const scale = Math.max(1, Math.min(3, 1600 / Math.max(1, rect.width)));
-      const canvas = await h2c(el, { scale: scale, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false });
+      const robotHref = new URL('img/robot-mask.png', location.href).href;
+      const canvas = await h2c(el, {
+        scale: scale, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false,
+        onclone: function (doc) {
+          // html2canvas kann SVG-Masken nicht -> maskiertes Roboter-Rechteck durch das Roboter-PNG ersetzen.
+          try {
+            doc.querySelectorAll('rect').forEach(function (r) {
+              if ((r.getAttribute('mask') || '').indexOf('robotMask') < 0) return;
+              const img = doc.createElementNS('http://www.w3.org/2000/svg', 'image');
+              img.setAttribute('x', '0'); img.setAttribute('y', '0');
+              img.setAttribute('width', '24'); img.setAttribute('height', '24');
+              img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', robotHref);
+              img.setAttribute('href', robotHref);
+              if (r.parentNode) r.parentNode.replaceChild(img, r);
+            });
+          } catch (e) { /* ignore */ }
+        },
+      });
       const dataUrl = canvas.toDataURL('image/png');
       if (!dataUrl || dataUrl.length < 100) throw new Error('leeres Bild erzeugt');
       return dataUrl;
