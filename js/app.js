@@ -3414,6 +3414,8 @@ const STATE_ICONS = {
     if (!f.type.startsWith('image/')) { toast('Bitte eine Bilddatei wählen'); return; }
     if (f.size > 8 * 1024 * 1024) { toast('Bild zu groß (max. 8 MB)'); return; }
     if (!state.detail) { toast('Bitte zuerst eine Anlage wählen'); return; }
+    if (state.uploadingLayout) { return; } // Doppel-Upload verhindern (Rate-Limit)
+    state.uploadingLayout = true;
     toast('Layout wird hochgeladen …');
     try {
       await Api.uploadLayout(state.detail.id, f);
@@ -3422,7 +3424,10 @@ const STATE_ICONS = {
       await ensureLayoutBlob();
       toast('Layout hochgeladen');
       if (state.view === 'editor') renderEditor(); else renderDetail();
-    } catch (e2) { toast('Upload fehlgeschlagen: ' + e2.message); }
+    } catch (e2) {
+      const msg = /429|too many/i.test(e2 && e2.message ? e2.message : '') ? 'Zu viele Uploads in kurzer Zeit – bitte kurz warten und erneut versuchen.' : ('Upload fehlgeschlagen: ' + (e2 && e2.message ? e2.message : e2));
+      toast(msg);
+    } finally { state.uploadingLayout = false; }
   }
 
   let _h2cPromise = null;
@@ -3431,7 +3436,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.151';
+      sc.src = 'js/html2canvas.min.js?v=0.25.152';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
