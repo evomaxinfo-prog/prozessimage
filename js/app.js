@@ -3430,7 +3430,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.147';
+      sc.src = 'js/html2canvas.min.js?v=0.25.148';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3461,7 +3461,12 @@ const STATE_ICONS = {
         const cvs = document.createElement('canvas'); cvs.width = w; cvs.height = h;
         const cx = cvs.getContext('2d'); cx.drawImage(maskImg, 0, 0, w, h);
         const id = cx.getImageData(0, 0, w, h); const dd = id.data;
-        for (let i = 0; i < dd.length; i += 4) { const lum = (dd[i] + dd[i + 1] + dd[i + 2]) / 3; dd[i] = 255; dd[i + 1] = 255; dd[i + 2] = 255; dd[i + 3] = lum; }
+        let hasAlpha = false;
+        for (let i = 3; i < dd.length; i += 4) { if (dd[i] < 250) { hasAlpha = true; break; } }
+        for (let i = 0; i < dd.length; i += 4) {
+          const a = hasAlpha ? dd[i + 3] : ((dd[i] + dd[i + 1] + dd[i + 2]) / 3);
+          dd[i] = 255; dd[i + 1] = 255; dd[i + 2] = 255; dd[i + 3] = a;
+        }
         cx.putImageData(id, 0, 0);
         robotData = cvs.toDataURL('image/png');
       } catch (e) { robotData = null; }
