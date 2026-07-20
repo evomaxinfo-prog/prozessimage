@@ -523,6 +523,7 @@
       const full = src ? await Api.getStationFull(src) : null;
       const newNode = await Api.createNode(parentId, 'anlage', (node.name || 'Anlage') + ' (Kopie)');
       const nsid = newNode && newNode.stationId;
+      let layoutOk = false;
       if (full && nsid) {
         const patch = {}; ['bereich', 'oem', 'anlagenversion', 'beschreibung'].forEach((k) => { if (full[k]) patch[k] = full[k]; });
         if (Object.keys(patch).length) { try { await Api.updateStation(nsid, patch); } catch (e) { /* ignore */ } }
@@ -558,8 +559,9 @@
               let file;
               try { file = new File([blob], 'layout.' + ext, { type: mime }); }
               catch (e) { file = blob; file.name = 'layout.' + ext; } // Fallback fuer aeltere Browser
-              await Api.uploadLayout(nsid, file);
-            }
+              try { await Api.uploadLayout(nsid, file); layoutOk = true; }
+              catch (e1) { await new Promise((r) => setTimeout(r, 500)); try { await Api.uploadLayout(nsid, file); layoutOk = true; } catch (e2) { toast('Layout-Upload fehlgeschlagen: ' + (e2 && e2.message ? e2.message : e2)); } }
+            } else if (full.hasLayout) { toast('Layout-Bild leer geladen (0 Bytes)'); }
           } else if (full.hasLayout) { toast('Layout-Bild laden fehlgeschlagen (' + (res ? res.status : '?') + ')'); }
         } catch (e) { toast('Layout-Bild nicht kopiert: ' + (e && e.message ? e.message : e)); }
         // Kommentare kopieren (Pins + Nachrichten). Autor/Zeitpunkt der Nachrichten werden neu vergeben.
@@ -575,7 +577,7 @@
       }
       if (parentId) state.expanded.add(parentId);
       await loadTree();
-      toast('Anlage dupliziert');
+      toast('Anlage dupliziert' + ((full && full.hasLayout) ? (layoutOk ? ' · Layout ✓' : ' · LAYOUT FEHLT') : ''));
     } catch (e) { toast('Duplizieren fehlgeschlagen: ' + (e.message || '')); }
     finally { state.dupBusy = false; }
   }
