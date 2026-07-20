@@ -562,6 +562,16 @@
             }
           } else if (full.hasLayout) { toast('Layout-Bild laden fehlgeschlagen (' + (res ? res.status : '?') + ')'); }
         } catch (e) { toast('Layout-Bild nicht kopiert: ' + (e && e.message ? e.message : e)); }
+        // Kommentare kopieren (Pins + Nachrichten). Autor/Zeitpunkt der Nachrichten werden neu vergeben.
+        try {
+          const comments = await Api.getComments(src);
+          for (const c of (comments || [])) {
+            try {
+              const nc = await Api.createComment(nsid, { x: c.x, y: c.y, layerId: c.layerId || null });
+              if (nc && nc.id) { for (const m of (c.messages || [])) { if (m && m.text) { try { await Api.addCommentMessage(nc.id, m.text); } catch (e) { /* ignore */ } } } }
+            } catch (e) { /* ignore */ }
+          }
+        } catch (e) { /* ignore */ }
       }
       if (parentId) state.expanded.add(parentId);
       await loadTree();
