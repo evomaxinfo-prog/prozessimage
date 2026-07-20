@@ -3458,7 +3458,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.158';
+      sc.src = 'js/html2canvas.min.js?v=0.25.159';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3501,6 +3501,8 @@ const STATE_ICONS = {
         scale: scale, backgroundColor: '#ffffff', useCORS: true, allowTaint: false, logging: false,
         onclone: function (doc) {
           try {
+            // Editier-Raster (Snap-/Zeichenraster) nicht ins PDF aufnehmen
+            doc.querySelectorAll('.snap-grid, .draw-grid').forEach(function (el) { el.style.display = 'none'; });
             const vw = doc.defaultView || window;
             doc.querySelectorAll('rect').forEach(function (r) {
               if ((r.getAttribute('mask') || '').indexOf('robotMask') < 0) return;
