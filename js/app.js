@@ -98,7 +98,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -373,6 +373,21 @@
 
   function renderTree() {
     $('treeScroll').innerHTML = state.tree.map(nodeHTML).join('');
+    updateToggleAllIcon();
+  }
+  function treeAllExpanded() { const ids = allExpandableIds(); return ids.length > 0 && ids.every((id) => state.expanded.has(id)); }
+  function updateToggleAllIcon() {
+    const b = $('btnToggleAll'); if (!b) return;
+    const open = treeAllExpanded();
+    b.innerHTML = open
+      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l4 4 4-4M8 19l4-4 4 4"/></svg>'
+      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>';
+    b.title = open ? t('Alles zuklappen') : t('Alles aufklappen');
+  }
+  function toggleAllTree() {
+    if (treeAllExpanded()) state.expanded = new Set();
+    else state.expanded = new Set(allExpandableIds());
+    renderTree();
   }
 
   function nodeHTML(n) {
@@ -3436,7 +3451,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.152';
+      sc.src = 'js/html2canvas.min.js?v=0.25.153';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4692,8 +4707,7 @@ const STATE_ICONS = {
 
     // Baum
     $('btnAddWerk').addEventListener('click', addWerk);
-    $('btnExpandAll').addEventListener('click', expandAll);
-    $('btnCollapseAll').addEventListener('click', collapseAll);
+    { const bta = $('btnToggleAll'); if (bta) bta.addEventListener('click', toggleAllTree); }
     // Baum-Breite per Zieh-Griff verstellen (persistiert in localStorage)
     (function () {
       var savedW = 0; try { savedW = parseInt(localStorage.getItem('tree_w') || '', 10); } catch (e) { /* noop */ }
