@@ -6,6 +6,8 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"'`]/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]));
   const clamp01 = (v) => Math.min(1, Math.max(0, v));
+  const GRID_STEP = 0.025; // Raster-Schrittweite (normiert) ~ 40 Spalten
+  const snapToGrid = (v) => Math.round(v / GRID_STEP) * GRID_STEP;
   const PLC_COLORS = ['#0065A5', '#C0392B', '#0E8A6E', '#D9822B', '#7A3FA8', '#2C82C9', '#16A085', '#E67E22'];
   // Naechster freier SPS-Name: SPS1, SPS2, ... (hoechste vorhandene SPS<n>-Nummer + 1)
   function nextSpsName(plcs) {
@@ -98,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -303,6 +305,7 @@
     state.group = ctx.group || null;
     state.visibleWerke = ctx.visibleWerke || null;
     state.visibleLayers = ctx.visibleLayers || null; // Array erlaubter Ebenen-Codes; null = alle sichtbar
+    state.snapGrid = (localStorage.getItem('promodx_snapgrid') !== '0'); // Raster-Snap, Standard: an
     $('userName').textContent = ctx.user.email;
     $('userAvatar').textContent = initials(ctx.user.email);
     if (ctx.tenants && ctx.tenants[0]) $('tenantName').textContent = ctx.tenants[0].name;
@@ -1334,6 +1337,7 @@
     else if (act === 'detail-upload') { triggerUpload(); }
     else if (act === 'zoom-in') { zoomStep(0.1); }
     else if (act === 'zoom-out') { zoomStep(-0.1); }
+    else if (act === 'toggle-snap') { state.snapGrid = !state.snapGrid; try { localStorage.setItem('promodx_snapgrid', state.snapGrid ? '1' : '0'); } catch (e) { /* noop */ } renderEditor(); }
     else if (act === 'layer-select') { selectLayer(el.getAttribute('data-layer')); }
     else if (act === 'layer-eye') { e.stopPropagation(); if (!canEdit()) { toast('Nur Lesezugriff'); return; } toggleLayerVis(el.getAttribute('data-layer')); }
     else if (act === 'export-pdf') { exportFile('pdf'); }
@@ -1981,7 +1985,7 @@ const STATE_ICONS = {
       ? ' style="aspect-ratio:' + state.layoutDim.w + '/' + state.layoutDim.h + ';max-width:960px"' : '';
 
     return '<div class="canvas-doc ' + (state.drawZone ? 'drawing' : '') + '" id="canvasDoc"' + docStyle + '>'
-      + bg + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + learnPromptLayer() + commentPinLayer() + commentWindowLayer() + zoneHandleLayer() + badge + '</div>';
+      + bg + (state.snapGrid && !state.drawZone ? '<div class="snap-grid"></div>' : '') + (state.drawZone ? '<div class="draw-grid"></div><div class="draw-measure" id="draw-measure"></div>' : '') + zoneOverlaySvg(visible) + '<div class="placed-layer">' + placed + '</div>' + fgLabelLayer(visible) + stateIconLayer(visible) + techBadgeLayer() + robotSuggestionLayer() + learnPromptLayer() + commentPinLayer() + commentWindowLayer() + zoneHandleLayer() + badge + '</div>';
   }
 
   // Frei platzierbare Zustands-Icons mit Verbindungslinie zum Prozesstyp
@@ -2320,6 +2324,7 @@ const STATE_ICONS = {
       + (canEdit() ? '<div class="up-btn undo-ctl"><button id="btnUndo" data-act="undo" title="Rückgängig (Strg+Z)"' + ((state.undoStack && state.undoStack.length) ? '' : ' disabled') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg></button>'
       + '<button id="btnRedo" data-act="redo" title="Wiederholen (Strg+Umschalt+Z)"' + ((state.redoStack && state.redoStack.length) ? '' : ' disabled') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h1"/></svg></button></div>' : '')
       + '<div class="zoom-ctl"><button data-act="zoom-out" aria-label="' + t('Verkleinern') + '">−</button><span class="z" aria-hidden="true">' + Math.round((state.zoom || 1) * 100) + '%</span><button data-act="zoom-in" aria-label="' + t('Vergrößern') + '">+</button></div>'
+      + (canEdit() ? '<button class="up-btn snap-toggle' + (state.snapGrid ? ' on' : '') + '" data-act="toggle-snap" title="' + t('Am Raster ausrichten') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg> ' + t('Raster') + '</button>' : '')
       + '</div></div>'
       + '<div class="canvas-stage" id="stage"><div class="canvas-inner">' + editorFloorplan() + '</div>' + flowLegendHtml()
       + (canEdit() ? '<div class="palette"><div class="pal-head"><span class="pal-dot" style="background:' + esc(L.color) + '"></span><span class="pal-ttl">' + esc(t(L.name)) + '</span><span class="pal-code">' + esc(L.code) + '</span></div>' + pal
@@ -2790,8 +2795,9 @@ const STATE_ICONS = {
   async function placeFromDrop(clientX, clientY, sym, name, color) {
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
     const r = doc.getBoundingClientRect();
-    const x = Math.min(0.97, Math.max(0.03, (clientX - r.left) / r.width));
-    const y = Math.min(0.96, Math.max(0.04, (clientY - r.top) / r.height));
+    let x = Math.min(0.97, Math.max(0.03, (clientX - r.left) / r.width));
+    let y = Math.min(0.96, Math.max(0.04, (clientY - r.top) / r.height));
+    if (state.snapGrid) { x = Math.min(0.97, Math.max(0.03, snapToGrid(x))); y = Math.min(0.96, Math.max(0.04, snapToGrid(y))); }
     const L = layerById(state.activeLayer);
     const base = (name || 'Objekt').replace(/\s+/g, '_');
     const num = String((state.detail.objects || []).filter((o) => o.symbolType === sym).length + 1).padStart(2, '0');
@@ -2911,8 +2917,9 @@ const STATE_ICONS = {
     if (!dragMove.moved && Math.hypot(e.clientX - dragMove.sx, e.clientY - dragMove.sy) < 4) return;
     dragMove.moved = true;
     const r = dragMove.doc.getBoundingClientRect();
-    const x = Math.min(0.97, Math.max(0.03, (e.clientX - r.left) / r.width));
-    const y = Math.min(0.96, Math.max(0.04, (e.clientY - r.top) / r.height));
+    let x = Math.min(0.97, Math.max(0.03, (e.clientX - r.left) / r.width));
+    let y = Math.min(0.96, Math.max(0.04, (e.clientY - r.top) / r.height));
+    if (state.snapGrid) { x = Math.min(0.97, Math.max(0.03, snapToGrid(x))); y = Math.min(0.96, Math.max(0.04, snapToGrid(y))); }
     dragMove.nx = x; dragMove.ny = y;
     dragMove.el.style.left = (x * 100) + '%'; dragMove.el.style.top = (y * 100) + '%'; dragMove.el.style.cursor = 'grabbing';
     // Zustands-Icon-Verbindungslinien live mitziehen (auf die Icon-Mitte, nicht den Spalten-Anker)
@@ -3451,7 +3458,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.155';
+      sc.src = 'js/html2canvas.min.js?v=0.25.156';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
