@@ -3199,18 +3199,41 @@ const STATE_ICONS = {
     }).catch(function () { /* egal */ });
   }
 
+  // Roboter-Erkennung im Web Worker ausfuehren (Hauptthread bleibt frei -> kein "Seite reagiert nicht").
+  // Faellt bei fehlendem/fehlgeschlagenem Worker sauber auf synchrone Ausfuehrung zurueck.
+  function runRobotDetect(layout, templates, opts) {
+    return new Promise(function (resolve, reject) {
+      function syncFallback() { setTimeout(function () { try { resolve(RobotDetect.detectMulti(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
+      if (typeof Worker === 'undefined') { syncFallback(); return; }
+      var w, done = false;
+      try { w = new Worker('js/robotworker.js?v=1.1.27'); } catch (e) { syncFallback(); return; }
+      w.onmessage = function (ev) {
+        if (done) return; done = true;
+        var r = ev.data || {};
+        try { w.terminate(); } catch (_) { /* noop */ }
+        if (r.ok) resolve(r.found || []);
+        else { try { resolve(RobotDetect.detectMulti(layout, templates, opts)); } catch (e2) { reject(e2); } }
+      };
+      w.onerror = function () {
+        if (done) return; done = true;
+        try { w.terminate(); } catch (_) { /* noop */ }
+        try { resolve(RobotDetect.detectMulti(layout, templates, opts)); } catch (e2) { reject(e2); }
+      };
+      try { w.postMessage({ layout: layout, templates: templates, opts: opts }); }
+      catch (e) { done = true; try { w.terminate(); } catch (_) { /* noop */ } syncFallback(); }
+    });
+  }
   function detectRobotsFlow() {
     if (!window.RobotDetect || !state.layoutBlobUrl) { toast(t('Kein Layout vorhanden.')); return; }
     if (state.robotDetecting) return;
     state.robotDetecting = true; toast(t('Erkenne Roboter …'));
     try { var _rb = document.querySelector('.zone-btn[data-act="detect-robots"]'); if (_rb) _rb.classList.add('active'); } catch (_) { /* noop */ }
     Promise.all([loadPosNegGray(), loadLayoutGray()]).then(function (arr) {
-      return new Promise(function (r) { setTimeout(function () { r(arr); }, 30); });
-    }).then(function (arr) {
       var lib = arr[0], lay = arr[1];
       var opts = { workW: lib.pos.length > 1 ? 260 : 300, threshold: 0.55, combine: true, negatives: lib.neg };
       if (lib.pos.length > 3) opts.scales = [0.8, 1.0, 1.2];
-      var found = RobotDetect.detectMulti(lay, lib.pos, opts);
+      return runRobotDetect(lay, lib.pos, opts);
+    }).then(function (found) {
       var existing = (state.detail.objects || []).filter(function (o) { return o.symbolType === 'robot'; });
       var sugg = found.filter(function (f) { return !existing.some(function (o) { return Math.hypot(o.x - f.x, o.y - f.y) < 0.05; }); });
       state.robotSuggestions = sugg; state.robotDetecting = false; renderEditor();
@@ -4076,7 +4099,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.26';
+      sc.src = 'js/html2canvas.min.js?v=1.1.27';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
