@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -338,6 +338,8 @@
   async function boot() {
     try { state.lang = (localStorage.getItem('promodx_lang') === 'en') ? 'en' : 'de'; } catch (e) { /* noop */ }
     applyLang();
+    // Direktlink zu einer Anlage merken (?station=…) – wird nach dem Laden des Baums geöffnet
+    try { const sp = new URLSearchParams(location.search).get('station'); if (sp) state.pendingStation = sp; } catch (e) { /* noop */ }
     // Reset-Link (?token=…&email=…) erkannt -> direkt "Neues Passwort setzen" anzeigen
     const rp = parseResetParams();
     if (rp) {
@@ -366,6 +368,7 @@
     } catch (e) { toast('Baum konnte nicht geladen werden'); return; }
     indexTree();
     renderTree();
+    if (state.pendingStation) { const pid = state.pendingStation; state.pendingStation = null; openDeepLink(pid); }
   }
   function indexTree() {
     state.byId = {};
@@ -373,6 +376,28 @@
     walk(state.tree, null);
   }
   function findNode(id) { return state.byId[id] || null; }
+
+  // Adresszeile spiegelt die offene Anlage (teilbarer Direktlink); null = Parameter entfernen.
+  function setStationUrl(nodeId) {
+    try { history.replaceState(null, '', nodeId ? (location.pathname + '?station=' + encodeURIComponent(nodeId)) : location.pathname); } catch (e) { /* noop */ }
+  }
+  function copyStationLink(id) {
+    const url = location.origin + location.pathname + '?station=' + encodeURIComponent(id);
+    const ok = () => toast(t('Direktlink kopiert'));
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(ok, () => window.prompt(t('Direktlink:'), url)); }
+      else { window.prompt(t('Direktlink:'), url); }
+    } catch (e) { window.prompt(t('Direktlink:'), url); }
+  }
+  // Beim Start per ?station=<Knoten-ID | Station-ID> direkt zur Anlage springen.
+  function openDeepLink(id) {
+    let node = findNode(id);
+    if (!node) { const all = state.byId || {}; node = Object.keys(all).map((k) => all[k]).find((n) => n.stationId === id) || null; }
+    if (!node || node.type !== 'anlage') { toast(t('Verlinkte Anlage nicht gefunden')); return; }
+    let p = node._parent; while (p) { state.expanded.add(p.id); p = p._parent; }
+    selectNode(node.id);
+    setTimeout(() => { const row = document.querySelector('[data-act="select"][data-id="' + node.id + '"]'); if (row && row.scrollIntoView) row.scrollIntoView({ block: 'center' }); }, 60);
+  }
 
   function renderTree() {
     $('treeScroll').innerHTML = state.tree.map(nodeHTML).join('');
@@ -412,6 +437,7 @@
       right = '<div class="node-tools">'
         + (ct ? '<button data-act="add" data-id="' + n.id + '" title="' + TYPE_LABEL[ct] + ' hinzufügen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button>' : '')
         + (n.type === 'anlage' ? '<button data-act="dup" data-id="' + n.id + '" title="Anlage duplizieren"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="1.6"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg></button>' : '')
+        + (n.type === 'anlage' ? '<button data-act="link" data-id="' + n.id + '" title="' + t('Direktlink kopieren') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5"/></svg></button>' : '')
         + '<button data-act="rename" data-id="' + n.id + '" title="Umbenennen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
         + '<button class="del" data-act="del" data-id="' + n.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
         + '</div>';
@@ -444,6 +470,7 @@
     else if (act === 'select') { selectNode(id); const a = document.querySelector('.app'); if (a) a.classList.remove('tree-open'); }
     else if (act === 'add') { e.stopPropagation(); addChild(id); }
     else if (act === 'dup') { e.stopPropagation(); duplicateAnlage(findNode(id)); }
+    else if (act === 'link') { e.stopPropagation(); copyStationLink(id); }
     else if (act === 'rename') { e.stopPropagation(); startRename(id); }
     else if (act === 'del') { e.stopPropagation(); state.confirmDelete = id; state.editingNodeId = null; renderTree(); }
     else if (act === 'del-yes') { e.stopPropagation(); doDelete(id); }
@@ -479,8 +506,8 @@
     const n = findNode(id); if (!n) return;
     state.selected = id; state.confirmDelete = null;
     if (n.type === 'anlage') { openAnlage(n); }
-    else if (LEVEL_VIEW[n.type]) { LEVEL_VIEW[n.type](n); }
-    else { renderWelcome(); }
+    else if (LEVEL_VIEW[n.type]) { setStationUrl(null); LEVEL_VIEW[n.type](n); }
+    else { setStationUrl(null); renderWelcome(); }
     renderTree();
   }
 
@@ -1125,6 +1152,7 @@
     } catch (e) { /* Cache bleibt gueltig */ }
   }
   async function openAnlage(node) {
+    setStationUrl(node.id);
     if (!node.stationId) {
       $('content').innerHTML = breadcrumb(node.id) + '<div class="pad"><div class="card"><div class="card-body">Für diese Anlage existiert keine Station.</div></div></div>';
       return;
@@ -3812,7 +3840,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.176';
+      sc.src = 'js/html2canvas.min.js?v=0.25.177';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
