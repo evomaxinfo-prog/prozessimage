@@ -363,6 +363,7 @@
   });
 
   async function boot() {
+    try { state._perf = /[?&]perf=1/.test(location.search || ''); } catch (e) { /* noop */ }
     try { state.lang = (localStorage.getItem('promodx_lang') === 'en') ? 'en' : 'de'; } catch (e) { /* noop */ }
     applyLang();
     // Direktlink zu einer Anlage merken (?station=…) – wird nach dem Laden des Baums geöffnet
@@ -2789,7 +2790,34 @@ const STATE_ICONS = {
     if (badge) { badge.style.left = (x * 100) + '%'; badge.style.top = (y * 100) + '%'; }
   }
 
+  // Schnelle Deselektion ohne Voll-Render: entfernt nur die Auswahl-Hervorhebung (Objekte + Resize-Griffe + Objektliste).
+  // Ist eine Zone selektiert, wird sicherheitshalber voll gerendert (Zonen-Styling/Handles brauchen den Voll-Render).
+  function deselectFast() {
+    if (state.selectedZone) {
+      state.selectedObj = null; state.selectedZone = null; state.selObjs = [];
+      renderEditor(); return;
+    }
+    const had = state.selectedObj || (state.selObjs && state.selObjs.length);
+    state.selectedObj = null; state.selObjs = [];
+    if (!had) return;
+    const doc = document.getElementById('canvasDoc');
+    if (doc) {
+      doc.querySelectorAll('.placed.sel').forEach((el) => el.classList.remove('sel'));
+      doc.querySelectorAll('.sel-resize').forEach((el) => el.remove());
+    }
+    const cont = document.getElementById('content');
+    if (cont) cont.querySelectorAll('.obj.sel').forEach((el) => el.classList.remove('sel'));
+  }
+  // Optionaler Perf-Wrapper: mit ?perf=1 loggt jeder Editor-Render seine Dauer (zum Messen, ohne Verhaltensaenderung).
   function renderEditor() {
+    if (!state._perf) return renderEditorImpl();
+    const t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+    const r = renderEditorImpl();
+    const dt = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
+    try { console.log('[perf] renderEditor ' + dt.toFixed(1) + 'ms · objs=' + ((state.detail.objects || []).length)); } catch (_) { /* noop */ }
+    return r;
+  }
+  function renderEditorImpl() {
     const c = $('content'); c.style.padding = '0';
     let L = layerById(state.activeLayer);
     if (!L || !layerAllowed(L.code)) L = allowedLayers()[0] || (state.detail.layers || [])[0];
@@ -4037,7 +4065,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.14';
+      sc.src = 'js/html2canvas.min.js?v=1.1.15';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4387,12 +4415,8 @@ const STATE_ICONS = {
           // Leere Fläche: Ziehen verschiebt das ganze Layout samt Objekten (Pan). Fokus eines zuvor
           // bearbeiteten Icons/Polygons dabei loesen (reiner Klick hebt die Auswahl ebenfalls auf).
           e.preventDefault();
-          let pdoc = doc;
-          if (state.selectedObj || state.selectedZone || (state.selObjs && state.selObjs.length)) {
-            state.selectedObj = null; state.selectedZone = null; state.selObjs = [];
-            renderEditor();
-            pdoc = document.getElementById('canvasDoc') || doc;
-          }
+          if (state.selectedObj || state.selectedZone || (state.selObjs && state.selObjs.length)) { deselectFast(); }
+          const pdoc = document.getElementById('canvasDoc') || doc; // re-query: bei selektierter Zone kann deselectFast voll gerendert haben
           const z0 = state.zoom || 1;
           state.panDrag = { sx: e.clientX, sy: e.clientY, px0: state.panX || 0, py0: state.panY || 0, moved: false, doc: pdoc, dw: pdoc.offsetWidth * z0, dh: pdoc.offsetHeight * z0, z: z0, raf: 0 };
           pdoc.style.cursor = 'grabbing'; pdoc.style.transition = 'none'; pdoc.style.willChange = 'transform';
