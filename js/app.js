@@ -428,7 +428,11 @@
 
     let right;
     if (editing) {
-      right = '<input class="n-edit" value="' + esc(n.name) + '" data-edit="' + n.id + '">';
+      right = '<input class="n-edit" value="' + esc(n.name) + '" data-edit="' + n.id + '">'
+        + '<div class="n-edit-btns">'
+        + '<button class="n-ok" data-act="rename-ok" data-id="' + n.id + '" title="' + t('Speichern') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></button>'
+        + '<button class="n-cancel" data-act="rename-cancel" data-id="' + n.id + '" title="' + t('Abbrechen') + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'
+        + '</div>';
     } else if (confirming) {
       right = '<div class="node-confirm"><span>Löschen?</span>'
         + '<button class="yes" data-act="del-yes" data-id="' + n.id + '">Ja</button>'
@@ -473,6 +477,8 @@
     else if (act === 'dup') { e.stopPropagation(); duplicateAnlage(findNode(id)); }
     else if (act === 'link') { e.stopPropagation(); copyStationLink(id); }
     else if (act === 'rename') { e.stopPropagation(); startRename(id); }
+    else if (act === 'rename-ok') { e.stopPropagation(); const inp = document.querySelector('.n-edit[data-edit="' + id + '"]'); commitRename(id, inp ? inp.value : ''); }
+    else if (act === 'rename-cancel') { e.stopPropagation(); state.editingNodeId = null; renderTree(); }
     else if (act === 'del') { e.stopPropagation(); state.confirmDelete = id; state.editingNodeId = null; renderTree(); }
     else if (act === 'del-yes') { e.stopPropagation(); doDelete(id); }
     else if (act === 'del-no') { e.stopPropagation(); state.confirmDelete = null; renderTree(); }
@@ -3851,7 +3857,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.1';
+      sc.src = 'js/html2canvas.min.js?v=1.1.2';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -5156,6 +5162,7 @@ const STATE_ICONS = {
     })();
     const ts = $('treeScroll');
     ts.addEventListener('click', onTreeClick);
+    ts.addEventListener('mousedown', function (e) { if (e.target.closest('[data-act="rename-ok"],[data-act="rename-cancel"]')) e.preventDefault(); });
     ts.addEventListener('dblclick', onTreeDblClick);
     ts.addEventListener('keydown', onTreeKey);
     ts.addEventListener('blur', onTreeBlur, true);
