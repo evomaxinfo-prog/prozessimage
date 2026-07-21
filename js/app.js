@@ -3202,7 +3202,7 @@ const STATE_ICONS = {
   function detectRobotsFlow() {
     if (!window.RobotDetect || !state.layoutBlobUrl) { toast(t('Kein Layout vorhanden.')); return; }
     if (state.robotDetecting) return;
-    state.robotDetecting = true; toast(t('Erkenne Roboter …'));
+    state.robotDetecting = true; toast(t('Erkenne Roboter …')); renderEditor();
     Promise.all([loadPosNegGray(), loadLayoutGray()]).then(function (arr) {
       return new Promise(function (r) { setTimeout(function () { r(arr); }, 30); });
     }).then(function (arr) {
@@ -4075,7 +4075,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.24';
+      sc.src = 'js/html2canvas.min.js?v=1.1.25';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
