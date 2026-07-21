@@ -3993,7 +3993,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.9';
+      sc.src = 'js/html2canvas.min.js?v=1.1.10';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4227,6 +4227,9 @@ const STATE_ICONS = {
 
   function onContentPointerDown(e) {
     if (!canEdit()) return;
+    // Sicherheitsnetz: einen evtl. haengengebliebenen Pan-Zustand vor jeder neuen Interaktion aufraeumen,
+    // damit endMove nicht faelschlich im Pan-Zweig austeigt (sonst bliebe der Ebenenwechsel beim Greifen aus).
+    if (state.panDrag) { const pd = state.panDrag; state.panDrag = null; if (pd.raf) cancelAnimationFrame(pd.raf); if (pd.doc) { pd.doc.style.cursor = ''; pd.doc.style.transition = ''; pd.doc.style.willChange = ''; } }
     // Zonen zeichnen: schon beim Aufsetzen einrasten + Snap-Ring zeigen (auch Touch / Klick ohne vorherige Bewegung).
     if (state.drawZone && e.target.closest('#canvasDoc')) {
       const doc0 = document.getElementById('canvasDoc');
@@ -4327,7 +4330,6 @@ const STATE_ICONS = {
           // Leere Fläche: Ziehen verschiebt das ganze Layout samt Objekten (Pan); reiner Klick hebt die Auswahl auf (in endMove).
           const z0 = state.zoom || 1; e.preventDefault();
           state.panDrag = { sx: e.clientX, sy: e.clientY, px0: state.panX || 0, py0: state.panY || 0, moved: false, doc: doc, dw: doc.offsetWidth * z0, dh: doc.offsetHeight * z0, z: z0, raf: 0 };
-          try { doc.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
           doc.style.cursor = 'grabbing'; doc.style.transition = 'none'; doc.style.willChange = 'transform';
         }
       }
@@ -5342,6 +5344,7 @@ const STATE_ICONS = {
     c.addEventListener('wheel', onWheelZoom, { passive: false });
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', endMove);
+    window.addEventListener('pointercancel', endMove);
     window.addEventListener('keydown', onEditorKey);
     $('btnAdmin').addEventListener('click', openAdmin);
     $('adminOverlay').addEventListener('click', onAdminClick);
