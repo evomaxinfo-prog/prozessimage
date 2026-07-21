@@ -3993,7 +3993,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.10';
+      sc.src = 'js/html2canvas.min.js?v=1.1.11';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4325,7 +4325,12 @@ const STATE_ICONS = {
           state._preDrag = snapObjects();
           state.zoneDrag = { type: 'move', id: z.id, sx: x, sy: y, moved: false, orig: z.points.map((p) => ({ x: p.x, y: p.y })) };
           try { doc.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
-          if (state.selectedObj || (state.selObjs && state.selObjs.length)) { state.selectedObj = null; state.selObjs = []; renderEditor(); }
+          // Ebene der Zone sofort aktiv setzen (robust – unabhaengig von Klick/Bewegung/Render-Timing).
+          let zNeedRender = false;
+          if (state.selectedObj || (state.selObjs && state.selObjs.length)) { state.selectedObj = null; state.selObjs = []; zNeedRender = true; }
+          if (state.selectedZone !== z.id) { state.selectedZone = z.id; zNeedRender = true; }
+          if (z.layerId && layerById(z.layerId) && state.activeLayer !== z.layerId) { state.activeLayer = z.layerId; zNeedRender = true; }
+          if (zNeedRender) renderEditor();
         } else {
           // Leere Fläche: Ziehen verschiebt das ganze Layout samt Objekten (Pan); reiner Klick hebt die Auswahl auf (in endMove).
           const z0 = state.zoom || 1; e.preventDefault();
