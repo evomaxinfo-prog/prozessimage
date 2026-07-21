@@ -3335,7 +3335,10 @@ const STATE_ICONS = {
   function startMove(e, oid) {
     if (e.button !== undefined && e.button !== 0) return;
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
-    const el = e.target.closest('.placed'); if (!el) return;
+    // Element per Objekt-ID holen (render-fest: falls direkt vor dem Greifen neu gerendert wurde, ist e.target evtl. veraltet).
+    let el = null; try { el = doc.querySelector('.placed[data-obj="' + (window.CSS && CSS.escape ? CSS.escape(oid) : oid) + '"]'); } catch (_) { el = null; }
+    if (!el) el = e.target.closest('.placed');
+    if (!el) return;
     state._preDrag = snapObjects();
     dragMove = { oid, el, doc, sx: e.clientX, sy: e.clientY, moved: false, nx: null, ny: null };
     try { el.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
@@ -3993,7 +3996,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.11';
+      sc.src = 'js/html2canvas.min.js?v=1.1.12';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4311,6 +4314,14 @@ const STATE_ICONS = {
       if (e.shiftKey || e.ctrlKey || e.metaKey) { toggleSelObj(oid); renderEditor(); return; }
       if (state.selObjs && state.selObjs.length > 1 && state.selObjs.indexOf(oid) >= 0) { startGroupDrag(e); return; }
       if (state.selObjs && state.selObjs.length) { state.selObjs = []; }
+      // Ebene des Objekts sofort aktiv setzen (robust – wie bei Zonen, unabhaengig von Klick/Bewegung/Render-Timing).
+      {
+        const _o = (state.detail.objects || []).find((x) => x.id === oid);
+        let oNeedRender = false;
+        if (state.selectedObj !== oid) { state.selectedObj = oid; oNeedRender = true; }
+        if (_o && _o.layerId && layerById(_o.layerId) && state.activeLayer !== _o.layerId) { state.activeLayer = _o.layerId; oNeedRender = true; }
+        if (oNeedRender) renderEditor();
+      }
       startMove(e, oid); return;
     }
     // Schutzbereich auswählen / verschieben (nicht im Zeichenmodus)
