@@ -1651,7 +1651,7 @@
       if (doc) {
         const r = doc.getBoundingClientRect();
         let x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
-        if (state.drawShape !== 'nhzone') { const _sn = snapCursor(x, y); x = _sn.x; y = _sn.y; } // Not-Halt manuell: bewusst kein Einrasten
+        const _sn = snapCursor(x, y); x = _sn.x; y = _sn.y; // Ausrichtung H/V an eigenen Punkten; nhzone dockt nicht an (dt=null)
         if (state.drawShape === 'route') {
           if (state.zoneDraft.length >= 2) {
             const last = state.zoneDraft[state.zoneDraft.length - 1];
@@ -2954,7 +2954,7 @@ const STATE_ICONS = {
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z" stroke-dasharray="0.5 3" stroke-linecap="round"/></svg> '
         + (nhActive ? t('ZEICHNEN AKTIV') : 'NOT-HALT-GRENZE MANUELL') + '</button>';
       hint = nhActive
-        ? 'Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab · <b>kein Einrasten</b>'
+        ? 'Klicken setzt Stützpunkte · richtet <b>waagerecht/senkrecht</b> aus · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab'
         : (!nSb
           ? 'Noch keine Schutzbereiche (SB) vorhanden – zuerst SB einzeichnen und erzeugen, oder unten die Grenze <b>manuell</b> zeichnen.'
           : (stale ? '<b>Schutzbereiche wurden seit der Erzeugung geändert</b> – klicken, um die Grenze zu aktualisieren.'
@@ -3515,7 +3515,7 @@ const STATE_ICONS = {
     updateZoneHoverTitle(e);
     if (state.drawZone) {
       const doc = document.getElementById('canvasDoc');
-      if (doc) { const r = doc.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = state.drawShape === 'nhzone' ? { x: cxr, y: cyr, ax: null, ay: null, dock: false } : snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
+      if (doc) { const r = doc.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
     }
     if (!dragMove) return;
     if (!dragMove.moved && Math.hypot(e.clientX - dragMove.sx, e.clientY - dragMove.sy) < 4) return;
@@ -4075,7 +4075,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.19';
+      sc.src = 'js/html2canvas.min.js?v=1.1.20';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4315,7 +4315,7 @@ const STATE_ICONS = {
     // Zonen zeichnen: schon beim Aufsetzen einrasten + Snap-Ring zeigen (auch Touch / Klick ohne vorherige Bewegung).
     if (state.drawZone && e.target.closest('#canvasDoc')) {
       const doc0 = document.getElementById('canvasDoc');
-      if (doc0) { const r = doc0.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = state.drawShape === 'nhzone' ? { x: cxr, y: cyr, ax: null, ay: null, dock: false } : snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
+      if (doc0) { const r = doc0.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
     }
     // Kommentar-Fenster an der Kopfzeile verschieben (nicht auf X/Löschen)
     const cwh = e.target.closest('.cw-head');
