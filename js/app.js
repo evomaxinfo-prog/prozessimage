@@ -4075,7 +4075,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.18';
+      sc.src = 'js/html2canvas.min.js?v=1.1.19';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4802,11 +4802,17 @@ const STATE_ICONS = {
       const h = document.querySelector('.zone-vertex[data-zone="' + z.id + '"][data-vidx="' + i + '"]');
       if (h) { h.style.left = (p.x * 100) + '%'; h.style.top = (p.y * 100) + '%'; }
     });
-    if (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone' || z.symbolType === 'sps_zone') {
+    if (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone' || z.symbolType === 'sps_zone' || z.symbolType === 'nh_zone') {
       const lbl = document.querySelector('.fg-label[data-zone="' + z.id + '"]');
       if (lbl) {
-        const cx = z.points.reduce((s, p) => s + p.x, 0) / z.points.length;
-        const cy = z.points.reduce((s, p) => s + p.y, 0) / z.points.length;
+        let cx, cy;
+        if (z.symbolType === 'nh_zone') { // Label sitzt am obersten Punkt (wie im Render), nicht im Schwerpunkt
+          let ti = 0; z.points.forEach((p, i) => { if (p.y < z.points[ti].y) ti = i; });
+          cx = z.points[ti].x; cy = z.points[ti].y;
+        } else {
+          cx = z.points.reduce((s, p) => s + p.x, 0) / z.points.length;
+          cy = z.points.reduce((s, p) => s + p.y, 0) / z.points.length;
+        }
         lbl.style.left = (cx * 100) + '%'; lbl.style.top = (cy * 100) + '%';
       }
     }
