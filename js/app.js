@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Doppelklick zum Umbenennen': 'Double-click to rename', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -449,7 +449,7 @@
       + '<div class="row ' + (active ? 'active' : '') + '" data-act="select" data-id="' + n.id + '">'
       + '<div class="toggle ' + (hasKids ? '' : 'leaf') + '" data-act="toggle" data-id="' + n.id + '"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg></div>'
       + '<div class="n-icon' + (n.type === 'linie' ? ' linie' : '') + '"' + (NODE_ICON_COLOR[n.type] ? ' style="color:' + NODE_ICON_COLOR[n.type] + '"' : '') + '><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">' + (ICONS[n.type] || '') + '</svg></div>'
-      + (editing ? '' : '<div class="n-name">' + esc(n.name) + '</div>')
+      + (editing ? '' : '<div class="n-name"' + (canEdit() ? ' title="' + t('Doppelklick zum Umbenennen') + '"' : '') + '>' + esc(n.name) + '</div>')
       + right
       + '</div>'
       + (hasKids ? '<div class="children">' + n.children.map(nodeHTML).join('') + '</div>' : '')
@@ -462,6 +462,7 @@
 
   // Tree-Interaktionen (Event-Delegation)
   function onTreeClick(e) {
+    if (e.target.closest('.n-edit')) return; // Klicks im Umbenennen-Feld nicht als Zeilen-Auswahl werten (Fokus bleibt)
     const el = e.target.closest('[data-act]');
     if (!el) return;
     const act = el.getAttribute('data-act');
@@ -485,6 +486,16 @@
   function onTreeBlur(e) {
     const inp = e.target.closest('.n-edit'); if (!inp) return;
     commitRename(inp.getAttribute('data-edit'), inp.value);
+  }
+  // Doppelklick auf den Knotennamen startet das Umbenennen (schneller als der Stift-Button).
+  function onTreeDblClick(e) {
+    if (!canEdit()) return;
+    const name = e.target.closest('.n-name'); if (!name) return;
+    const row = name.closest('.row'); if (!row) return;
+    const id = row.getAttribute('data-id'); if (!id) return;
+    e.preventDefault();
+    if (window.getSelection) { try { window.getSelection().removeAllRanges(); } catch (_) { /* noop */ } }
+    startRename(id);
   }
 
   function toggleNode(id) { if (state.expanded.has(id)) state.expanded.delete(id); else state.expanded.add(id); renderTree(); }
@@ -3840,7 +3851,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.0';
+      sc.src = 'js/html2canvas.min.js?v=1.1.1';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -5145,6 +5156,7 @@ const STATE_ICONS = {
     })();
     const ts = $('treeScroll');
     ts.addEventListener('click', onTreeClick);
+    ts.addEventListener('dblclick', onTreeDblClick);
     ts.addEventListener('keydown', onTreeKey);
     ts.addEventListener('blur', onTreeBlur, true);
     document.addEventListener('click', (e) => { const a = document.querySelector('.app'); if (!a || !a.classList.contains('tree-open')) return; if (e.target.closest('aside.tree') || e.target.closest('[data-act="tree-toggle"]')) return; a.classList.remove('tree-open'); });
