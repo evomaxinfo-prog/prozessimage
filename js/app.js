@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Doppelklick zum Umbenennen': 'Double-click to rename', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'QR-Code zur Anlage': 'QR code to station', 'Aktionen': 'Actions', 'hinzufügen': 'add', 'QR-Code konnte nicht erzeugt werden': 'Could not generate QR code', 'Direktlink zur Anlage – scannen zum Öffnen': 'Direct link to station – scan to open', 'PNG herunterladen': 'Download PNG', 'Drucken': 'Print', 'Popup wurde blockiert': 'Popup was blocked', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Doppelklick zum Umbenennen': 'Double-click to rename', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'QR-Code zur Anlage': 'QR code to station', 'Aktionen': 'Actions', 'hinzufügen': 'add', 'QR-Code konnte nicht erzeugt werden': 'Could not generate QR code', 'Direktlink zur Anlage – scannen zum Öffnen': 'Direct link to station – scan to open', 'PNG herunterladen': 'Download PNG', 'Drucken': 'Print', 'Popup wurde blockiert': 'Popup was blocked', 'Ein unerwarteter Fehler ist aufgetreten. Bitte laden Sie die Seite neu (Strg+Umschalt+R).': 'An unexpected error occurred. Please reload the page (Ctrl+Shift+R).', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -344,6 +344,24 @@
     } catch (e) { return '–'; }
   }
 
+  // Globale Fehlerbehandlung: unerwartete Fehler protokollieren und dem Nutzer dezent zurueckmelden
+  // (gedrosselt), statt still in einen kaputten Zustand zu laufen. 401 wird vom API-Layer/Login behandelt.
+  let _lastErrToast = 0;
+  function reportGlobalError(err) {
+    try { if (window.console && console.error) console.error('[ProModX]', err); } catch (_) { /* noop */ }
+    const now = Date.now();
+    if (now - _lastErrToast > 4000) {
+      _lastErrToast = now;
+      try { toast(t('Ein unerwarteter Fehler ist aufgetreten. Bitte laden Sie die Seite neu (Strg+Umschalt+R).')); } catch (_) { /* noop */ }
+    }
+  }
+  window.addEventListener('error', (e) => reportGlobalError((e && e.error) || (e && e.message) || e));
+  window.addEventListener('unhandledrejection', (e) => {
+    const r = e && e.reason;
+    if (r && (r.status === 401 || r.name === 'AbortError')) return; // bereits behandelt bzw. bewusst abgebrochen
+    reportGlobalError(r);
+  });
+
   async function boot() {
     try { state.lang = (localStorage.getItem('promodx_lang') === 'en') ? 'en' : 'de'; } catch (e) { /* noop */ }
     applyLang();
@@ -429,9 +447,16 @@
       else if (act === 'print') printQr(dataUrl, node.name, url);
     });
     document.addEventListener('keydown', qrEsc);
+    state._qrPrevFocus = document.activeElement;
+    const xbtn = bd.querySelector('.qr-x'); if (xbtn) { try { xbtn.focus(); } catch (_) { /* noop */ } }
   }
   function qrEsc(e) { if (e.key === 'Escape') closeQrModal(); }
-  function closeQrModal() { const b = document.getElementById('qrBackdrop'); if (b) b.remove(); document.removeEventListener('keydown', qrEsc); }
+  function closeQrModal() {
+    const b = document.getElementById('qrBackdrop'); if (b) b.remove();
+    document.removeEventListener('keydown', qrEsc);
+    const pf = state._qrPrevFocus; state._qrPrevFocus = null;
+    if (pf && pf.focus) { try { pf.focus(); } catch (_) { /* noop */ } }
+  }
   function downloadQr(dataUrl, name) {
     const img = new Image();
     img.onload = function () {
@@ -457,16 +482,29 @@
     else if (act === 'rename') startRename(id);
     else if (act === 'del') { state.confirmDelete = id; state.editingNodeId = null; renderTree(); }
   }
-  function nodeMenuEsc(e) { if (e.key === 'Escape') closeNodeMenu(); }
+  function nodeMenuKey(e) {
+    const m = document.getElementById('nodeMenu'); if (!m) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeNodeMenu(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const items = Array.prototype.slice.call(m.querySelectorAll('.nm-item'));
+      const cur = items.indexOf(document.activeElement);
+      const nx = e.key === 'ArrowDown' ? (cur + 1) % items.length : (cur - 1 + items.length) % items.length;
+      if (items[nx]) items[nx].focus();
+    }
+  }
   function nodeMenuOutside(e) { const m = document.getElementById('nodeMenu'); if (m && !m.contains(e.target)) closeNodeMenu(); }
   function closeNodeMenu() {
     const m = document.getElementById('nodeMenu'); if (m) m.remove();
-    document.removeEventListener('keydown', nodeMenuEsc, true);
+    document.removeEventListener('keydown', nodeMenuKey, true);
     document.removeEventListener('mousedown', nodeMenuOutside, true);
+    const pf = state._nmPrevFocus; state._nmPrevFocus = null;
+    if (pf && pf.focus) { try { pf.focus(); } catch (_) { /* noop */ } }
   }
   function openNodeMenu(id, btnEl) {
     closeNodeMenu();
     const n = findNode(id); if (!n) return;
+    state._nmPrevFocus = btnEl;
     const ct = childType(n.type);
     const IC = {
       add: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>',
@@ -486,8 +524,8 @@
     items.push(['rename', IC.pen, t('Umbenennen'), false]);
     items.push(['del', IC.del, t('Löschen'), true]);
     const menu = document.createElement('div');
-    menu.id = 'nodeMenu'; menu.className = 'node-menu';
-    menu.innerHTML = items.map((it) => '<button class="nm-item' + (it[3] ? ' danger' : '') + '" data-nm="' + it[0] + '">' + it[1] + '<span>' + esc(it[2]) + '</span></button>').join('');
+    menu.id = 'nodeMenu'; menu.className = 'node-menu'; menu.setAttribute('role', 'menu');
+    menu.innerHTML = items.map((it) => '<button class="nm-item' + (it[3] ? ' danger' : '') + '" role="menuitem" data-nm="' + it[0] + '">' + it[1] + '<span>' + esc(it[2]) + '</span></button>').join('');
     document.body.appendChild(menu);
     const r = btnEl.getBoundingClientRect();
     const mw = menu.offsetWidth || 200, mh = menu.offsetHeight || 200;
@@ -498,8 +536,9 @@
       const b = ev.target.closest('[data-nm]'); if (!b) return;
       const act = b.getAttribute('data-nm'); closeNodeMenu(); runNodeAction(act, id);
     });
+    const first = menu.querySelector('.nm-item'); if (first) { try { first.focus(); } catch (_) { /* noop */ } }
     setTimeout(() => {
-      document.addEventListener('keydown', nodeMenuEsc, true);
+      document.addEventListener('keydown', nodeMenuKey, true);
       document.addEventListener('mousedown', nodeMenuOutside, true);
     }, 0);
   }
@@ -3418,6 +3457,14 @@ const STATE_ICONS = {
     state.panX = nx; state.panY = ny;
     if (!d.raf) d.raf = requestAnimationFrame(applyPanFrame);
   }
+  // Beendet einen evtl. laufenden Pan sauber (z. B. bei Fokusverlust des Fensters).
+  function cleanupStuckPan() {
+    const d = state.panDrag; if (!d) return;
+    state.panDrag = null;
+    if (d.raf) cancelAnimationFrame(d.raf);
+    if (d.doc) { d.doc.style.cursor = ''; d.doc.style.transition = ''; d.doc.style.willChange = ''; }
+    applyZoomSat();
+  }
   function onMove(e) {
     if (state.panDrag) { onPanDrag(e); return; }
     if (state.scaleDrag) { onScaleDrag(e); return; }
@@ -3472,13 +3519,7 @@ const STATE_ICONS = {
   }
   async function endMove() {
     if (state.panDrag) {
-      const d = state.panDrag; state.panDrag = null;
-      if (d.raf) cancelAnimationFrame(d.raf);
-      applyZoomSat();
-      if (d.doc) { d.doc.style.cursor = ''; d.doc.style.transition = ''; d.doc.style.willChange = ''; }
-      if (!d.moved && (state.selectedZone || state.selectedObj || (state.selObjs && state.selObjs.length))) {
-        state.selectedZone = null; state.selectedObj = null; state.selObjs = []; renderEditor();
-      }
+      cleanupStuckPan();
       return;
     }
     if (state.pinDrag) {
@@ -3996,7 +4037,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.13';
+      sc.src = 'js/html2canvas.min.js?v=1.1.14';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4232,7 +4273,7 @@ const STATE_ICONS = {
     if (!canEdit()) return;
     // Sicherheitsnetz: einen evtl. haengengebliebenen Pan-Zustand vor jeder neuen Interaktion aufraeumen,
     // damit endMove nicht faelschlich im Pan-Zweig austeigt (sonst bliebe der Ebenenwechsel beim Greifen aus).
-    if (state.panDrag) { const pd = state.panDrag; state.panDrag = null; if (pd.raf) cancelAnimationFrame(pd.raf); if (pd.doc) { pd.doc.style.cursor = ''; pd.doc.style.transition = ''; pd.doc.style.willChange = ''; } }
+    if (state.panDrag) { cleanupStuckPan(); }
     // Zonen zeichnen: schon beim Aufsetzen einrasten + Snap-Ring zeigen (auch Touch / Klick ohne vorherige Bewegung).
     if (state.drawZone && e.target.closest('#canvasDoc')) {
       const doc0 = document.getElementById('canvasDoc');
@@ -5369,6 +5410,9 @@ const STATE_ICONS = {
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', endMove);
     window.addEventListener('pointercancel', endMove);
+    // Sicherheitsnetz: wird die Maustaste ausserhalb des Fensters losgelassen, kann pointerup/-cancel ausbleiben.
+    // Beim Fokusverlust einen evtl. laufenden Pan sauber beenden.
+    window.addEventListener('blur', cleanupStuckPan);
     window.addEventListener('keydown', onEditorKey);
     $('btnAdmin').addEventListener('click', openAdmin);
     $('adminOverlay').addEventListener('click', onAdminClick);
