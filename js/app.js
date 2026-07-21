@@ -335,6 +335,15 @@
     return null;
   }
 
+  // Liest die echte Build-/Cache-Buster-Nummer aus der geladenen app.js (?v=…)
+  function getBuild() {
+    try {
+      const s = document.querySelector('script[src*="js/app.js"]');
+      const m = s && s.src.match(/[?&]v=([^&#]+)/);
+      return m ? decodeURIComponent(m[1]) : '–';
+    } catch (e) { return '–'; }
+  }
+
   async function boot() {
     try { state.lang = (localStorage.getItem('promodx_lang') === 'en') ? 'en' : 'de'; } catch (e) { /* noop */ }
     applyLang();
@@ -3857,7 +3866,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.4';
+      sc.src = 'js/html2canvas.min.js?v=1.1.5';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -5172,6 +5181,19 @@ const STATE_ICONS = {
     // Objektnamen in der Objektliste inline umbenennen (fuer alle Rollen ausser Betrachter). Doppelklick wird im Klick-Handler per Zeitstempel erkannt (obj-name), da Einfachklick neu rendert.
     document.addEventListener('keydown', (e) => { const inp = e.target.closest('.oname-edit'); if (!inp) return; if (e.key === 'Enter') { e.preventDefault(); commitObjRename(inp.getAttribute('data-oedit'), inp.value); } else if (e.key === 'Escape') { e.preventDefault(); cancelObjRename(); } });
     document.addEventListener('focusout', (e) => { const inp = e.target.closest('.oname-edit'); if (inp) commitObjRename(inp.getAttribute('data-oedit'), inp.value); });
+    // Verstecktes Feature: 5x auf die Versionsanzeige tippen -> echte Build-/Cache-Buster-Nummer anzeigen (+ in die Zwischenablage)
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.ver')) return;
+      state._verTaps = (state._verTaps || 0) + 1;
+      clearTimeout(state._verTapT);
+      state._verTapT = setTimeout(() => { state._verTaps = 0; }, 1500);
+      if (state._verTaps >= 5) {
+        state._verTaps = 0;
+        const b = getBuild();
+        toast('Build ' + b);
+        try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(b); } catch (err) { /* noop */ }
+      }
+    });
 
     // Detailansicht (Schritt 2) + Editor (Schritt 3)
     const c = $('content');
