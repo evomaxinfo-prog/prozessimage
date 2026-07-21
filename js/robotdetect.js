@@ -160,7 +160,159 @@
     return kept.map(function (c) { return { x: c.cx / workW, y: c.cy / workH, score: c.score }; });
   }
 
-  return { grayFromRGBA: grayFromRGBA, resizeGray: resizeGray, matchTemplate: matchTemplate, detect: detect, detectMulti: detectMulti, similarity: similarity };
+  // Ausschnitt eines Graubilds kopieren (geklemmt).
+  function cropGray(img, x0, y0, cw, ch) {
+    cw = Math.min(cw, img.w); ch = Math.min(ch, img.h);
+    x0 = Math.max(0, Math.min(img.w - cw, Math.round(x0)));
+    y0 = Math.max(0, Math.min(img.h - ch, Math.round(y0)));
+    var out = new Float32Array(cw * ch);
+    for (var y = 0; y < ch; y++) {
+      var sr = (y0 + y) * img.w + x0, dr = y * cw;
+      for (var x = 0; x < cw; x++) out[dr + x] = img.data[sr + x];
+    }
+    return { data: out, w: cw, h: ch, x0: x0, y0: y0 };
+  }
+
+  // Bester NCC-Treffer von Tg (und optional Kanten Te) in einem kleinen Fenster um (cx,cy) von Lg/Le.
+  function localBest(Lg, Le, Tg, Te, cx, cy, pad) {
+    var tw = Tg.w, th = Tg.h;
+    var cw = Math.min(Lg.w, tw + 2 * pad), ch = Math.min(Lg.h, th + 2 * pad);
+    var Cg = cropGray(Lg, cx - cw / 2, cy - ch / 2, cw, ch);
+    var r;
+    if (Le && Te) {
+      var rg = matchTemplate(Cg, Tg);
+      var Ce = cropGray(Le, cx - cw / 2, cy - ch / 2, cw, ch);
+      var re = matchTemplate(Ce, Te);
+      var n = rg.map.length, map = new Float32Array(n);
+      for (var q = 0; q < n; q++) map[q] = 0.5 * (rg.map[q] + re.map[q]);
+      r = { map: map, mw: rg.mw, mh: rg.mh };
+    } else {
+      r = matchTemplate(Cg, Tg);
+    }
+    var best = -1, bx = 0, by = 0;
+    for (var y = 0; y < r.mh; y++) for (var x = 0; x < r.mw; x++) { var s = r.map[y * r.mw + x]; if (s > best) { best = s; bx = x; by = y; } }
+    return { score: best, cx: Cg.x0 + bx + tw / 2, cy: Cg.y0 + by + th / 2 };
+  }
+
+  /*
+   * Schnelle Mehrvorlagen-Erkennung (Coarse-to-Fine):
+   * 1) grobe Vorsuche in kleiner Aufloesung (coarseW) ueber alle Vorlagen/Skalen -> Kandidaten (mit Vorlage+Skala),
+   * 2) feine NCC-Nachpruefung nur in kleinen Fenstern um die Kandidaten (workW),
+   * 3) Negativ-Vorlagen nur LOKAL an den finalen Treffern pruefen (statt ueber das ganze Bild).
+   * Gleiche Ergebnisform wie detectMulti; um Groessenordnungen weniger Rechenarbeit.
+   */
+  function detectMultiFast(layout, templates, opts) {
+    opts = opts || {};
+    var workW = opts.workW || 300;
+    var baseFrac = opts.baseFrac || 0.161;
+    var scales = opts.scales || [0.72, 0.86, 1.0, 1.16, 1.32];
+    var thr = opts.threshold != null ? opts.threshold : 0.6;
+    var maxResults = opts.maxResults || 12;
+    var coarseW = opts.coarseW || 132;
+    var negs = opts.negatives || [];
+    var workH = Math.max(1, Math.round(layout.h * workW / layout.w));
+    var cH = Math.max(1, Math.round(layout.h * coarseW / layout.w));
+    var Lc = resizeGray(layout, coarseW, cH);
+    var Lec = opts.combine ? sobelMag(Lc) : null;
+    var Lg = resizeGray(layout, workW, workH);
+    var Le = opts.combine ? sobelMag(Lg) : null;
+    // 1) grobe Vorsuche: pro Vorlage/Skala die Top-K-Positionen als Kandidaten weiterreichen (Ranking,
+    //    keine absolute Schwelle - bei kleiner Aufloesung sacken NCC-Scores durch Aliasing ab; die echten
+    //    Positionen ranken aber weiterhin oben). Die Feinstufe entscheidet mit der echten Schwelle.
+    var topK = opts.coarseTopK || 6;
+    var cands = [];
+    for (var t = 0; t < templates.length; t++) {
+      var tpl = templates[t]; if (!tpl) continue;
+      for (var s = 0; s < scales.length; s++) {
+        var twc = Math.max(8, Math.round(baseFrac * coarseW * scales[s]));
+        if (twc >= coarseW || twc >= cH) continue;
+        var Tc = resizeGray(tpl, twc, twc);
+        var r;
+        if (opts.combine) {
+          var rg = matchTemplate(Lc, Tc), re = matchTemplate(Lec, sobelMag(Tc));
+          var n0 = rg.map.length, map0 = new Float32Array(n0);
+          for (var q0 = 0; q0 < n0; q0++) map0[q0] = 0.5 * (rg.map[q0] + re.map[q0]);
+          r = { map: map0, mw: rg.mw, mh: rg.mh };
+        } else {
+          r = matchTemplate(Lc, Tc);
+        }
+        // alle Positionen sammeln, absteigend sortieren, mit lokalem Abstand (0.7*twc) die Top-K nehmen
+        var pos = [];
+        for (var yy = 0; yy < r.mh; yy++) for (var xx = 0; xx < r.mw; xx++) pos.push({ sc: r.map[yy * r.mw + xx], px: xx, py: yy });
+        pos.sort(function (a, b) { return b.sc - a.sc; });
+        var takenC = [], md = 0.7 * twc;
+        for (var p0 = 0; p0 < pos.length && takenC.length < topK; p0++) {
+          var cnd = pos[p0], okc = true;
+          for (var q1 = 0; q1 < takenC.length; q1++) {
+            var ddx = cnd.px - takenC[q1].px, ddy = cnd.py - takenC[q1].py;
+            if (ddx * ddx + ddy * ddy < md * md) { okc = false; break; }
+          }
+          if (okc) { takenC.push(cnd); cands.push({ score: cnd.sc, x: (cnd.px + twc / 2) / coarseW, y: (cnd.py + twc / 2) / cH, t: t, s: s }); }
+        }
+      }
+    }
+    cands.sort(function (a, b) { return b.score - a.score; });
+    // grobe NMS + Deckel (mehr Kandidaten als Endergebnisse zulassen)
+    var capD = (opts.mergeDist || 0.05) * 0.8, cap = Math.max(24, maxResults * 3), picks = [];
+    for (var k0 = 0; k0 < cands.length; k0++) {
+      var c0 = cands[k0], ok0 = true;
+      for (var m0 = 0; m0 < picks.length; m0++) {
+        var dx0 = c0.x - picks[m0].x, dy0 = c0.y - picks[m0].y;
+        if (dx0 * dx0 + dy0 * dy0 < capD * capD) { ok0 = false; break; }
+      }
+      if (ok0) { picks.push(c0); if (picks.length >= cap) break; }
+    }
+    // 2) feine Nachpruefung nur um die Kandidaten - je Kandidat ueber ALLE Skalen lokal (kleine Fenster,
+    //    billig) und die beste nehmen. Grund: Grobscores sind ueber Skalen hinweg nicht vergleichbar;
+    //    die Grob-NMS kann sonst den Kandidaten mit der richtigen Skala zugunsten einer falschen verdraengen.
+    var fined = [], tplG = {}, tplE = {};
+    for (var k1 = 0; k1 < picks.length; k1++) {
+      var c1 = picks[k1], bestB = null, bestTw = 0;
+      for (var s1 = 0; s1 < scales.length; s1++) {
+        var tw = Math.max(10, Math.round(baseFrac * workW * scales[s1]));
+        if (tw >= workW || tw >= workH) continue;
+        var key = c1.t + '_' + tw;
+        var Tg = tplG[key]; if (!Tg) { Tg = resizeGray(templates[c1.t], tw, tw); tplG[key] = Tg; }
+        var Te = null; if (opts.combine) { Te = tplE[key]; if (!Te) { Te = sobelMag(Tg); tplE[key] = Te; } }
+        var b1 = localBest(Lg, Le, Tg, Te, c1.x * workW, c1.y * workH, Math.round(tw * 0.55));
+        if (!bestB || b1.score > bestB.score) { bestB = b1; bestTw = tw; }
+      }
+      if (bestB && bestB.score >= thr) fined.push({ x: bestB.cx / workW, y: bestB.cy / workH, score: bestB.score, tw: bestTw });
+    }
+    fined.sort(function (a, b) { return b.score - a.score; });
+    var minD = opts.mergeDist || 0.05, kept = [];
+    for (var k2 = 0; k2 < fined.length; k2++) {
+      var c2 = fined[k2], ok2 = true;
+      for (var m2 = 0; m2 < kept.length; m2++) {
+        var dx2 = c2.x - kept[m2].x, dy2 = c2.y - kept[m2].y;
+        if (dx2 * dx2 + dy2 * dy2 < minD * minD) { ok2 = false; break; }
+      }
+      if (ok2) { kept.push(c2); if (kept.length >= maxResults) break; }
+    }
+    // 3) Hard Negatives: nur lokal an den Treffern pruefen (gleiche Skala wie der Treffer)
+    if (negs.length && kept.length) {
+      var negThr = opts.negThreshold != null ? opts.negThreshold : 0.5;
+      var margin = opts.negMargin != null ? opts.negMargin : 0.08;
+      var out = [];
+      for (var k3 = 0; k3 < kept.length; k3++) {
+        var c3 = kept[k3], isNeg = false;
+        for (var n3 = 0; n3 < negs.length; n3++) {
+          if (!negs[n3]) continue;
+          var Ng = resizeGray(negs[n3], c3.tw, c3.tw);
+          var Ne = opts.combine ? sobelMag(Ng) : null;
+          var nb = localBest(Lg, Le, Ng, Ne, c3.x * workW, c3.y * workH, Math.round(c3.tw * 0.55));
+          if (nb.score >= Math.max(negThr, c3.score - margin)) { isNeg = true; break; }
+        }
+        if (!isNeg) out.push({ x: c3.x, y: c3.y, score: c3.score });
+      }
+      return out;
+    }
+    var res = [];
+    for (var k4 = 0; k4 < kept.length; k4++) res.push({ x: kept[k4].x, y: kept[k4].y, score: kept[k4].score });
+    return res;
+  }
+
+  return { grayFromRGBA: grayFromRGBA, resizeGray: resizeGray, matchTemplate: matchTemplate, detect: detect, detectMulti: detectMulti, detectMultiFast: detectMultiFast, similarity: similarity, sobelMag: sobelMag, cropGray: cropGray, localBest: localBest };
 
   // Erkennung mit mehreren Vorlagen + optionalen Negativ-Vorlagen (Hard Negatives).
   function detectMulti(layout, templates, opts) {

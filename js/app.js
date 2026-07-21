@@ -3105,7 +3105,17 @@ const STATE_ICONS = {
     var posUrls = ['img/robot-template.png?v=0.25.52'].concat(lib.filter(function (e) { return !e.neg; }).map(function (e) { return e.url; }));
     var negUrls = lib.filter(function (e) { return e.neg; }).map(function (e) { return e.url; });
     function decode(urls) { return Promise.all(urls.map(function (u) { return urlToGray(u).catch(function () { return null; }); })).then(function (a) { return a.filter(Boolean); }); }
-    return Promise.all([decode(posUrls), decode(negUrls)]).then(function (a) { return { pos: a[0], neg: a[1] }; });
+    // Fast identische Vorlagen nur einmal rechnen (NCC-Aehnlichkeit auf 132px) – spart ganze Erkennungslaeufe.
+    function dedupe(list) {
+      var out = [], small = [];
+      for (var i = 0; i < list.length; i++) {
+        var g = RobotDetect.resizeGray(list[i], 132, 132), dup = false;
+        for (var k = 0; k < small.length; k++) { if (RobotDetect.similarity(small[k], g) >= 0.93) { dup = true; break; } }
+        if (!dup) { small.push(g); out.push(list[i]); }
+      }
+      return out;
+    }
+    return Promise.all([decode(posUrls), decode(negUrls)]).then(function (a) { return { pos: dedupe(a[0]), neg: dedupe(a[1]) }; });
   }
   // Höchste Ähnlichkeit eines neuen 132er-Graubilds zu den angegebenen Vorlagen-URLs (für Dedupe/Vergiftungsschutz).
   function maxSimilarityTo(newGray, urls) {
@@ -3203,21 +3213,21 @@ const STATE_ICONS = {
   // Faellt bei fehlendem/fehlgeschlagenem Worker sauber auf synchrone Ausfuehrung zurueck.
   function runRobotDetect(layout, templates, opts) {
     return new Promise(function (resolve, reject) {
-      function syncFallback() { setTimeout(function () { try { resolve(RobotDetect.detectMulti(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
+      function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false;
-      try { w = new Worker('js/robotworker.js?v=1.1.27'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.1.28'); } catch (e) { syncFallback(); return; }
       w.onmessage = function (ev) {
         if (done) return; done = true;
         var r = ev.data || {};
         try { w.terminate(); } catch (_) { /* noop */ }
         if (r.ok) resolve(r.found || []);
-        else { try { resolve(RobotDetect.detectMulti(layout, templates, opts)); } catch (e2) { reject(e2); } }
+        else { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e2) { reject(e2); } }
       };
       w.onerror = function () {
         if (done) return; done = true;
         try { w.terminate(); } catch (_) { /* noop */ }
-        try { resolve(RobotDetect.detectMulti(layout, templates, opts)); } catch (e2) { reject(e2); }
+        try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e2) { reject(e2); }
       };
       try { w.postMessage({ layout: layout, templates: templates, opts: opts }); }
       catch (e) { done = true; try { w.terminate(); } catch (_) { /* noop */ } syncFallback(); }
@@ -4099,7 +4109,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.27';
+      sc.src = 'js/html2canvas.min.js?v=1.1.28';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
