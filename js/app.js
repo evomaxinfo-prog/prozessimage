@@ -3202,7 +3202,8 @@ const STATE_ICONS = {
   function detectRobotsFlow() {
     if (!window.RobotDetect || !state.layoutBlobUrl) { toast(t('Kein Layout vorhanden.')); return; }
     if (state.robotDetecting) return;
-    state.robotDetecting = true; toast(t('Erkenne Roboter …')); renderEditor();
+    state.robotDetecting = true; toast(t('Erkenne Roboter …'));
+    try { var _rb = document.querySelector('.zone-btn[data-act="detect-robots"]'); if (_rb) _rb.classList.add('active'); } catch (_) { /* noop */ }
     Promise.all([loadPosNegGray(), loadLayoutGray()]).then(function (arr) {
       return new Promise(function (r) { setTimeout(function () { r(arr); }, 30); });
     }).then(function (arr) {
@@ -3214,7 +3215,7 @@ const STATE_ICONS = {
       var sugg = found.filter(function (f) { return !existing.some(function (o) { return Math.hypot(o.x - f.x, o.y - f.y) < 0.05; }); });
       state.robotSuggestions = sugg; state.robotDetecting = false; renderEditor();
       toast(sugg.length ? (sugg.length + ' ' + t('Roboter erkannt – bitte bestätigen')) : t('Keine (neuen) Roboter erkannt.'));
-    }).catch(function () { state.robotDetecting = false; toast(t('Erkennung fehlgeschlagen.')); });
+    }).catch(function () { state.robotDetecting = false; renderEditor(); toast(t('Erkennung fehlgeschlagen.')); });
   }
   function robotSuggestionLayer() {
     var s = state.robotSuggestions || [];
@@ -4075,7 +4076,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.25';
+      sc.src = 'js/html2canvas.min.js?v=1.1.26';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
