@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Doppelklick zum Umbenennen': 'Double-click to rename', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Doppelklick zum Umbenennen': 'Double-click to rename', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'QR-Code zur Anlage': 'QR code to station', 'QR-Code konnte nicht erzeugt werden': 'Could not generate QR code', 'Direktlink zur Anlage – scannen zum Öffnen': 'Direct link to station – scan to open', 'PNG herunterladen': 'Download PNG', 'Drucken': 'Print', 'Popup wurde blockiert': 'Popup was blocked', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -398,6 +398,56 @@
       else { window.prompt(t('Direktlink:'), url); }
     } catch (e) { window.prompt(t('Direktlink:'), url); }
   }
+  // ---- QR-Code zur Anlage (zeigt auf den Direktlink) ----
+  function openQrModal(nodeId) {
+    const node = findNode(nodeId); if (!node) return;
+    if (typeof qrcode === 'undefined') { toast(t('QR-Code konnte nicht erzeugt werden')); return; }
+    const url = location.origin + location.pathname + '?station=' + encodeURIComponent(nodeId);
+    let dataUrl = '';
+    try { const qr = qrcode(0, 'M'); qr.addData(url); qr.make(); dataUrl = qr.createDataURL(8, 4); }
+    catch (e) { toast(t('QR-Code konnte nicht erzeugt werden')); return; }
+    const name = esc(node.name || 'Anlage');
+    closeQrModal();
+    const wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="qr-backdrop" id="qrBackdrop"><div class="qr-card" role="dialog" aria-modal="true">'
+      + '<button class="qr-x" data-qr="close" title="' + t('Schließen') + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'
+      + '<div class="qr-title">' + name + '</div>'
+      + '<div class="qr-sub">' + t('Direktlink zur Anlage – scannen zum Öffnen') + '</div>'
+      + '<div class="qr-img"><img src="' + dataUrl + '" alt="QR"></div>'
+      + '<div class="qr-url">' + esc(url) + '</div>'
+      + '<div class="qr-actions"><button class="btn" data-qr="download"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v12M8 12l4 4 4-4M5 20h14"/></svg> ' + t('PNG herunterladen') + '</button><button class="btn primary" data-qr="print"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg> ' + t('Drucken') + '</button></div>'
+      + '</div></div>';
+    document.body.appendChild(wrap.firstChild);
+    const bd = document.getElementById('qrBackdrop');
+    bd.addEventListener('mousedown', (ev) => { bd._down = (ev.target.id === 'qrBackdrop'); });
+    bd.addEventListener('click', (ev) => {
+      if (ev.target.id === 'qrBackdrop') { if (bd._down) closeQrModal(); bd._down = false; return; }
+      const a = ev.target.closest('[data-qr]'); if (!a) return;
+      const act = a.getAttribute('data-qr');
+      if (act === 'close') closeQrModal();
+      else if (act === 'download') downloadQr(dataUrl, node.name);
+      else if (act === 'print') printQr(dataUrl, node.name, url);
+    });
+    document.addEventListener('keydown', qrEsc);
+  }
+  function qrEsc(e) { if (e.key === 'Escape') closeQrModal(); }
+  function closeQrModal() { const b = document.getElementById('qrBackdrop'); if (b) b.remove(); document.removeEventListener('keydown', qrEsc); }
+  function downloadQr(dataUrl, name) {
+    const img = new Image();
+    img.onload = function () {
+      const S = 900, c = document.createElement('canvas'); c.width = S; c.height = S;
+      const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, S, S); ctx.drawImage(img, 0, 0, S, S);
+      const a = document.createElement('a'); a.href = c.toDataURL('image/png');
+      a.download = 'QR_' + String(name || 'Anlage').replace(/[^\w\-]+/g, '_') + '.png'; a.click();
+    };
+    img.src = dataUrl;
+  }
+  function printQr(dataUrl, name, url) {
+    const w = window.open('', '_blank'); if (!w) { toast(t('Popup wurde blockiert')); return; }
+    w.document.write('<html><head><title>QR ' + esc(name) + '</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:40px;color:#1E2A33}img{width:300px;height:300px;image-rendering:pixelated;border:1px solid #ddd;border-radius:8px}h2{margin:6px 0 2px}small{color:#777;word-break:break-all;font-size:11px}</style></head><body><h2>' + esc(name) + '</h2><small>' + esc(url) + '</small><br><br><img src="' + dataUrl + '"></body></html>');
+    w.document.close(); w.focus(); setTimeout(function () { try { w.print(); } catch (e) { /* noop */ } }, 350);
+  }
   // Beim Start per ?station=<Knoten-ID | Station-ID> direkt zur Anlage springen.
   function openDeepLink(id) {
     let node = findNode(id);
@@ -451,6 +501,7 @@
         + (ct ? '<button data-act="add" data-id="' + n.id + '" title="' + TYPE_LABEL[ct] + ' hinzufügen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button>' : '')
         + (n.type === 'anlage' ? '<button data-act="dup" data-id="' + n.id + '" title="Anlage duplizieren"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="1.6"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg></button>' : '')
         + (n.type === 'anlage' ? '<button data-act="link" data-id="' + n.id + '" title="' + t('Direktlink kopieren') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5"/></svg></button>' : '')
+        + (n.type === 'anlage' ? '<button data-act="qr" data-id="' + n.id + '" title="' + t('QR-Code zur Anlage') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3M14 17v4M17 14v3M20 14v3M17 20h4M20 20v1"/></svg></button>' : '')
         + '<button data-act="rename" data-id="' + n.id + '" title="Umbenennen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
         + '<button class="del" data-act="del" data-id="' + n.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
         + '</div>';
@@ -485,6 +536,7 @@
     else if (act === 'add') { e.stopPropagation(); addChild(id); }
     else if (act === 'dup') { e.stopPropagation(); duplicateAnlage(findNode(id)); }
     else if (act === 'link') { e.stopPropagation(); copyStationLink(id); }
+    else if (act === 'qr') { e.stopPropagation(); openQrModal(id); }
     else if (act === 'rename') { e.stopPropagation(); startRename(id); }
     else if (act === 'rename-ok') { e.stopPropagation(); const inp = document.querySelector('.n-edit[data-edit="' + id + '"]'); commitRename(id, inp ? inp.value : ''); }
     else if (act === 'rename-cancel') { e.stopPropagation(); state.editingNodeId = null; renderTree(); }
@@ -3866,7 +3918,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.5';
+      sc.src = 'js/html2canvas.min.js?v=1.1.6';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
