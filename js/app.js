@@ -2948,7 +2948,7 @@ const STATE_ICONS = {
       const nhActive = state.drawShape === 'nhzone';
       btn = '<button class="btn zone-btn" data-act="gen-nothalt" style="width:100%;justify-content:center"' + ((nSb && !busy) ? '' : ' disabled') + '>'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg> '
-        + (busy ? 'GENERIERE …' : (nhAuto.length ? 'NOT-HALT-GRENZE NEU GENERIEREN' : 'NOT-HALT-GRENZE GENERIEREN')) + '</button>'
+        + (busy ? 'GENERIERE …' : 'NOT-HALT-GRENZE GENERIEREN') + '</button>'
         + '<div style="height:7px"></div>'
         + '<button class="btn zone-btn ' + (nhActive ? 'active' : '') + '" data-act="toggle-nhzone" style="width:100%;justify-content:center">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z" stroke-dasharray="0.5 3" stroke-linecap="round"/></svg> '
@@ -4075,7 +4075,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.22';
+      sc.src = 'js/html2canvas.min.js?v=1.1.23';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
