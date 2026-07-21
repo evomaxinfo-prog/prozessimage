@@ -1651,7 +1651,7 @@
       if (doc) {
         const r = doc.getBoundingClientRect();
         let x = clamp01((e.clientX - r.left) / r.width), y = clamp01((e.clientY - r.top) / r.height);
-        const _sn = snapCursor(x, y); x = _sn.x; y = _sn.y;
+        if (state.drawShape !== 'nhzone') { const _sn = snapCursor(x, y); x = _sn.x; y = _sn.y; } // Not-Halt manuell: bewusst kein Einrasten
         if (state.drawShape === 'route') {
           if (state.zoneDraft.length >= 2) {
             const last = state.zoneDraft[state.zoneDraft.length - 1];
@@ -1736,6 +1736,7 @@
     }
     else if (act === 'toggle-zone') { const on = !(state.drawZone && state.drawShape === 'zone'); state.drawZone = on; state.drawShape = on ? 'zone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'toggle-spszone') { const on = !(state.drawZone && state.drawShape === 'spszone'); state.drawZone = on; state.drawShape = on ? 'spszone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
+    else if (act === 'toggle-nhzone') { const on = !(state.drawZone && state.drawShape === 'nhzone'); state.drawZone = on; state.drawShape = on ? 'nhzone' : null; state.zoneDraft = []; state.zoneCursor = null; if (on) state.selectedZone = null; renderEditor(); }
     else if (act === 'gen-nothalt') { generateNotHaltBoundary(); }
     else if (act === 'undo') { doUndo(); }
     else if (act === 'redo') { doRedo(); }
@@ -1935,6 +1936,7 @@ const STATE_ICONS = {
   function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'mf_route' || o.symbolType === 'nh_zone'); }
   // Polygon-Art abhängig von der Ebene: "Funktionsgruppen" -> fg_zone, sonst Schutzbereich (sb_zone). Nach Namen, damit Umnummerieren nichts bricht.
   function zoneKind(layer) {
+    if (state.drawShape === 'nhzone') return { type: 'nh_zone', prefix: 'Not-Halt-Grenze', noun: 'Not-Halt-Grenze', label: 'NOT-HALT' };
     if (state.drawShape === 'spszone') return { type: 'sps_zone', prefix: 'SPS-Bereich', noun: 'SPS-Bereich', label: 'SPS BEREICH' };
     if (layer && layer.name === 'Funktionsgruppen') return { type: 'fg_zone', prefix: 'Funktionsgruppe', noun: 'Funktionsgruppe', label: 'FG FUNKTIONSGRUPPE' };
     return { type: 'sb_zone', prefix: 'Schutzbereich', noun: 'Schutzbereich', label: 'SB SCHUTZBEREICH' };
@@ -2939,17 +2941,25 @@ const STATE_ICONS = {
     } else if (isNotHalt) {
       const nSb = (state.detail.objects || []).filter((o) => o.symbolType === 'sb_zone' && o.points && o.points.length >= 3).length;
       const nhz = (state.detail.objects || []).filter((o) => o.symbolType === 'nh_zone');
+      const nhAuto = nhz.filter((o) => (o.metatags || []).some((m) => m.label === 'SB-Stand')); // automatisch erzeugte Grenzen (mit SB-Stand); manuelle bleiben unberuehrt
       const fpNow = nSb ? sbFingerprint() : '';
-      const stale = nhz.length && nhz.some((o) => { const m = (o.metatags || []).find((x) => x.label === 'SB-Stand'); return !m || m.value !== fpNow; });
+      const stale = nhAuto.length && nhAuto.some((o) => { const m = (o.metatags || []).find((x) => x.label === 'SB-Stand'); return m.value !== fpNow; });
       const busy = !!state.nhGenerating;
+      const nhActive = state.drawShape === 'nhzone';
       btn = '<button class="btn zone-btn" data-act="gen-nothalt" style="width:100%;justify-content:center"' + ((nSb && !busy) ? '' : ' disabled') + '>'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg> '
-        + (busy ? 'ERZEUGE …' : (nhz.length ? 'NOT-HALT-GRENZE AKTUALISIEREN' : 'NOT-HALT-GRENZE ERZEUGEN')) + '</button>';
-      hint = !nSb
-        ? 'Noch keine Schutzbereiche (SB) vorhanden – zuerst SB einzeichnen, dann Not-Halt-Grenze erzeugen.'
-        : (stale ? '<b>Schutzbereiche wurden seit der Erzeugung geändert</b> – klicken, um die Grenze zu aktualisieren.'
-          : (nhz.length ? 'Grenze ist aktuell (' + nSb + ' SB umschlossen). Erneutes Klicken erzeugt sie neu.'
-            : 'Erzeugt eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB).'));
+        + (busy ? 'ERZEUGE …' : (nhAuto.length ? 'NOT-HALT-GRENZE AKTUALISIEREN' : 'NOT-HALT-GRENZE ERZEUGEN')) + '</button>'
+        + '<div style="height:7px"></div>'
+        + '<button class="btn zone-btn ' + (nhActive ? 'active' : '') + '" data-act="toggle-nhzone" style="width:100%;justify-content:center">'
+        + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z" stroke-dasharray="0.5 3" stroke-linecap="round"/></svg> '
+        + (nhActive ? t('ZEICHNEN AKTIV') : 'NOT-HALT-GRENZE MANUELL') + '</button>';
+      hint = nhActive
+        ? 'Klicken setzt Stützpunkte · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab · <b>kein Einrasten</b>'
+        : (!nSb
+          ? 'Noch keine Schutzbereiche (SB) vorhanden – zuerst SB einzeichnen und erzeugen, oder unten die Grenze <b>manuell</b> zeichnen.'
+          : (stale ? '<b>Schutzbereiche wurden seit der Erzeugung geändert</b> – klicken, um die Grenze zu aktualisieren.'
+            : (nhAuto.length ? 'Grenze ist aktuell (' + nSb + ' SB umschlossen). Erneutes Klicken erzeugt sie neu.'
+              : 'Erzeugt eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB).')));
     } else if (isRobotL) {
       const ready = state.layoutBlobUrl && window.RobotDetect;
       btn = '<button class="btn zone-btn" data-act="detect-robots" style="width:100%;justify-content:center"' + (ready ? '' : ' disabled') + '>'
@@ -3505,7 +3515,7 @@ const STATE_ICONS = {
     updateZoneHoverTitle(e);
     if (state.drawZone) {
       const doc = document.getElementById('canvasDoc');
-      if (doc) { const r = doc.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
+      if (doc) { const r = doc.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = state.drawShape === 'nhzone' ? { x: cxr, y: cyr, ax: null, ay: null, dock: false } : snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
     }
     if (!dragMove) return;
     if (!dragMove.moved && Math.hypot(e.clientX - dragMove.sx, e.clientY - dragMove.sy) < 4) return;
@@ -4065,7 +4075,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.17';
+      sc.src = 'js/html2canvas.min.js?v=1.1.18';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4305,7 +4315,7 @@ const STATE_ICONS = {
     // Zonen zeichnen: schon beim Aufsetzen einrasten + Snap-Ring zeigen (auch Touch / Klick ohne vorherige Bewegung).
     if (state.drawZone && e.target.closest('#canvasDoc')) {
       const doc0 = document.getElementById('canvasDoc');
-      if (doc0) { const r = doc0.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
+      if (doc0) { const r = doc0.getBoundingClientRect(); const cxr = clamp01((e.clientX - r.left) / r.width), cyr = clamp01((e.clientY - r.top) / r.height); const sn = state.drawShape === 'nhzone' ? { x: cxr, y: cyr, ax: null, ay: null, dock: false } : snapCursor(cxr, cyr); state.zoneCursor = { x: sn.x, y: sn.y }; state.zoneAlign = { x: sn.ax, y: sn.ay }; state.zoneSnap = sn.dock ? { x: sn.x, y: sn.y } : null; updateDraftDom(); }
     }
     // Kommentar-Fenster an der Kopfzeile verschieben (nicht auf X/Löschen)
     const cwh = e.target.closest('.cw-head');
@@ -4595,9 +4605,9 @@ const STATE_ICONS = {
     const L = layerById(state.activeLayer);
     const kind = zoneKind(L);
     const num = String((state.detail.objects || []).filter((o) => o.symbolType === kind.type).length + 1).padStart(2, '0');
-    state.drawZone = false; state.zoneDraft = []; state.zoneCursor = null;
+    state.drawZone = false; state.drawShape = null; state.zoneDraft = []; state.zoneCursor = null;
     try {
-      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: kind.prefix + '_' + num, symbolType: kind.type, color: L.color, x: pts[0].x, y: pts[0].y, points: pts });
+      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: kind.prefix + '_' + num, symbolType: kind.type, color: (kind.type === 'nh_zone' ? '#D9534F' : L.color), x: pts[0].x, y: pts[0].y, points: pts });
       state.detail.objects.push(obj); state.selectedZone = obj.id; protectObj(obj.id);
       toast(kind.noun + ' erstellt');
       renderEditor();
@@ -4730,7 +4740,7 @@ const STATE_ICONS = {
       if (!outlines.length) { toast('Umriss konnte nicht erzeugt werden.'); return; }
       pushUndo();
       const fp = sbFingerprint();
-      const old = (state.detail.objects || []).filter((o) => o.symbolType === 'nh_zone');
+      const old = (state.detail.objects || []).filter((o) => o.symbolType === 'nh_zone' && (o.metatags || []).some((m) => m.label === 'SB-Stand')); // nur automatisch erzeugte Grenzen ersetzen; manuell gezeichnete bleiben erhalten
       for (const o of old) { try { await Api.deleteObject(o.id); } catch (e) { /* ignore */ } state.detail.objects = state.detail.objects.filter((x) => x.id !== o.id); }
       for (let k = 0; k < outlines.length; k++) {
         const pts = outlines[k];
@@ -4997,7 +5007,7 @@ const STATE_ICONS = {
     }
     if (state.drawZone) {
       if (e.key === 'Enter') { e.preventDefault(); state.drawShape === 'route' ? finishRoute() : finishZone(); }
-      else if (e.key === 'Escape') { e.preventDefault(); state.drawZone = false; state.zoneDraft = []; state.zoneCursor = null; renderEditor(); }
+      else if (e.key === 'Escape') { e.preventDefault(); state.drawZone = false; state.drawShape = null; state.zoneDraft = []; state.zoneCursor = null; renderEditor(); }
       else if (e.key === 'Backspace' && !inField) { e.preventDefault(); state.zoneDraft.pop(); renderEditor(); }
       return;
     }
