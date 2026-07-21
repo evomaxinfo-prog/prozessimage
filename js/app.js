@@ -3267,6 +3267,13 @@ const STATE_ICONS = {
     if (state.snapGrid) { x = Math.min(0.97, Math.max(0.03, snapToGrid(x))); y = Math.min(0.96, Math.max(0.04, snapToGrid(y))); }
     dragMove.nx = x; dragMove.ny = y;
     dragMove.el.style.left = (x * 100) + '%'; dragMove.el.style.top = (y * 100) + '%'; dragMove.el.style.cursor = 'grabbing';
+    // Skalier-Anfasser (Doppelpfeil) des Icons mitführen, falls sichtbar
+    const _mh = document.querySelector('.sel-resize[data-obj="' + dragMove.oid + '"]');
+    if (_mh) {
+      const _mo = (state.detail.objects || []).find((z) => z.id === dragMove.oid);
+      const _off = handleOff(_mo ? (_mo.scale || 1) : 1);
+      _mh.style.left = (clamp01(x + _off) * 100) + '%'; _mh.style.top = (clamp01(y + _off) * 100) + '%';
+    }
     // Zustands-Icon-Verbindungslinien live mitziehen (auf die Icon-Mitte, nicht den Spalten-Anker)
     const sf = symFrac(dragMove.oid);
     const slx = (sf ? sf.x : x) * 100, sly = (sf ? sf.y : y) * 100;
@@ -3805,7 +3812,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=0.25.175';
+      sc.src = 'js/html2canvas.min.js?v=0.25.176';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
