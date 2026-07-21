@@ -68,7 +68,7 @@
     'aktiv': 'active', 'deaktiviert': 'disabled',
     // Admin-Panel
     'Verwaltung': 'Administration', 'Benutzer': 'Users', 'Gruppen': 'Groups', 'Ebenen': 'Layers',
-    'Anmeldungen': 'Logins', 'Status': 'Status', 'Werke': 'Plants', 'Mitglieder': 'Members',
+    'Anmeldungen': 'Logins', 'Anmelde-Zähler zurücksetzen': 'Reset login counter', 'Anmelde-Zähler von „{n}“ auf 0 zurücksetzen?': 'Reset login counter of "{n}" to 0?', 'Anmelde-Zähler zurückgesetzt': 'Login counter reset', 'Zurücksetzen fehlgeschlagen': 'Reset failed', 'Status': 'Status', 'Werke': 'Plants', 'Mitglieder': 'Members',
     '+ Benutzer hinzufügen': '+ Add user', '+ Gruppe hinzufügen': '+ Add group',
     'Noch keine Benutzer.': 'No users yet.', 'Noch keine Gruppen.': 'No groups yet.',
     'zuletzt': 'last', 'noch nie': 'never', 'alle Werke': 'all plants',
@@ -3217,7 +3217,7 @@ const STATE_ICONS = {
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.1.30'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.1.31'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -4128,7 +4128,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.30';
+      sc.src = 'js/html2canvas.min.js?v=1.1.31';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -5167,6 +5167,7 @@ const STATE_ICONS = {
       + '<td>' + (u.active ? '<span class="adm-ok">' + t('aktiv') + '</span>' : '<span class="adm-off">' + t('deaktiviert') + '</span>') + '</td>'
       + '<td class="adm-actions">'
       + '<button data-adm="user-edit" data-id="' + u.id + '" title="Bearbeiten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
+      + (state.isAdmin ? '<button data-adm="user-logins" data-id="' + u.id + '" title="' + t('Anmelde-Zähler zurücksetzen') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/><path d="M12 8v4l3 2"/></svg></button>' : '')
       + '<button data-adm="user-pw" data-id="' + u.id + '" title="Passwort zurücksetzen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3M17 6l2 2M14 9l2 2"/></svg></button>'
       + '<button class="del" data-adm="user-del" data-id="' + u.id + '" title="Löschen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
       + '</td></tr>').join('') : '<tr><td colspan="6" class="adm-empty">' + t('Noch keine Benutzer.') + '</td></tr>';
@@ -5282,6 +5283,7 @@ const STATE_ICONS = {
     else if (act === 'user-edit') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.userForm = { id: u.id, name: u.name, email: u.email, groupId: u.group ? u.group.id : '', active: u.active }; renderAdmin(); } }
     else if (act === 'user-save') { saveUser(); }
     else if (act === 'user-pw') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u) { a.pwForm = { id: u.id, name: u.name }; renderAdmin(); } }
+    else if (act === 'user-logins') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u && window.confirm(t('Anmelde-Zähler von „{n}“ auf 0 zurücksetzen?', { n: u.name }))) resetUserLoginsUi(u.id); }
     else if (act === 'pw-save') { savePw(); }
     else if (act === 'user-del') { const u = a.users.find((x) => String(x.id) === el.getAttribute('data-id')); if (u && window.confirm(t('Benutzer „{n}“ wirklich löschen?', { n: u.name }))) delUser(u.id); }
     else if (act === 'group-new') { a.groupForm = { name: '', role: 'viewer', allWerke: false, werkIds: new Set(), allLayers: true, layerCodes: new Set() }; renderAdmin(); }
@@ -5346,6 +5348,17 @@ const STATE_ICONS = {
   async function delUser(id) {
     try { await Api.deleteUser(id); state.admin.users = await Api.getUsers(); renderAdmin(); toast('Benutzer gelöscht'); }
     catch (err) { toast((err.data && err.data.message) || 'Löschen fehlgeschlagen'); }
+  }
+
+  // Anmelde-Zaehler zuruecksetzen - Button nur fuer Admins sichtbar, Endpunkt zusaetzlich serverseitig admin-geschuetzt.
+  async function resetUserLoginsUi(id) {
+    try {
+      const upd = await Api.resetUserLogins(id);
+      const i = (state.admin.users || []).findIndex((x) => x.id === id);
+      if (i >= 0 && upd && upd.id) state.admin.users[i] = upd;
+      else if (i >= 0) state.admin.users[i].loginCount = 0;
+      renderAdmin(); toast(t('Anmelde-Zähler zurückgesetzt'));
+    } catch (err) { toast((err.data && err.data.message) || t('Zurücksetzen fehlgeschlagen')); }
   }
 
   async function saveGroup() {

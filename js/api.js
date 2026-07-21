@@ -241,6 +241,7 @@
     createUser(data) { return this.request('/users', { method: 'POST', body: data }); },
     updateUser(id, data) { return this.request('/users/' + id, { method: 'PATCH', body: data }); },
     resetUserPassword(id, newPassword) { return this.request('/users/' + id + '/reset-password', { method: 'POST', body: { newPassword } }); },
+    resetUserLogins(id) { return this.request('/users/' + id + '/reset-logins', { method: 'POST' }); },
     deleteUser(id) { return this.request('/users/' + id, { method: 'DELETE' }); },
   };
 
