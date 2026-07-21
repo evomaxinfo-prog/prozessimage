@@ -191,6 +191,7 @@
     getVersions(stationId) { return this.request('/stations/' + stationId + '/versions'); },
     createVersion(stationId, body) { return this.request('/stations/' + stationId + '/versions', { method: 'POST', body: body || {} }); },
     getVersion(stationId, versionId) { return this.request('/stations/' + stationId + '/versions/' + versionId); },
+    updateVersion(stationId, versionId, body) { return this.request('/stations/' + stationId + '/versions/' + versionId, { method: 'PATCH', body: body || {} }); },
     restoreVersion(stationId, versionId) { return this.request('/stations/' + stationId + '/versions/' + versionId + '/restore', { method: 'POST', body: {} }); },
     deleteVersion(stationId, versionId) { return this.request('/stations/' + stationId + '/versions/' + versionId, { method: 'DELETE' }); },
     getPaletteSymbols(werkId) { return this.request('/werke/' + werkId + '/palette'); },
