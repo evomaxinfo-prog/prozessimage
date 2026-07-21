@@ -2948,7 +2948,7 @@ const STATE_ICONS = {
     return rows;
   }
 
-  function applyZoomSat() { const doc = document.getElementById('canvasDoc'); if (doc) doc.style.transform = 'translate(' + (state.panX || 0) + 'px,' + (state.panY || 0) + 'px) scale(' + (state.zoom || 1) + ')'; }
+  function applyZoomSat() { const doc = document.getElementById('canvasDoc'); if (doc) doc.style.transform = 'translate3d(' + (state.panX || 0) + 'px,' + (state.panY || 0) + 'px,0) scale(' + (state.zoom || 1) + ')'; }
   // Mitte des Icon-Symbols (.p-sym) eines Objekts als Bruchteil der Zeichenflaeche (zoom-invariant, da Symbol und Linien-SVG gemeinsam skalieren).
   function symFrac(oid) {
     const doc = document.getElementById('canvasDoc');
@@ -3401,17 +3401,19 @@ const STATE_ICONS = {
     d.x = x; d.y = y;
     if (d.moved) { var pin = document.querySelector('.comment-pin[data-id="' + d.id + '"]'); if (pin) { pin.style.left = x * 100 + '%'; pin.style.top = y * 100 + '%'; } }
   }
-  // Ganze Zeichenfläche verschieben (Pan): translate auf #canvasDoc, sanft begrenzt, damit das Layout nicht verloren geht.
+  // Ganze Zeichenfläche verschieben (Pan): rAF-gebündeltes translate3d auf #canvasDoc (GPU-Layer), sanft begrenzt.
+  function applyPanFrame() {
+    const d = state.panDrag; if (!d) return; d.raf = 0;
+    d.doc.style.transform = 'translate3d(' + (state.panX || 0) + 'px,' + (state.panY || 0) + 'px,0) scale(' + d.z + ')';
+  }
   function onPanDrag(e) {
-    const dx = e.clientX - state.panDrag.sx, dy = e.clientY - state.panDrag.sy;
-    if (!state.panDrag.moved && Math.hypot(dx, dy) > 3) state.panDrag.moved = true;
-    const doc = document.getElementById('canvasDoc');
-    const z = state.zoom || 1;
-    const dw = doc ? doc.offsetWidth * z : 900, dh = doc ? doc.offsetHeight * z : 700;
-    let nx = state.panDrag.px0 + dx, ny = state.panDrag.py0 + dy;
-    nx = Math.max(-dw, Math.min(dw, nx)); ny = Math.max(-dh, Math.min(dh, ny));
+    const d = state.panDrag;
+    const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+    if (!d.moved && Math.hypot(dx, dy) > 3) d.moved = true;
+    let nx = d.px0 + dx, ny = d.py0 + dy;
+    nx = Math.max(-d.dw, Math.min(d.dw, nx)); ny = Math.max(-d.dh, Math.min(d.dh, ny));
     state.panX = nx; state.panY = ny;
-    applyZoomSat();
+    if (!d.raf) d.raf = requestAnimationFrame(applyPanFrame);
   }
   function onMove(e) {
     if (state.panDrag) { onPanDrag(e); return; }
@@ -3467,9 +3469,11 @@ const STATE_ICONS = {
   }
   async function endMove() {
     if (state.panDrag) {
-      const moved = state.panDrag.moved; state.panDrag = null;
-      const doc = document.getElementById('canvasDoc'); if (doc) { doc.style.cursor = ''; doc.style.transition = ''; }
-      if (!moved && (state.selectedZone || state.selectedObj || (state.selObjs && state.selObjs.length))) {
+      const d = state.panDrag; state.panDrag = null;
+      if (d.raf) cancelAnimationFrame(d.raf);
+      applyZoomSat();
+      if (d.doc) { d.doc.style.cursor = ''; d.doc.style.transition = ''; d.doc.style.willChange = ''; }
+      if (!d.moved && (state.selectedZone || state.selectedObj || (state.selObjs && state.selObjs.length))) {
         state.selectedZone = null; state.selectedObj = null; state.selObjs = []; renderEditor();
       }
       return;
@@ -3989,7 +3993,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.8';
+      sc.src = 'js/html2canvas.min.js?v=1.1.9';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4321,9 +4325,10 @@ const STATE_ICONS = {
           if (state.selectedObj || (state.selObjs && state.selObjs.length)) { state.selectedObj = null; state.selObjs = []; renderEditor(); }
         } else {
           // Leere Fläche: Ziehen verschiebt das ganze Layout samt Objekten (Pan); reiner Klick hebt die Auswahl auf (in endMove).
-          state.panDrag = { sx: e.clientX, sy: e.clientY, px0: state.panX || 0, py0: state.panY || 0, moved: false };
+          const z0 = state.zoom || 1; e.preventDefault();
+          state.panDrag = { sx: e.clientX, sy: e.clientY, px0: state.panX || 0, py0: state.panY || 0, moved: false, doc: doc, dw: doc.offsetWidth * z0, dh: doc.offsetHeight * z0, z: z0, raf: 0 };
           try { doc.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
-          doc.style.cursor = 'grabbing'; doc.style.transition = 'none';
+          doc.style.cursor = 'grabbing'; doc.style.transition = 'none'; doc.style.willChange = 'transform';
         }
       }
     }
