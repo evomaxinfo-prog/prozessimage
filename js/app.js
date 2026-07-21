@@ -3996,7 +3996,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.12';
+      sc.src = 'js/html2canvas.min.js?v=1.1.13';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4343,10 +4343,18 @@ const STATE_ICONS = {
           if (z.layerId && layerById(z.layerId) && state.activeLayer !== z.layerId) { state.activeLayer = z.layerId; zNeedRender = true; }
           if (zNeedRender) renderEditor();
         } else {
-          // Leere Fläche: Ziehen verschiebt das ganze Layout samt Objekten (Pan); reiner Klick hebt die Auswahl auf (in endMove).
-          const z0 = state.zoom || 1; e.preventDefault();
-          state.panDrag = { sx: e.clientX, sy: e.clientY, px0: state.panX || 0, py0: state.panY || 0, moved: false, doc: doc, dw: doc.offsetWidth * z0, dh: doc.offsetHeight * z0, z: z0, raf: 0 };
-          doc.style.cursor = 'grabbing'; doc.style.transition = 'none'; doc.style.willChange = 'transform';
+          // Leere Fläche: Ziehen verschiebt das ganze Layout samt Objekten (Pan). Fokus eines zuvor
+          // bearbeiteten Icons/Polygons dabei loesen (reiner Klick hebt die Auswahl ebenfalls auf).
+          e.preventDefault();
+          let pdoc = doc;
+          if (state.selectedObj || state.selectedZone || (state.selObjs && state.selObjs.length)) {
+            state.selectedObj = null; state.selectedZone = null; state.selObjs = [];
+            renderEditor();
+            pdoc = document.getElementById('canvasDoc') || doc;
+          }
+          const z0 = state.zoom || 1;
+          state.panDrag = { sx: e.clientX, sy: e.clientY, px0: state.panX || 0, py0: state.panY || 0, moved: false, doc: pdoc, dw: pdoc.offsetWidth * z0, dh: pdoc.offsetHeight * z0, z: z0, raf: 0 };
+          pdoc.style.cursor = 'grabbing'; pdoc.style.transition = 'none'; pdoc.style.willChange = 'transform';
         }
       }
     }
