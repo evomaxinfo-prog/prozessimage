@@ -2929,7 +2929,7 @@ const STATE_ICONS = {
     const routeActive = state.drawShape === 'route';
     let btn, hint, extra = '';
     if (isL0) {
-      btn = '<button class="btn zone-btn ' + (routeActive ? 'active' : '') + '" data-act="toggle-route" style="width:100%;justify-content:center">'
+      btn = '<button class="btn zone-btn ' + (routeActive ? 'active' : '') + '" data-act="toggle-route" style="width:100%">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h13M13 8l4 4-4 4" stroke-linecap="round" stroke-linejoin="round"/></svg> '
         + (routeActive ? t('ZEICHNEN AKTIV') : t('FÖRDERWEG')) + '</button>';
       // Farbige Materialfluss-Typen zur Auswahl -> bestimmt die Pfeilfarbe des nächsten Förderwegs
@@ -2947,11 +2947,11 @@ const STATE_ICONS = {
       const stale = nhAuto.length && nhAuto.some((o) => { const m = (o.metatags || []).find((x) => x.label === 'SB-Stand'); return m.value !== fpNow; });
       const busy = !!state.nhGenerating;
       const nhActive = state.drawShape === 'nhzone';
-      btn = '<button class="btn zone-btn" data-act="gen-nothalt" style="width:100%;justify-content:center"' + ((nSb && !busy) ? '' : ' disabled') + '>'
+      btn = '<button class="btn zone-btn" data-act="gen-nothalt" style="width:100%"' + ((nSb && !busy) ? '' : ' disabled') + '>'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg> '
         + (busy ? 'GENERIERE …' : 'NOT-HALT-GRENZE GENERIEREN') + '</button>'
         + '<div style="height:7px"></div>'
-        + '<button class="btn zone-btn ' + (nhActive ? 'active' : '') + '" data-act="toggle-nhzone" style="width:100%;justify-content:center">'
+        + '<button class="btn zone-btn ' + (nhActive ? 'active' : '') + '" data-act="toggle-nhzone" style="width:100%">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z" stroke-dasharray="0.5 3" stroke-linecap="round"/></svg> '
         + (nhActive ? t('ZEICHNEN AKTIV') : 'NOT-HALT-GRENZE MANUELL') + '</button>';
       hint = nhActive
@@ -2963,7 +2963,7 @@ const STATE_ICONS = {
               : 'Generiert eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB).')));
     } else if (isRobotL) {
       const ready = state.layoutBlobUrl && window.RobotDetect;
-      btn = '<button class="btn zone-btn' + (state.robotDetecting ? ' active' : '') + '" data-act="detect-robots" style="width:100%;justify-content:center"' + (ready ? '' : ' disabled') + '>'
+      btn = '<button class="btn zone-btn' + (state.robotDetecting ? ' active' : '') + '" data-act="detect-robots" style="width:100%"' + (ready ? '' : ' disabled') + '>'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> '
         + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>';
       hint = ready
@@ -2972,7 +2972,7 @@ const STATE_ICONS = {
     } else {
       const spsActive = state.drawShape === 'spszone';
       const zsvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z" stroke-dasharray="3 2.5"/></svg> ';
-      const zbtn = (a, on, label) => '<button class="btn zone-btn ' + (on ? 'active' : '') + '" data-act="' + a + '" style="width:100%;justify-content:center">' + zsvg + label + '</button>';
+      const zbtn = (a, on, label) => '<button class="btn zone-btn ' + (on ? 'active' : '') + '" data-act="' + a + '" style="width:100%">' + zsvg + label + '</button>';
       if (isSteuer) {
         // SPS-Bereich (1:1 zu einer SPS) ueber dem Schutzbereich-Button
         btn = zbtn('toggle-spszone', spsActive, spsActive ? 'ZEICHNEN AKTIV' : 'SPS BEREICH')
@@ -3217,7 +3217,7 @@ const STATE_ICONS = {
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.1.31'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.1.32'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -4128,7 +4128,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.31';
+      sc.src = 'js/html2canvas.min.js?v=1.1.32';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4311,7 +4311,7 @@ const STATE_ICONS = {
       + '<div class="m-field"><label>Materialfluss-Typ (Farbe)</label><select id="rfMat">' + matOpts + '</select></div>'
       + '<div class="m-field"><label>Förderart (Linienstil)</label><select id="rfArt">' + opts + '</select></div>'
       + '<div class="m-field"><label>Bezeichnung / Teil</label><input id="rfBez" placeholder="z. B. Karosserie-Seitenteil" value="' + esc(bez) + '"></div>'
-      + '<button class="btn" data-za="reverse" style="justify-content:center">⇄ Flussrichtung umkehren</button>'
+      + '<button class="btn" data-za="reverse" style="justify-content:flex-start">⇄ Flussrichtung umkehren</button>'
       + '</div>'
       + '<div class="za-foot"><button class="btn" data-za="close">Abbrechen</button>'
       + '<button class="btn" data-za="save" style="background:' + esc(col) + ';border-color:' + esc(col) + ';color:#fff">Speichern</button></div></div></div>';
