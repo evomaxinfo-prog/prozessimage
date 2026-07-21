@@ -2136,7 +2136,7 @@ const STATE_ICONS = {
       const csig = commentsSig(cmR.value);
       // Nur einspielen, wenn der Nutzer gerade nicht interagiert (Ziehen/Modal) - sonst wuerde renderEditor einen laufenden Drag abbrechen.
       if (csig !== state.commentsSig && collabIdle() && !state.iconDrag && !state.pinDrag && !state.cwDrag
-        && !state.commentsMovePending && Date.now() > (state.commentsHoldUntil || 0)) { state.commentsSig = csig; applyCommentsUpdate(cmR.value); }
+        && Date.now() > (state.commentsHoldUntil || 0)) { state.commentsSig = csig; applyCommentsUpdate(cmR.value); }
     }
   }
   // Gleicht die komplette Objektliste vom Server gegen den lokalen Stand ab (Hinzufügen/Ändern/Entfernen).
@@ -3216,22 +3216,28 @@ const STATE_ICONS = {
     return new Promise(function (resolve, reject) {
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
-      var w, done = false;
-      try { w = new Worker('js/robotworker.js?v=1.1.29'); } catch (e) { syncFallback(); return; }
-      w.onmessage = function (ev) {
+      var w, done = false, dog = 0;
+      try { w = new Worker('js/robotworker.js?v=1.1.30'); } catch (e) { syncFallback(); return; }
+      // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
+      dog = setTimeout(function () {
         if (done) return; done = true;
+        try { w.terminate(); } catch (_) { /* noop */ }
+        reject(new Error('Zeitueberschreitung bei der Erkennung'));
+      }, 60000);
+      w.onmessage = function (ev) {
+        if (done) return; done = true; clearTimeout(dog);
         var r = ev.data || {};
         try { w.terminate(); } catch (_) { /* noop */ }
         if (r.ok) resolve(r.found || []);
         else { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e2) { reject(e2); } }
       };
       w.onerror = function () {
-        if (done) return; done = true;
+        if (done) return; done = true; clearTimeout(dog);
         try { w.terminate(); } catch (_) { /* noop */ }
         try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e2) { reject(e2); }
       };
       try { w.postMessage({ layout: layout, templates: templates, opts: opts }); }
-      catch (e) { done = true; try { w.terminate(); } catch (_) { /* noop */ } syncFallback(); }
+      catch (e) { done = true; clearTimeout(dog); try { w.terminate(); } catch (_) { /* noop */ } syncFallback(); }
     });
   }
   function detectRobotsFlow() {
@@ -3602,13 +3608,12 @@ const STATE_ICONS = {
         if (d.moved && d.x != null) {
           c.x = d.x; c.y = d.y;
           if (state.commentsServer) {
-            // Schutz gegen Zurueckspringen: waehrend der PATCH laeuft und kurz danach keine Poll-Daten
-            // uebernehmen (ein parallel laufender GET liefert sonst noch die alte Position).
-            state.commentsMovePending = (state.commentsMovePending || 0) + 1;
-            state.commentsHoldUntil = Date.now() + 7000;
+            // Schutz gegen Zurueckspringen: rein zeitbasiert (kann nie dauerhaft blockieren, auch wenn
+            // der PATCH haengt): 15s ab Start, nach Abschluss noch 7s Nachlauf fuer den naechsten Poll.
+            state.commentsHoldUntil = Date.now() + 15000;
             Api.moveComment(c.id, d.x, d.y)
               .catch(function () { toast(t('Kommentar-Position konnte nicht gespeichert werden')); })
-              .finally(function () { state.commentsMovePending = Math.max(0, (state.commentsMovePending || 1) - 1); state.commentsHoldUntil = Date.now() + 7000; });
+              .finally(function () { state.commentsHoldUntil = Date.now() + 7000; });
             state.commentsSig = commentsSig(state.comments);
           } else { saveComments(); }
           renderEditor();
@@ -4123,7 +4128,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.29';
+      sc.src = 'js/html2canvas.min.js?v=1.1.30';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
