@@ -112,7 +112,7 @@
     'SPS-Konfiguration': 'PLC configuration', 'SPS-Bereich': 'PLC area', 'Roboter erkennen': 'Detect robots', 'Gelernte Vorlagen': 'Learned templates', 'Kommentar': 'Comment', 'Kommentar (ziehen zum Verschieben)': 'Comment (drag to move)', 'Noch keine Nachrichten – schreib den ersten Kommentar.': 'No messages yet - write the first comment.', 'Nachricht …': 'Message …', 'Senden': 'Send', 'Schließen': 'Close', 'Fehlbeispiele': 'Negatives', 'Positive Vorlagen': 'Positive templates', 'Als Fehlbeispiel gemerkt': 'Saved as negative', 'Ähnliche Vorlage bereits vorhanden – übersprungen.': 'Similar template already exists - skipped.', 'Noch keine gelernten Vorlagen.': 'No learned templates yet.', 'Alle zurücksetzen': 'Reset all', 'Fehlbeispiele zurückgesetzt.': 'Negatives reset.', 'Löschen': 'Delete', 'zurücksetzen': 'reset', 'Als Vorlage gelernt': 'Learned as template', 'Gelernte Vorlagen zurückgesetzt.': 'Learned templates reset.', 'Roboter im Layout automatisch finden': 'Auto-find robots in the layout', 'Erkenne …': 'Detecting …', 'Erkenne Roboter …': 'Detecting robots …', 'Roboter erkannt – bitte bestätigen': 'robots detected – please confirm', 'Keine (neuen) Roboter erkannt.': 'No (new) robots detected.', 'Erkennung fehlgeschlagen.': 'Detection failed.', 'Kein Layout vorhanden.': 'No layout available.', 'Alle verwerfen': 'Dismiss all', 'Konfidenz': 'Confidence', 'Übernehmen': 'Accept', 'Verwerfen': 'Dismiss', 'Roboter-Ebene fehlt.': 'Robot layer missing.', 'Speichern fehlgeschlagen.': 'Save failed.', 'Bereich': 'area', 'Bereiche': 'areas', 'Zugeordnete Funktionsgruppen / Schutzbereiche': 'Assigned function groups / safety zones', '— keine —': '— none —', 'Steuerungen': 'controllers',
     'Zykluszeit [ms]': 'Cycle time [ms]', 'Remanenz [Byte]': 'Retentive [bytes]', 'Code-AS [kByte]': 'Code AS [kB]',
     'Keine SPS erfasst.': 'No PLCs recorded.', 'SPS HINZUFÜGEN': 'ADD PLC',
-    'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …',
+    'Änderungsjournal': 'Change journal', 'Neuer Eintrag …': 'New entry …', 'Änderung': 'change', 'Änderungen': 'changes',
     'Vorherige: ': 'Previous: ', 'Erste Station': 'First station', 'Nächste: ': 'Next: ', 'Letzte Station': 'Last station',
     'Layout ersetzen': 'Replace layout', 'Layout hochladen': 'Upload layout',
     'eigenes Layout': 'custom layout', 'Schema-Layout · L1–L5': 'Schematic layout · L1–L5', 'Schema-Layout': 'Schematic layout',
@@ -1433,7 +1433,7 @@
       + (ed ? '<button class="add-row-btn" data-act="plc-add"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> ' + t('SPS HINZUFÜGEN') + '</button>' : '')
       + '</div></div>'
 
-      + '<div class="card"><div class="card-head"><h3>' + t('Änderungsjournal') + '</h3><span class="badge">append-only</span></div>'
+      + '<div class="card"><div class="card-head"><h3>' + t('Änderungsjournal') + '</h3><span class="badge">' + journal.length + ' ' + (journal.length === 1 ? t('Änderung') : t('Änderungen')) + '</span></div>'
       + '<div class="card-body"><div class="journal-list">' + jlist + '</div>'
       + (canEdit() ? '<div class="j-add"><input id="jInput" placeholder="' + t('Neuer Eintrag …') + '"><button data-act="journal-add" aria-label="' + t('Eintrag hinzufügen') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button></div>' : '')
       + '</div></div>'
@@ -3217,7 +3217,7 @@ const STATE_ICONS = {
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.1.34'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.1.35'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -4128,7 +4128,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.34';
+      sc.src = 'js/html2canvas.min.js?v=1.1.35';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
