@@ -2962,7 +2962,7 @@ const STATE_ICONS = {
               : 'Generiert eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB).')));
     } else if (isRobotL) {
       const ready = state.layoutBlobUrl && window.RobotDetect;
-      btn = '<button class="btn zone-btn" data-act="detect-robots" style="width:100%;justify-content:center"' + (ready ? '' : ' disabled') + '>'
+      btn = '<button class="btn zone-btn' + (state.robotDetecting ? ' active' : '') + '" data-act="detect-robots" style="width:100%;justify-content:center"' + (ready ? '' : ' disabled') + '>'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg> '
         + (state.robotDetecting ? t('Erkenne …') : t('Roboter erkennen')) + '</button>';
       hint = ready
@@ -4075,7 +4075,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.23';
+      sc.src = 'js/html2canvas.min.js?v=1.1.24';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
