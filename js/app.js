@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Doppelklick zum Umbenennen': 'Double-click to rename', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'QR-Code zur Anlage': 'QR code to station', 'Aktionen': 'Actions', 'hinzufügen': 'add', 'QR-Code konnte nicht erzeugt werden': 'Could not generate QR code', 'Direktlink zur Anlage – scannen zum Öffnen': 'Direct link to station – scan to open', 'PNG herunterladen': 'Download PNG', 'Drucken': 'Print', 'Popup wurde blockiert': 'Popup was blocked', 'Ein unerwarteter Fehler ist aufgetreten. Bitte laden Sie die Seite neu (Strg+Umschalt+R).': 'An unexpected error occurred. Please reload the page (Ctrl+Shift+R).', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Doppelklick zum Umbenennen': 'Double-click to rename', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'QR-Code zur Anlage': 'QR code to station', 'Aktionen': 'Actions', 'hinzufügen': 'add', 'QR-Code konnte nicht erzeugt werden': 'Could not generate QR code', 'Direktlink zur Anlage – scannen zum Öffnen': 'Direct link to station – scan to open', 'PNG herunterladen': 'Download PNG', 'Drucken': 'Print', 'Popup wurde blockiert': 'Popup was blocked', 'Kommentar-Position konnte nicht gespeichert werden': 'Comment position could not be saved', 'Ein unerwarteter Fehler ist aufgetreten. Bitte laden Sie die Seite neu (Strg+Umschalt+R).': 'An unexpected error occurred. Please reload the page (Ctrl+Shift+R).', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -2135,7 +2135,8 @@ const STATE_ICONS = {
     if (state.commentsServer && cmR && cmR.status === 'fulfilled' && Array.isArray(cmR.value)) {
       const csig = commentsSig(cmR.value);
       // Nur einspielen, wenn der Nutzer gerade nicht interagiert (Ziehen/Modal) - sonst wuerde renderEditor einen laufenden Drag abbrechen.
-      if (csig !== state.commentsSig && collabIdle() && !state.iconDrag && !state.pinDrag && !state.cwDrag) { state.commentsSig = csig; applyCommentsUpdate(cmR.value); }
+      if (csig !== state.commentsSig && collabIdle() && !state.iconDrag && !state.pinDrag && !state.cwDrag
+        && !state.commentsMovePending && Date.now() > (state.commentsHoldUntil || 0)) { state.commentsSig = csig; applyCommentsUpdate(cmR.value); }
     }
   }
   // Gleicht die komplette Objektliste vom Server gegen den lokalen Stand ab (Hinzufügen/Ändern/Entfernen).
@@ -3216,7 +3217,7 @@ const STATE_ICONS = {
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false;
-      try { w = new Worker('js/robotworker.js?v=1.1.28'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.1.29'); } catch (e) { syncFallback(); return; }
       w.onmessage = function (ev) {
         if (done) return; done = true;
         var r = ev.data || {};
@@ -3598,7 +3599,20 @@ const STATE_ICONS = {
       var d = state.pinDrag; state.pinDrag = null;
       var c = (state.comments || []).find(function (x) { return x.id === d.id; });
       if (c) {
-        if (d.moved && d.x != null) { c.x = d.x; c.y = d.y; if (state.commentsServer) { Api.moveComment(c.id, d.x, d.y).catch(function () {}); state.commentsSig = commentsSig(state.comments); } else { saveComments(); } renderEditor(); }
+        if (d.moved && d.x != null) {
+          c.x = d.x; c.y = d.y;
+          if (state.commentsServer) {
+            // Schutz gegen Zurueckspringen: waehrend der PATCH laeuft und kurz danach keine Poll-Daten
+            // uebernehmen (ein parallel laufender GET liefert sonst noch die alte Position).
+            state.commentsMovePending = (state.commentsMovePending || 0) + 1;
+            state.commentsHoldUntil = Date.now() + 7000;
+            Api.moveComment(c.id, d.x, d.y)
+              .catch(function () { toast(t('Kommentar-Position konnte nicht gespeichert werden')); })
+              .finally(function () { state.commentsMovePending = Math.max(0, (state.commentsMovePending || 1) - 1); state.commentsHoldUntil = Date.now() + 7000; });
+            state.commentsSig = commentsSig(state.comments);
+          } else { saveComments(); }
+          renderEditor();
+        }
         else { state.openComment = d.id; renderEditor(); setTimeout(function () { var i = $('cwText'); if (i) i.focus(); }, 30); }
       }
       return;
@@ -4109,7 +4123,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.28';
+      sc.src = 'js/html2canvas.min.js?v=1.1.29';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
