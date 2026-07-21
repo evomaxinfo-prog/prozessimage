@@ -1936,7 +1936,7 @@ const STATE_ICONS = {
   function isShape(o) { return o && (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'mf_route' || o.symbolType === 'nh_zone'); }
   // Polygon-Art abhängig von der Ebene: "Funktionsgruppen" -> fg_zone, sonst Schutzbereich (sb_zone). Nach Namen, damit Umnummerieren nichts bricht.
   function zoneKind(layer) {
-    if (state.drawShape === 'nhzone') return { type: 'nh_zone', prefix: 'Not-Halt-Grenze', noun: 'Not-Halt-Grenze', label: 'NOT-HALT' };
+    if (state.drawShape === 'nhzone') return { type: 'nh_zone', prefix: 'Not-Halt-Grenze manuell', noun: 'Not-Halt-Grenze manuell', label: 'NOT-HALT' };
     if (state.drawShape === 'spszone') return { type: 'sps_zone', prefix: 'SPS-Bereich', noun: 'SPS-Bereich', label: 'SPS BEREICH' };
     if (layer && layer.name === 'Funktionsgruppen') return { type: 'fg_zone', prefix: 'Funktionsgruppe', noun: 'Funktionsgruppe', label: 'FG FUNKTIONSGRUPPE' };
     return { type: 'sb_zone', prefix: 'Schutzbereich', noun: 'Schutzbereich', label: 'SB SCHUTZBEREICH' };
@@ -2948,7 +2948,7 @@ const STATE_ICONS = {
       const nhActive = state.drawShape === 'nhzone';
       btn = '<button class="btn zone-btn" data-act="gen-nothalt" style="width:100%;justify-content:center"' + ((nSb && !busy) ? '' : ' disabled') + '>'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg> '
-        + (busy ? 'ERZEUGE …' : (nhAuto.length ? 'NOT-HALT-GRENZE AKTUALISIEREN' : 'NOT-HALT-GRENZE ERZEUGEN')) + '</button>'
+        + (busy ? 'GENERIERE …' : (nhAuto.length ? 'NOT-HALT-GRENZE NEU GENERIEREN' : 'NOT-HALT-GRENZE GENERIEREN')) + '</button>'
         + '<div style="height:7px"></div>'
         + '<button class="btn zone-btn ' + (nhActive ? 'active' : '') + '" data-act="toggle-nhzone" style="width:100%;justify-content:center">'
         + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z" stroke-dasharray="0.5 3" stroke-linecap="round"/></svg> '
@@ -2956,10 +2956,10 @@ const STATE_ICONS = {
       hint = nhActive
         ? 'Klicken setzt Stützpunkte · richtet <b>waagerecht/senkrecht</b> aus · Klick auf den Startpunkt oder <b>Enter</b> schließt · <b>Esc</b> bricht ab'
         : (!nSb
-          ? 'Noch keine Schutzbereiche (SB) vorhanden – zuerst SB einzeichnen und erzeugen, oder unten die Grenze <b>manuell</b> zeichnen.'
-          : (stale ? '<b>Schutzbereiche wurden seit der Erzeugung geändert</b> – klicken, um die Grenze zu aktualisieren.'
-            : (nhAuto.length ? 'Grenze ist aktuell (' + nSb + ' SB umschlossen). Erneutes Klicken erzeugt sie neu.'
-              : 'Erzeugt eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB).')));
+          ? 'Noch keine Schutzbereiche (SB) vorhanden – zuerst SB einzeichnen und generieren, oder unten die Grenze <b>manuell</b> zeichnen.'
+          : (stale ? '<b>Schutzbereiche wurden seit der Generierung geändert</b> – klicken, um die Grenze neu zu generieren.'
+            : (nhAuto.length ? 'Grenze ist aktuell (' + nSb + ' SB umschlossen). Erneutes Klicken generiert sie neu.'
+              : 'Generiert eine Not-Halt-Grenze als umschließende Umrisslinie aller ' + nSb + ' Schutzbereiche (SB).')));
     } else if (isRobotL) {
       const ready = state.layoutBlobUrl && window.RobotDetect;
       btn = '<button class="btn zone-btn" data-act="detect-robots" style="width:100%;justify-content:center"' + (ready ? '' : ' disabled') + '>'
@@ -4075,7 +4075,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.20';
+      sc.src = 'js/html2canvas.min.js?v=1.1.21';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4745,7 +4745,7 @@ const STATE_ICONS = {
       for (let k = 0; k < outlines.length; k++) {
         const pts = outlines[k];
         try {
-          const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Not-Halt-Grenze' + (outlines.length > 1 ? ' ' + (k + 1) : ''), symbolType: 'nh_zone', color: '#D9534F', x: pts[0].x, y: pts[0].y, points: pts });
+          const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: 'Not-Halt-Grenze generiert' + (outlines.length > 1 ? ' ' + (k + 1) : ''), symbolType: 'nh_zone', color: '#D9534F', x: pts[0].x, y: pts[0].y, points: pts });
           try { await Api.setMetatags(obj.id, [{ label: 'SB-Stand', value: fp, position: 1 }]); obj.metatags = [{ label: 'SB-Stand', value: fp, position: 1 }]; } catch (e) { /* ignore */ }
           state.detail.objects.push(obj); if (k === 0) state.selectedZone = obj.id; protectObj(obj.id); created++;
         } catch (e) { /* ignore */ }
