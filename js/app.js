@@ -100,7 +100,7 @@
     'Anmelden': 'Sign in', 'Benutzer · E-Mail': 'User · e-mail', 'Passwort': 'Password',
     'Passwort anzeigen': 'Show password', 'ANMELDEN': 'SIGN IN', 'PASSWORT SPEICHERN': 'SAVE PASSWORD',
     'Benutzerverwaltung': 'User administration', 'Profil & Einstellungen': 'Profile & settings', 'Abmelden': 'Sign out',
-    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Doppelklick zum Umbenennen': 'Double-click to rename', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'QR-Code zur Anlage': 'QR code to station', 'QR-Code konnte nicht erzeugt werden': 'Could not generate QR code', 'Direktlink zur Anlage – scannen zum Öffnen': 'Direct link to station – scan to open', 'PNG herunterladen': 'Download PNG', 'Drucken': 'Print', 'Popup wurde blockiert': 'Popup was blocked', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
+    'Anlagenstruktur': 'Plant structure', 'Alles aufklappen': 'Expand all', 'Alles zuklappen': 'Collapse all', 'Alles auf-/zuklappen': 'Expand / collapse all', 'Baum einklappen': 'Collapse panel', 'Anlagenstruktur einblenden': 'Show plant structure', 'Am Raster ausrichten': 'Snap to grid', 'Raster': 'Grid', 'Dokumente': 'Documents', 'Dokument hochladen': 'Upload document', 'Noch keine Dokumente.': 'No documents yet.', 'Öffnen / Herunterladen': 'Open / download', 'Dokument wirklich löschen?': 'Really delete this document?', 'Nur PDF, Word oder Excel erlaubt.': 'Only PDF, Word or Excel allowed.', 'Datei zu groß (max. 25 MB).': 'File too large (max. 25 MB).', 'Wird geladen …': 'Loading …', 'Symbolgröße ziehen': 'Drag to resize symbols', 'Icon kopiert': 'Icon copied', 'Icons kopiert': 'icons copied', 'Icon eingefügt': 'Icon pasted', 'Icons eingefügt': 'icons pasted', 'Icon gelöscht': 'Icon deleted', 'Icons gelöscht': 'icons deleted', 'Versionen': 'Versions', 'Bezeichnung (optional)': 'Label (optional)', 'Version speichern': 'Save version', 'Objekte': 'objects', 'Version': 'Version', 'Wiederherstellen': 'Restore', 'Noch keine Versionen gespeichert.': 'No versions saved yet.', 'Diese Version wiederherstellen?': 'Restore this version?', 'Der aktuelle Stand wird vorher automatisch gesichert.': 'The current state is backed up automatically first.', 'Version wiederhergestellt': 'Version restored', 'Version gespeichert': 'Version saved', 'Version wirklich löschen?': 'Really delete this version?', 'Direktlink kopieren': 'Copy direct link', 'Doppelklick zum Umbenennen': 'Double-click to rename', 'Direktlink kopiert': 'Direct link copied', 'Direktlink:': 'Direct link:', 'Verlinkte Anlage nicht gefunden': 'Linked station not found', 'QR-Code zur Anlage': 'QR code to station', 'Aktionen': 'Actions', 'hinzufügen': 'add', 'QR-Code konnte nicht erzeugt werden': 'Could not generate QR code', 'Direktlink zur Anlage – scannen zum Öffnen': 'Direct link to station – scan to open', 'PNG herunterladen': 'Download PNG', 'Drucken': 'Print', 'Popup wurde blockiert': 'Popup was blocked', 'Umbenennen': 'Rename', 'Version umbenannt': 'Version renamed', 'Speichern': 'Save', 'Abbrechen': 'Cancel',
     // Editor-Toolbar
     'EDITIEREN': 'EDIT', 'SPEICHERN': 'SAVE', 'LAYOUT HOCHLADEN': 'UPLOAD LAYOUT', 'LAYOUT ERSETZEN': 'REPLACE LAYOUT',
     'ZURÜCK': 'BACK', 'FÖRDERWEG': 'CONVEYOR PATH', 'ZEICHNEN AKTIV': 'DRAWING ACTIVE',
@@ -448,6 +448,61 @@
     w.document.write('<html><head><title>QR ' + esc(name) + '</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:40px;color:#1E2A33}img{width:300px;height:300px;image-rendering:pixelated;border:1px solid #ddd;border-radius:8px}h2{margin:6px 0 2px}small{color:#777;word-break:break-all;font-size:11px}</style></head><body><h2>' + esc(name) + '</h2><small>' + esc(url) + '</small><br><br><img src="' + dataUrl + '"></body></html>');
     w.document.close(); w.focus(); setTimeout(function () { try { w.print(); } catch (e) { /* noop */ } }, 350);
   }
+  // ---- Knoten-Aktionsmenü (Drei-Punkte) ----
+  function runNodeAction(act, id) {
+    if (act === 'add') addChild(id);
+    else if (act === 'dup') duplicateAnlage(findNode(id));
+    else if (act === 'link') copyStationLink(id);
+    else if (act === 'qr') openQrModal(id);
+    else if (act === 'rename') startRename(id);
+    else if (act === 'del') { state.confirmDelete = id; state.editingNodeId = null; renderTree(); }
+  }
+  function nodeMenuEsc(e) { if (e.key === 'Escape') closeNodeMenu(); }
+  function nodeMenuOutside(e) { const m = document.getElementById('nodeMenu'); if (m && !m.contains(e.target)) closeNodeMenu(); }
+  function closeNodeMenu() {
+    const m = document.getElementById('nodeMenu'); if (m) m.remove();
+    document.removeEventListener('keydown', nodeMenuEsc, true);
+    document.removeEventListener('mousedown', nodeMenuOutside, true);
+  }
+  function openNodeMenu(id, btnEl) {
+    closeNodeMenu();
+    const n = findNode(id); if (!n) return;
+    const ct = childType(n.type);
+    const IC = {
+      add: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>',
+      dup: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="11" height="11" rx="1.6"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
+      link: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5"/></svg>',
+      qr: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3M14 17v4M17 14v3M20 14v3M17 20h4M20 20v1"/></svg>',
+      pen: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg>',
+      del: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg>'
+    };
+    const items = [];
+    if (ct) items.push(['add', IC.add, TYPE_LABEL[ct] + ' ' + t('hinzufügen'), false]);
+    if (n.type === 'anlage') {
+      items.push(['dup', IC.dup, t('Anlage duplizieren'), false]);
+      items.push(['link', IC.link, t('Direktlink kopieren'), false]);
+      items.push(['qr', IC.qr, t('QR-Code zur Anlage'), false]);
+    }
+    items.push(['rename', IC.pen, t('Umbenennen'), false]);
+    items.push(['del', IC.del, t('Löschen'), true]);
+    const menu = document.createElement('div');
+    menu.id = 'nodeMenu'; menu.className = 'node-menu';
+    menu.innerHTML = items.map((it) => '<button class="nm-item' + (it[3] ? ' danger' : '') + '" data-nm="' + it[0] + '">' + it[1] + '<span>' + esc(it[2]) + '</span></button>').join('');
+    document.body.appendChild(menu);
+    const r = btnEl.getBoundingClientRect();
+    const mw = menu.offsetWidth || 200, mh = menu.offsetHeight || 200;
+    let left = r.right - mw; if (left < 8) left = 8;
+    let top = r.bottom + 4; if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 4);
+    menu.style.left = left + 'px'; menu.style.top = top + 'px';
+    menu.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-nm]'); if (!b) return;
+      const act = b.getAttribute('data-nm'); closeNodeMenu(); runNodeAction(act, id);
+    });
+    setTimeout(() => {
+      document.addEventListener('keydown', nodeMenuEsc, true);
+      document.addEventListener('mousedown', nodeMenuOutside, true);
+    }, 0);
+  }
   // Beim Start per ?station=<Knoten-ID | Station-ID> direkt zur Anlage springen.
   function openDeepLink(id) {
     let node = findNode(id);
@@ -497,14 +552,7 @@
         + '<button class="yes" data-act="del-yes" data-id="' + n.id + '">Ja</button>'
         + '<button class="no" data-act="del-no">Nein</button></div>';
     } else if (canEdit()) {
-      right = '<div class="node-tools">'
-        + (ct ? '<button data-act="add" data-id="' + n.id + '" title="' + TYPE_LABEL[ct] + ' hinzufügen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg></button>' : '')
-        + (n.type === 'anlage' ? '<button data-act="dup" data-id="' + n.id + '" title="Anlage duplizieren"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="1.6"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg></button>' : '')
-        + (n.type === 'anlage' ? '<button data-act="link" data-id="' + n.id + '" title="' + t('Direktlink kopieren') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5"/></svg></button>' : '')
-        + (n.type === 'anlage' ? '<button data-act="qr" data-id="' + n.id + '" title="' + t('QR-Code zur Anlage') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3M14 17v4M17 14v3M20 14v3M17 20h4M20 20v1"/></svg></button>' : '')
-        + '<button data-act="rename" data-id="' + n.id + '" title="Umbenennen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button>'
-        + '<button class="del" data-act="del" data-id="' + n.id + '" title="Löschen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></svg></button>'
-        + '</div>';
+      right = '<div class="node-tools"><button data-act="node-menu" data-id="' + n.id + '" title="' + t('Aktionen') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg></button></div>';
     } else {
       right = '';
     }
@@ -537,6 +585,7 @@
     else if (act === 'dup') { e.stopPropagation(); duplicateAnlage(findNode(id)); }
     else if (act === 'link') { e.stopPropagation(); copyStationLink(id); }
     else if (act === 'qr') { e.stopPropagation(); openQrModal(id); }
+    else if (act === 'node-menu') { e.stopPropagation(); if (document.getElementById('nodeMenu')) closeNodeMenu(); else openNodeMenu(id, el); }
     else if (act === 'rename') { e.stopPropagation(); startRename(id); }
     else if (act === 'rename-ok') { e.stopPropagation(); const inp = document.querySelector('.n-edit[data-edit="' + id + '"]'); commitRename(id, inp ? inp.value : ''); }
     else if (act === 'rename-cancel') { e.stopPropagation(); state.editingNodeId = null; renderTree(); }
@@ -3918,7 +3967,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.6';
+      sc.src = 'js/html2canvas.min.js?v=1.1.7';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
