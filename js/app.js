@@ -3857,7 +3857,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.2';
+      sc.src = 'js/html2canvas.min.js?v=1.1.3';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -3994,8 +3994,9 @@ const STATE_ICONS = {
     const wrap = document.createElement('div'); wrap.innerHTML = html;
     document.body.appendChild(wrap.firstChild);
     const bd = document.getElementById('zaBackdrop');
+    bd.addEventListener('mousedown', (ev) => { bd._downBackdrop = (ev.target.id === 'zaBackdrop'); });
     bd.addEventListener('click', (ev) => {
-      if (ev.target.id === 'zaBackdrop') { closeZoneModal(); return; }
+      if (ev.target.id === 'zaBackdrop') { if (bd._downBackdrop) closeZoneModal(); bd._downBackdrop = false; return; }
       const za = ev.target.closest('[data-za]');
       if (za) { const a = za.getAttribute('data-za'); if (a === 'close') { closeZoneModal(); } else if (a === 'none') { assignZone(zoneId, null, null); } return; }
       const row = ev.target.closest('.za-row');
@@ -4046,8 +4047,9 @@ const STATE_ICONS = {
     const wrap = document.createElement('div'); wrap.innerHTML = html;
     document.body.appendChild(wrap.firstChild);
     const bd = document.getElementById('zaBackdrop');
+    bd.addEventListener('mousedown', (ev) => { bd._downBackdrop = (ev.target.id === 'zaBackdrop'); });
     bd.addEventListener('click', (ev) => {
-      if (ev.target.id === 'zaBackdrop') { closeZoneModal(); return; }
+      if (ev.target.id === 'zaBackdrop') { if (bd._downBackdrop) closeZoneModal(); bd._downBackdrop = false; return; }
       const za = ev.target.closest('[data-za]'); if (!za) return;
       const a = za.getAttribute('data-za');
       if (a === 'close') closeZoneModal();
@@ -5208,7 +5210,8 @@ const STATE_ICONS = {
     $('mClose').addEventListener('click', closeTagModal);
     $('mX').addEventListener('click', closeTagModal);
     $('mBody').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') saveTags(); });
-    $('tagModal').addEventListener('click', (e) => { if (e.target.id === 'tagModal') closeTagModal(); });
+    $('tagModal').addEventListener('mousedown', (e) => { state._tagDownBackdrop = (e.target.id === 'tagModal'); });
+    $('tagModal').addEventListener('click', (e) => { if (e.target.id === 'tagModal' && state._tagDownBackdrop) closeTagModal(); state._tagDownBackdrop = false; });
 
     window.addEventListener('promodx:unauthorized', () => { toast('Sitzung abgelaufen'); showLogin(); });
   }
