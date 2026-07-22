@@ -107,4 +107,106 @@
     return inside;
   }
 
+
+  const BOLT_PTS = [[1, -10], [-9, 2], [0, 2], [-1, 10], [9, -2], [0, -2]];
+  const LCO_AV_COLORS = ['#0065A5', '#7A3FA8', '#0E8A6E', '#D9822B', '#C0392B', '#2E7DB2', '#B0498B'];
+  window.PMX.sbBoltPath = function sbBoltPath(z, ar) {
+    const P = z.points; const n = P.length; if (n < 2) return '';
+    const step = 10, s = 0.075;
+    let out = '';
+    for (let e = 0; e < n; e++) {
+      const a = { x: P[e].x * 100, y: P[e].y * 100 };
+      const b = { x: P[(e + 1) % n].x * 100, y: P[(e + 1) % n].y * 100 };
+      const edx = b.x - a.x, edy = b.y - a.y;
+      const sdx = edx * ar, sdy = edy; const slen = Math.hypot(sdx, sdy); if (slen < step) continue;
+      for (let d = step * 0.5; d < slen; d += step) {
+        const f = d / slen;
+        const px = a.x + edx * f, py = a.y + edy * f;
+        out += 'M' + BOLT_PTS.map((pt) => (px + pt[0] * s / ar).toFixed(2) + ',' + (py + pt[1] * s).toFixed(2)).join('L') + 'Z';
+      }
+    }
+    return out;
+  }
+
+  window.PMX.lcoColor = function lcoColor(who) {
+    let h = 0; const s = String(who || '');
+    for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+    return LCO_AV_COLORS[h % LCO_AV_COLORS.length];
+  }
+
+  window.PMX.shapeVisualKey = function shapeVisualKey(o) {
+    const art = (o.metatags || []).find((m) => m.label === 'Förderart');
+    return [o.color, o.plcConfigId || '', art ? art.value : '', o.layerId].join('|');
+  }
+
+  window.PMX.objPayload = function objPayload(o) {
+    const p = { layerId: o.layerId, name: o.name, symbolType: o.symbolType, color: o.color };
+    if (o.points && o.points.length) { p.points = o.points; p.x = o.points[0].x; p.y = o.points[0].y; } else { p.x = o.x; p.y = o.y; }
+    return p;
+  }
+
+  window.PMX.initials = function initials(email) {
+    return (email.split('@')[0].split(/[.\-_]/).filter(Boolean).slice(0, 2)
+      .map((s) => s[0].toUpperCase()).join('')) || 'U';
+  }
+
+  window.PMX.userSortVal = function userSortVal(u, col) {
+    if (col === 'email') return (u.email || '').toLowerCase();
+    if (col === 'group') return (u.group ? u.group.name : '').toLowerCase();
+    if (col === 'logins') return u.loginCount || 0;
+    if (col === 'status') return u.active ? 1 : 0;
+    return (u.name || '').toLowerCase();
+  }
+
+  window.PMX.groupSortVal = function groupSortVal(g, col) {
+    if (col === 'role') { const rank = { viewer: 0, editor: 1, werkadmin: 2, admin: 3 }; return rank[g.role] != null ? rank[g.role] : -1; }
+    if (col === 'werke') return g.allWerke ? '\uffff' : ((g.werke && g.werke.length) ? g.werke.map((w) => w.name).join(', ').toLowerCase() : '');
+    if (col === 'members') return g.userCount || 0;
+    return (g.name || '').toLowerCase();
+  }
+
+  window.PMX.fgName = function fgName(z) {
+    const tags = (z.metatags || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0));
+    const v = tags.map((t) => t.value).find((val) => val && String(val).trim());
+    return v || z.name || 'Funktionsgruppe';
+  }
+
+  window.PMX.ptStateGroups = function ptStateGroups(pt) {
+    const parse = (s) => (s ? String(s).split(', ') : []).filter(Boolean);
+    return [
+      { group: 'Betriebszustände', muss: parse(pt.muss), opt: parse(pt.opt) },
+      { group: 'MPS-Meldungen', muss: parse(pt.mpsMuss), opt: parse(pt.mpsOpt) },
+      { group: 'Informationen', muss: parse(pt.infoMuss), opt: parse(pt.infoOpt) },
+    ];
+  }
+
+  window.PMX.collectStationNodes = function collectStationNodes(node) {
+    const out = [];
+    const walk = (n) => { if (n.stationId) out.push(n); (n.children || []).forEach(walk); };
+    (node.children || []).forEach(walk);
+    return out;
+  }
+
+  window.PMX.detailSkeleton = function detailSkeleton() {
+    return '<div class="pad"><div class="detail-skel">'
+      + '<div class="sk-top"><div class="sk-box sk-prev"></div><div class="sk-head"><div class="sk-line w50"></div><div class="sk-line w30"></div><div class="sk-chips"></div><div class="sk-btns"></div></div></div>'
+      + '<div class="sk-card"></div><div class="sk-card sk-card-sm"></div>'
+      + '</div></div>';
+  }
+
+  window.PMX.schemaThumb = function schemaThumb() {
+    return '<svg viewBox="0 0 320 240" style="width:100%;height:100%;display:block">'
+      + '<defs><pattern id="tgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#E3E9EE" stroke-width="1"/></pattern></defs>'
+      + '<rect width="320" height="240" fill="#F9FBFC"/><rect width="320" height="240" fill="url(#tgrid)"/>'
+      + '<rect x="20" y="20" width="280" height="200" fill="none" stroke="#8FA3B0" stroke-width="1.6"/></svg>';
+  }
+
+  window.PMX.commentsSig = function commentsSig(list) {
+    return (list || []).map(function (c) { return c.id + '#' + ((c.messages || []).length) + '@' + Math.round((c.x || 0) * 1000) + ',' + Math.round((c.y || 0) * 1000); }).join('|');
+  }
+
+  window.PMX.fmtMetrics = function fmtMetrics(m, withArea) {
+    return 'B ' + Math.round(m.w * 100) + '% × H ' + Math.round(m.h * 100) + '%' + (withArea && m.area > 0.0004 ? ' · A ' + (m.area * 100).toFixed(1) + '%' : '');
+  }
+
 })();

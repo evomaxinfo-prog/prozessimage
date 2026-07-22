@@ -181,10 +181,7 @@
     }
   }
 
-  function initials(email) {
-    return (email.split('@')[0].split(/[.\-_]/).filter(Boolean).slice(0, 2)
-      .map((s) => s[0].toUpperCase()).join('')) || 'U';
-  }
+  const initials = window.PMX.initials;
 
   function canEdit() { return state.role === 'editor' || state.role === 'admin' || state.role === 'werkadmin'; }
   // Eigene Palette-Symbole verwalten (anlegen/bearbeiten/löschen): voller Admin oder Werk-Admin (in seinen Werken).
@@ -732,12 +729,7 @@
   }
 
   /* -------- Linien-Dashboard: Übersicht aller unterlagerten Stationen -------- */
-  function collectStationNodes(node) {
-    const out = [];
-    const walk = (n) => { if (n.stationId) out.push(n); (n.children || []).forEach(walk); };
-    (node.children || []).forEach(walk);
-    return out;
-  }
+  const collectStationNodes = window.PMX.collectStationNodes;
   // Mini-Editor-Vorschau seitenverhältnis-treu: viewBox hat das Layout-Seitenverhältnis, Objekte in 0–1 → skaliert.
   function stationPreviewSvg(full, aspect) {
     const a = aspect && aspect > 0 ? aspect : (760 / 520);
@@ -894,13 +886,8 @@
     }
   }
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
-  const LCO_AV_COLORS = ['#0065A5', '#7A3FA8', '#0E8A6E', '#D9822B', '#C0392B', '#2E7DB2', '#B0498B'];
   const lcoInitials = window.PMX.lcoInitials;
-  function lcoColor(who) {
-    let h = 0; const s = String(who || '');
-    for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
-    return LCO_AV_COLORS[h % LCO_AV_COLORS.length];
-  }
+  const lcoColor = window.PMX.lcoColor;
   function linieCommentsHtml(byStation) {
     if (!byStation || !byStation.length) return '';
     byStation.sort(function (a, b) { return String(a.station).localeCompare(String(b.station)); });
@@ -1185,12 +1172,7 @@
   }
 
   /* -------- Detailansicht (Schritt 2) -------- */
-  function detailSkeleton() {
-    return '<div class="pad"><div class="detail-skel">'
-      + '<div class="sk-top"><div class="sk-box sk-prev"></div><div class="sk-head"><div class="sk-line w50"></div><div class="sk-line w30"></div><div class="sk-chips"></div><div class="sk-btns"></div></div></div>'
-      + '<div class="sk-card"></div><div class="sk-card sk-card-sm"></div>'
-      + '</div></div>';
-  }
+  const detailSkeleton = window.PMX.detailSkeleton;
   // Frisch laden und – falls diese Station noch aktiv ist und sich etwas geaendert hat – neu rendern.
   async function revalidateStation(node, seq) {
     const prevJson = JSON.stringify(state.detail);
@@ -1243,12 +1225,7 @@
   function fmtDate(iso) { if (!iso) return '–'; const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleDateString('de-DE'); }
   function fmtDateTime(iso) { if (!iso) return '–'; const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); }
 
-  function schemaThumb() {
-    return '<svg viewBox="0 0 320 240" style="width:100%;height:100%;display:block">'
-      + '<defs><pattern id="tgrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#E3E9EE" stroke-width="1"/></pattern></defs>'
-      + '<rect width="320" height="240" fill="#F9FBFC"/><rect width="320" height="240" fill="url(#tgrid)"/>'
-      + '<rect x="20" y="20" width="280" height="200" fill="none" stroke="#8FA3B0" stroke-width="1.6"/></svg>';
-  }
+  const schemaThumb = window.PMX.schemaThumb;
 
   function renderDetail() {
     const s = state.detail, ed = state.detailEdit, d = state.detailDraft || {};
@@ -1663,14 +1640,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   const PT_WHITE = { ptk_90: 1, ptk_91: 1, ptk_92: 1, ptk_93: 1, ptk_94: 1, ptk_95: 1, ptk_96: 1 };
   function ptColorGroup(sym) { return PT_WHITE[sym] ? 's' : PT_DARK[sym] ? 'p' : 'a'; }
   const PT_COLOR_GROUPS = (window.PMX && window.PMX.PT_COLOR_GROUPS) || [];
-  function ptStateGroups(pt) {
-    const parse = (s) => (s ? String(s).split(', ') : []).filter(Boolean);
-    return [
-      { group: 'Betriebszustände', muss: parse(pt.muss), opt: parse(pt.opt) },
-      { group: 'MPS-Meldungen', muss: parse(pt.mpsMuss), opt: parse(pt.mpsOpt) },
-      { group: 'Informationen', muss: parse(pt.infoMuss), opt: parse(pt.infoOpt) },
-    ];
-  }
+  const ptStateGroups = window.PMX.ptStateGroups;
   function ptStateList(pt) {
     const out = [];
     ptStateGroups(pt).forEach((g) => {
@@ -1934,10 +1904,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   function protectObj(id) { if (id) state.collab.protect[String(id)] = Date.now() + 6000; }
   // Vergleicht zwei Punktlisten mit Toleranz (Server rundet ggf. Floats).
   const pointsMatch = window.PMX.pointsMatch;
-  function shapeVisualKey(o) {
-    const art = (o.metatags || []).find((m) => m.label === 'Förderart');
-    return [o.color, o.plcConfigId || '', art ? art.value : '', o.layerId].join('|');
-  }
+  const shapeVisualKey = window.PMX.shapeVisualKey;
   function flashShape(id) {
     const el = document.getElementById('zone-poly-' + id); if (!el) return;
     el.classList.remove('mf-flash'); void el.getBBox; el.classList.add('mf-flash');
@@ -2137,24 +2104,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // Polygon mit leicht abgerundeten Ecken als SVG-Pfad (Punkte im 0..100-Raum). r = Rundungsradius.
   const roundedPolyPath = window.PMX.roundedPolyPath;
   // Kleine Blitze entlang der SB-Grenze (statt Pfeilen). Aspektkorrigiert, in Zonenfarbe.
-  const BOLT_PTS = [[1, -10], [-9, 2], [0, 2], [-1, 10], [9, -2], [0, -2]];
-  function sbBoltPath(z, ar) {
-    const P = z.points; const n = P.length; if (n < 2) return '';
-    const step = 10, s = 0.075;
-    let out = '';
-    for (let e = 0; e < n; e++) {
-      const a = { x: P[e].x * 100, y: P[e].y * 100 };
-      const b = { x: P[(e + 1) % n].x * 100, y: P[(e + 1) % n].y * 100 };
-      const edx = b.x - a.x, edy = b.y - a.y;
-      const sdx = edx * ar, sdy = edy; const slen = Math.hypot(sdx, sdy); if (slen < step) continue;
-      for (let d = step * 0.5; d < slen; d += step) {
-        const f = d / slen;
-        const px = a.x + edx * f, py = a.y + edy * f;
-        out += 'M' + BOLT_PTS.map((pt) => (px + pt[0] * s / ar).toFixed(2) + ',' + (py + pt[1] * s).toFixed(2)).join('L') + 'Z';
-      }
-    }
-    return out;
-  }
+  const sbBoltPath = window.PMX.sbBoltPath;
   function zoneOverlaySvg(visible) {
     const zones = (state.detail.objects || []).filter((o) => (o.symbolType === 'sb_zone' || o.symbolType === 'sps_zone' || o.symbolType === 'fg_zone' || o.symbolType === 'nh_zone') && o.points && o.points.length >= 2 && visible[o.layerId] !== false);
     const hlFg = highlightedFgZoneId();
@@ -2914,7 +2864,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.0'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.1'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3007,9 +2957,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       renderEditor();
     } catch (e) { state.commentsServer = false; /* Backend (noch) nicht da -> lokaler Fallback bleibt aktiv */ }
   }
-  function commentsSig(list) {
-    return (list || []).map(function (c) { return c.id + '#' + ((c.messages || []).length) + '@' + Math.round((c.x || 0) * 1000) + ',' + Math.round((c.y || 0) * 1000); }).join('|');
-  }
+  const commentsSig = window.PMX.commentsSig;
   // Kommentare aus dem Poll uebernehmen, ohne die offene Eingabe/den Fokus zu verlieren.
   function applyCommentsUpdate(list) {
     var winMap = {}; (state.comments || []).forEach(function (c) { if (c.winX != null) winMap[c.id] = { winX: c.winX, winY: c.winY }; });
@@ -3825,7 +3773,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.0';
+      sc.src = 'js/html2canvas.min.js?v=1.2.1';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4246,11 +4194,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   }
 
   // Name/Label einer Funktionsgruppe: erster gesetzter Metatag, sonst der Objektname.
-  function fgName(z) {
-    const tags = (z.metatags || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0));
-    const v = tags.map((t) => t.value).find((val) => val && String(val).trim());
-    return v || z.name || 'Funktionsgruppe';
-  }
+  const fgName = window.PMX.fgName;
   // Funktionsgruppen-Zone, in der der Punkt (x,y) liegt (oberste), sonst null.
   function fgZoneAt(x, y) {
     const visible = visibleMap();
@@ -4273,9 +4217,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   const zoneCentroid = window.PMX.zoneCentroid;
   // Bounding-Box + Flaeche (Prozent der Layoutflaeche) eines Polygons/Drafts.
   const polyMetrics = window.PMX.polyMetrics;
-  function fmtMetrics(m, withArea) {
-    return 'B ' + Math.round(m.w * 100) + '% × H ' + Math.round(m.h * 100) + '%' + (withArea && m.area > 0.0004 ? ' · A ' + (m.area * 100).toFixed(1) + '%' : '');
-  }
+  const fmtMetrics = window.PMX.fmtMetrics;
   // SPS-Bereich (sps_zone), der den Punkt enthaelt – oberster, sonst null.
   function spsZoneAt(x, y) {
     const visible = visibleMap();
@@ -4674,11 +4616,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     updateUndoBtns();
   }
   function pushUndo() { if (state.detail) pushUndoSnap(snapObjects()); }
-  function objPayload(o) {
-    const p = { layerId: o.layerId, name: o.name, symbolType: o.symbolType, color: o.color };
-    if (o.points && o.points.length) { p.points = o.points; p.x = o.points[0].x; p.y = o.points[0].y; } else { p.x = o.x; p.y = o.y; }
-    return p;
-  }
+  const objPayload = window.PMX.objPayload;
   function objChanged(a, b) {
     return JSON.stringify([a.name, a.color, a.x, a.y, a.points || null, a.plcConfigId || null, a.layerId, a.symbolType, a.metatags || []])
       !== JSON.stringify([b.name, b.color, b.x, b.y, b.points || null, b.plcConfigId || null, b.layerId, b.symbolType, b.metatags || []]);
@@ -4822,13 +4760,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       + '<div class="adm-body">' + body + '</div></div></div>';
   }
 
-  function userSortVal(u, col) {
-    if (col === 'email') return (u.email || '').toLowerCase();
-    if (col === 'group') return (u.group ? u.group.name : '').toLowerCase();
-    if (col === 'logins') return u.loginCount || 0;
-    if (col === 'status') return u.active ? 1 : 0;
-    return (u.name || '').toLowerCase();
-  }
+  const userSortVal = window.PMX.userSortVal;
   function renderAdminUsers(a) {
     const llFmt = (v) => { if (!v) return null; const d = new Date(v); return isNaN(d) ? null : d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
     const us = a.userSort || (a.userSort = { col: 'name', dir: 'asc' });
@@ -4879,12 +4811,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       + '<div class="adm-form-actions"><button class="btn" data-adm="form-cancel">Abbrechen</button><button class="btn primary" data-adm="pw-save">Setzen</button></div></div>';
   }
 
-  function groupSortVal(g, col) {
-    if (col === 'role') { const rank = { viewer: 0, editor: 1, werkadmin: 2, admin: 3 }; return rank[g.role] != null ? rank[g.role] : -1; }
-    if (col === 'werke') return g.allWerke ? '\uffff' : ((g.werke && g.werke.length) ? g.werke.map((w) => w.name).join(', ').toLowerCase() : '');
-    if (col === 'members') return g.userCount || 0;
-    return (g.name || '').toLowerCase();
-  }
+  const groupSortVal = window.PMX.groupSortVal;
   function renderAdminGroups(a) {
     const gs = a.groupSort || (a.groupSort = { col: 'name', dir: 'asc' });
     const sorted = a.groups.slice().sort((x, y) => {
