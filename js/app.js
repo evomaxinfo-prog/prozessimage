@@ -794,6 +794,7 @@
       +   '<button class="linie-tab active" data-act="linie-tab" data-tab="projekt"><span class="lt-num">1.0</span> Projektdaten</button>'
       +   '<button class="linie-tab" data-act="linie-tab" data-tab="dash"><span class="lt-num">2.0</span> Linie Dashboard</button>'
       +   '<button class="linie-tab" data-act="linie-tab" data-tab="comments"><span class="lt-num">3.0</span> Kommentare Gesamtübersicht<span class="lt-badge" id="linieCommentsCount" hidden></span></button>'
+      +   (state.isAdmin ? '<button class="linie-tab" data-act="linie-tab" data-tab="changes"><span class="lt-num">4.0</span> Änderungsindex<span class="lt-badge" id="linieChangesCount" hidden></span></button>' : '')
       + '</div>'
       + '<div id="linieTabProjekt" class="linie-tabpanel"><div id="linieProjekt" class="linie-projekt-panel"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>'
       + '<div id="linieTabDash" class="linie-tabpanel" hidden>'
@@ -811,10 +812,11 @@
       + '<div id="linieTabComments" class="linie-tabpanel" hidden>'
       +   '<div id="linieComments" class="linie-comments-panel"></div>'
       + '</div>'
+      + (state.isAdmin ? '<div id="linieTabChanges" class="linie-tabpanel" hidden><div class="ls-section-title">Änderungsindex <span>alle protokollierten Änderungen der Stationen dieser Linie · neueste zuerst</span></div><div id="linieChanges"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>' : '')
       + '</div>';
     loadLinieProjekt(node.id);
     if (!stations.length) return;
-    let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {}, commentsByStation = [];
+    let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {}, commentsByStation = [], changesRows = [];
     await Promise.all(stations.map(async (n) => {
       try {
         const [full, stComments0] = await Promise.all([Api.getStationFull(n.stationId), Api.getComments(n.stationId).catch(function () { return []; })]);
@@ -840,6 +842,7 @@
         const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
         const stName = full.anlagenname || n.name;
         if (stComments.length) commentsByStation.push({ node: n.id, station: stName, comments: stComments, layers: full.layers || [] });
+        (full.journal || []).forEach(function (j) { changesRows.push({ station: stName, text: j.text, author: j.author, createdAt: j.createdAt }); });
         (full.layers || []).forEach((l) => {
           if (!layerAgg[l.name]) layerAgg[l.name] = { objects: 0, stations: new Set(), color: l.color, code: l.code, syms: {} };
           layerAgg[l.name].stations.add(n.id);
@@ -884,10 +887,23 @@
       const total = commentsByStation.reduce(function (s, x) { return s + (x.comments || []).length; }, 0);
       const cc = $('linieCommentsCount'); if (cc) { cc.textContent = total; cc.hidden = !total; }
     }
+    if (state.isAdmin) {
+      const chHost = $('linieChanges'); if (chHost) chHost.innerHTML = linieChangesHtml(changesRows);
+      const chc = $('linieChangesCount'); if (chc) { chc.textContent = changesRows.length; chc.hidden = !changesRows.length; }
+    }
   }
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
   const lcoInitials = window.PMX.lcoInitials;
   const lcoColor = window.PMX.lcoColor;
+  // Änderungsindex (admin-only): alle Journal-Einträge der Stationen dieser Linie, neueste zuerst.
+  function linieChangesHtml(rows) {
+    if (!rows || !rows.length) return '<div class="pad" style="color:var(--muted)">Keine protokollierten Änderungen in dieser Linie.</div>';
+    const sorted = rows.slice().sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
+    const body = sorted.map(function (r) {
+      return '<tr><td>' + esc(r.station) + '</td><td>' + esc(r.text || '–') + '</td><td style="white-space:nowrap">' + fmtDateTime(r.createdAt) + '</td><td>' + esc(r.author || '–') + '</td></tr>';
+    }).join('');
+    return '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Art der Änderung</th><th>Wann</th><th>Von wem</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+  }
   function linieCommentsHtml(byStation) {
     if (!byStation || !byStation.length) return '';
     byStation.sort(function (a, b) { return String(a.station).localeCompare(String(b.station)); });
@@ -1544,7 +1560,7 @@
     else if (act === 'open-station') { selectNode(el.getAttribute('data-id')); }
     else if (act === 'goto-obj') { e.stopPropagation(); gotoObject(el.getAttribute('data-node'), el.getAttribute('data-obj')); }
     else if (act === 'pick-layer') { state.linieActiveLayer = el.getAttribute('data-layer'); renderLinieFolders(); }
-    else if (act === 'linie-tab') { const tab = el.getAttribute('data-tab'); document.querySelectorAll('.linie-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); }); const d = $('linieTabDash'), c = $('linieTabComments'), p = $('linieTabProjekt'); if (d) d.hidden = tab !== 'dash'; if (c) c.hidden = tab !== 'comments'; if (p) p.hidden = tab !== 'projekt'; }
+    else if (act === 'linie-tab') { const tab = el.getAttribute('data-tab'); document.querySelectorAll('.linie-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); }); const d = $('linieTabDash'), c = $('linieTabComments'), p = $('linieTabProjekt'), ch = $('linieTabChanges'); if (d) d.hidden = tab !== 'dash'; if (c) c.hidden = tab !== 'comments'; if (p) p.hidden = tab !== 'projekt'; if (ch) ch.hidden = tab !== 'changes'; }
     else if (act === 'pj-save') { saveLinieProjekt(el.getAttribute('data-node')); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
@@ -2868,7 +2884,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.4'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.5'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3777,7 +3793,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.4';
+      sc.src = 'js/html2canvas.min.js?v=1.2.5';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
