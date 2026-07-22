@@ -1935,7 +1935,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // Hat sich ein Objekt in einer sichtbaren/relevanten Eigenschaft geändert?
   function objChanged(a, b) {
     if (a.name !== b.name || a.color !== b.color || a.symbolType !== b.symbolType || a.layerId !== b.layerId
-      || a.x !== b.x || a.y !== b.y || (a.rotation || 0) !== (b.rotation || 0)
+      || a.x !== b.x || a.y !== b.y || (a.rotation || 0) !== (b.rotation || 0) || (a.scale || 1) !== (b.scale || 1)
       || (a.plcConfigId || '') !== (b.plcConfigId || '') || !!a.visible !== !!b.visible) return true;
     if (JSON.stringify(a.points || null) !== JSON.stringify(b.points || null)) return true;
     if (JSON.stringify(a.metatags || []) !== JSON.stringify(b.metatags || [])) return true;
@@ -2886,7 +2886,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.6'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.7'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3795,7 +3795,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.6';
+      sc.src = 'js/html2canvas.min.js?v=1.2.7';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4639,10 +4639,6 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   }
   function pushUndo() { if (state.detail) pushUndoSnap(snapObjects()); }
   const objPayload = window.PMX.objPayload;
-  function objChanged(a, b) {
-    return JSON.stringify([a.name, a.color, a.x, a.y, a.points || null, a.plcConfigId || null, a.layerId, a.symbolType, a.metatags || []])
-      !== JSON.stringify([b.name, b.color, b.x, b.y, b.points || null, b.plcConfigId || null, b.layerId, b.symbolType, b.metatags || []]);
-  }
   function remapId(oldId, newId) {
     const fix = (arr) => (arr || []).forEach((o) => { if (o.id === oldId) o.id = newId; });
     fix(state.detail.objects);
