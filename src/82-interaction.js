@@ -72,20 +72,27 @@
   }
   // Hover-Tooltip: beim Ueberfahren einer Zone Name (+ SPS bei FG/SB) anzeigen.
   let _hoverZoneId = null;
+  function setZoneHoverClass(id, on) {
+    if (id == null) return;
+    const p = document.getElementById('zone-poly-' + id); if (p) p.classList.toggle('zone-hover', on);
+    const a = document.getElementById('route-arrow-' + id); if (a) a.classList.toggle('zone-hover', on); // Pfeilspitze bei Routen mit hervorheben
+  }
   function updateZoneHoverTitle(e) {
     const doc = document.getElementById('canvasDoc');
     if (!doc) return;
-    if (state.drawZone) { if (doc.style.cursor) doc.style.cursor = ''; return; } // Zeichen-Modus: .drawing-Klasse (crosshair) greifen lassen
+    if (state.drawZone) { if (doc.style.cursor) doc.style.cursor = ''; if (_hoverZoneId !== null) { setZoneHoverClass(_hoverZoneId, false); _hoverZoneId = null; } return; } // Zeichen-Modus: .drawing-Klasse (crosshair) greifen lassen
     const r = doc.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
-      if (_hoverZoneId !== null) { _hoverZoneId = null; doc.removeAttribute('title'); doc.style.cursor = ''; }
+      if (_hoverZoneId !== null) { setZoneHoverClass(_hoverZoneId, false); _hoverZoneId = null; doc.removeAttribute('title'); doc.style.cursor = ''; }
       return;
     }
     const z = zoneAt((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
     const id = z ? z.id : null;
     if (id === _hoverZoneId) return;
+    if (_hoverZoneId !== null) setZoneHoverClass(_hoverZoneId, false);
     _hoverZoneId = id;
-    doc.style.cursor = z ? 'move' : ''; // über einer Zone: Verschiebe-Cursor; sonst Canvas-Standard (grab)
+    setZoneHoverClass(id, true);
+    doc.style.cursor = z ? 'move' : ''; // über einer Zone/Route: Verschiebe-Cursor; sonst Canvas-Standard (grab)
     if (z && (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone')) {
       const sps = plcNameOf(z);
       doc.title = z.name + (sps ? ' — SPS: ' + sps : '');
@@ -719,7 +726,7 @@
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.9';
+      sc.src = 'js/html2canvas.min.js?v=1.2.10';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
