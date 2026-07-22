@@ -1259,6 +1259,9 @@
       ? journal.map((j) => '<div class="j-item"><div class="j-dot"></div><div class="j-body"><div class="j-text">' + esc(j.text) + '</div><div class="j-meta">' + esc(j.author || '–') + ' · ' + fmtDateTime(j.createdAt) + '</div></div></div>').join('')
       : '<div style="color:var(--muted);font-size:13px;padding:6px 2px">' + t('Noch keine Einträge.') + '</div>';
 
+    // Jüngster Journal-Eintrag = letzte Änderung durch einen Nutzer (robust gegen Sortierreihenfolge)
+    const lastEdit = journal.length ? journal.reduce((a, b) => (new Date(a.createdAt || 0) >= new Date(b.createdAt || 0) ? a : b)) : null;
+
     const html = '<div class="pad">'
       + '<div class="detail-top">'
       + '<div class="preview">'
@@ -1275,7 +1278,11 @@
       + '<div class="action-bar" style="margin-top:16px;margin-bottom:0">'
       + (canEdit() ? '<button class="btn ' + (ed ? 'primary' : '') + '" data-act="toggle-edit">' + (ed ? t('SPEICHERN') : t('EDITIEREN')) + '</button>' : '')
       + '<button class="btn solid-dark" data-act="open-editor">' + t('MODELLIEREN') + '</button>'
-      + '</div></div></div>'
+      + '</div>'
+      + (lastEdit
+          ? '<div class="detail-lastedit" style="margin-top:10px;font-size:12px;color:var(--muted)">Letzte Änderung: ' + fmtDate(lastEdit.createdAt) + ' · ' + esc(lastEdit.author || '–') + '</div>'
+          : (s.letzteAenderung ? '<div class="detail-lastedit" style="margin-top:10px;font-size:12px;color:var(--muted)">Letzte Änderung: ' + fmtDate(s.letzteAenderung) + '</div>' : ''))
+      + '</div></div>'
 
       + '<div class="card"><div class="card-head"><h3>' + t('Stammdaten') + '</h3>' + (ed ? '<span class="badge" style="color:#0065A5;border-color:#0065A5">' + t('Bearbeitung') + '</span>' : '') + '</div>'
       + '<div class="card-body"><div class="form-grid">'
@@ -2864,7 +2871,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.2'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.3'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3773,7 +3780,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.2';
+      sc.src = 'js/html2canvas.min.js?v=1.2.3';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
