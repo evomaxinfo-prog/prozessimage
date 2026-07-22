@@ -363,7 +363,6 @@
   });
 
   async function boot() {
-    try { state._perf = /[?&]perf=1/.test(location.search || ''); } catch (e) { /* noop */ }
     try { state.lang = (localStorage.getItem('promodx_lang') === 'en') ? 'en' : 'de'; } catch (e) { /* noop */ }
     applyLang();
     // Direktlink zu einer Anlage merken (?station=…) – wird nach dem Laden des Baums geöffnet
@@ -953,7 +952,7 @@
           } catch (e) { /* ohne Bild */ }
         }
         const t = $('lct-' + n.id);
-        if (t) t.innerHTML = (layoutUrl ? '<img class="lc-bg" src="' + layoutUrl + '" alt="">' : '') + stationPreviewSvg(full, aspect)
+        if (t) t.innerHTML = (layoutUrl ? '<img class="lc-bg" src="' + esc(layoutUrl) + '" alt="">' : '') + stationPreviewSvg(full, aspect)
           + '<span class="lc-badge ' + (isDoc ? 'doc' : 'undoc') + '">' + (isDoc ? 'Dokumentiert' : 'Offen') + '</span>';
         const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
         const stName = full.anlagenname || n.name;
@@ -1093,7 +1092,7 @@
   // Symbol-Inhalt: eigenes Bild (custom:) oder Standard-SVG.
   function symInner(symbolType, px) {
     const c = state.customSyms && state.customSyms[symbolType];
-    if (c) return c.url ? '<img class="sym-img" draggable="false" src="' + c.url + '" alt="" style="width:' + px + 'px;height:' + px + 'px">' : '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + SYM.box + '</svg>';
+    if (c) return c.url ? '<img class="sym-img" draggable="false" src="' + esc(c.url) + '" alt="" style="width:' + px + 'px;height:' + px + 'px">' : '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + SYM.box + '</svg>';
     return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + (SYM[symbolType] || SYM.box) + '</svg>';
   }
   // Feld-Konfiguration eines eigenen Symbols (Überschrift + Typ text/select + Optionen).
@@ -2814,12 +2813,7 @@ const STATE_ICONS = {
   }
   // Optionaler Perf-Wrapper: mit ?perf=1 loggt jeder Editor-Render seine Dauer (zum Messen, ohne Verhaltensaenderung).
   function renderEditor() {
-    if (!state._perf) return renderEditorImpl();
-    const t0 = (window.performance && performance.now) ? performance.now() : Date.now();
-    const r = renderEditorImpl();
-    const dt = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
-    try { console.log('[perf] renderEditor ' + dt.toFixed(1) + 'ms · objs=' + ((state.detail.objects || []).length)); } catch (_) { /* noop */ }
-    return r;
+    return renderEditorImpl();
   }
   function renderEditorImpl() {
     const c = $('content'); c.style.padding = '0';
@@ -3218,7 +3212,7 @@ const STATE_ICONS = {
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.1.36'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.1.37'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3965,7 +3959,7 @@ const STATE_ICONS = {
     state.symFieldsDraft = (isEdit && editSym.fields && editSym.fields.length)
       ? editSym.fields.map((f) => ({ label: f.label || '', type: (f.type === 'select' || f.type === 'multiselect') ? f.type : 'text', options: (f.options || []).slice() }))
       : defaultCustomFields();
-    const prev = isEdit && editSym.url ? '<img src="' + editSym.url + '" alt="">' : t('Bild wählen …');
+    const prev = isEdit && editSym.url ? '<img src="' + esc(editSym.url) + '" alt="">' : t('Bild wählen …');
     let m = document.getElementById('symModal');
     if (!m) { m = document.createElement('div'); m.id = 'symModal'; m.className = 'modal-backdrop'; document.body.appendChild(m); }
     m.innerHTML = '<div class="modal sym-modal">'
@@ -4129,7 +4123,7 @@ const STATE_ICONS = {
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.36';
+      sc.src = 'js/html2canvas.min.js?v=1.1.37';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
