@@ -2485,7 +2485,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     const cont = document.getElementById('content');
     if (cont) cont.querySelectorAll('.obj.sel').forEach((el) => el.classList.remove('sel'));
   }
-  // Optionaler Perf-Wrapper: mit ?perf=1 loggt jeder Editor-Render seine Dauer (zum Messen, ohne Verhaltensaenderung).
+  // renderEditor delegiert an renderEditorImpl (stabiler Einstiegspunkt; frueherer ?perf=1-Timing-Wrapper wurde entfernt).
   function renderEditor() {
     return renderEditorImpl();
   }
