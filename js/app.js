@@ -567,10 +567,11 @@
   const LEVEL_VIEW = { linie: renderLinie };
   function selectNode(id) {
     const n = findNode(id); if (!n) return;
+    stopCollab(); // Editor-Live-Poll beim Baum-Wechsel beenden – verhindert Ruecksprung in die Modellierung
     state.selected = id; state.confirmDelete = null;
     if (n.type === 'anlage') { openAnlage(n); }
-    else if (LEVEL_VIEW[n.type]) { setStationUrl(null); LEVEL_VIEW[n.type](n); }
-    else { setStationUrl(null); renderWelcome(); }
+    else if (LEVEL_VIEW[n.type]) { state.view = 'linie'; setStationUrl(null); LEVEL_VIEW[n.type](n); }
+    else { state.view = 'linie'; setStationUrl(null); renderWelcome(); }
     renderTree();
   }
 
@@ -1822,6 +1823,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     let objsList, chg;
     const [objR, chR, cmR] = await Promise.allSettled([Api.getObjects(sid), Api.getChanges(sid, null), state.commentsServer ? Api.getComments(sid) : Promise.resolve(null)]);
     state.collab.inflight = false;
+    if (state.view !== 'editor') return; // waehrend des Await weg-navigiert -> nicht mehr in den Editor rendern
     if (objR.status === 'rejected') {
       const st = objR.reason && objR.reason.status;
       if (st === 404 || st === 405) { state.collab.enabled = false; state.collab.status = 'offline'; stopCollab(); renderPresenceOnly(); return; }
@@ -2884,7 +2886,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.5'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.6'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3793,7 +3795,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.5';
+      sc.src = 'js/html2canvas.min.js?v=1.2.6';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
