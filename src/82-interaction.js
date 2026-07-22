@@ -74,11 +74,8 @@
   let _hoverZoneId = null;
   function setZoneHoverClass(id, on, isRoute) {
     if (id == null) return;
-    const cls = isRoute ? 'route-hl' : 'zone-hover';
-    ['zone-poly-' + id, 'route-arrow-' + id].forEach(function (eid) {
-      const el = document.getElementById(eid); if (!el) return;
-      if (on) el.classList.add(cls); else el.classList.remove('zone-hover', 'route-hl');
-    });
+    const p = document.getElementById('zone-poly-' + id);
+    if (p) p.classList.toggle('zone-hover', on && !isRoute); // Routen bekommen kein Hover-Highlight
   }
   function updateZoneHoverTitle(e) {
     const doc = document.getElementById('canvasDoc');
@@ -729,7 +726,7 @@
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.15';
+      sc.src = 'js/html2canvas.min.js?v=1.2.16';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
