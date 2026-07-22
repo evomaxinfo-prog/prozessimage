@@ -895,12 +895,7 @@
   }
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
   const LCO_AV_COLORS = ['#0065A5', '#7A3FA8', '#0E8A6E', '#D9822B', '#C0392B', '#2E7DB2', '#B0498B'];
-  function lcoInitials(who) {
-    const local = String(who || '?').split('@')[0];
-    const parts = local.split(/[._\-\s]+/).filter(Boolean);
-    const ini = parts.length >= 2 ? (parts[0][0] + parts[1][0]) : local.slice(0, 2);
-    return (ini || '?').toUpperCase();
-  }
+  const lcoInitials = window.PMX.lcoInitials;
   function lcoColor(who) {
     let h = 0; const s = String(who || '');
     for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
@@ -1754,12 +1749,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     return 760 / 520;
   }
   // Abstand Punkt→Strecke in seitenverhältnis-korrigiertem Raum (x mit ar skaliert → isotrop)
-  function distToSegAR(px, py, ax, ay, bx, by, ar) {
-    px *= ar; ax *= ar; bx *= ar;
-    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
-    let t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0; t = Math.max(0, Math.min(1, t));
-    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-  }
+  const distToSegAR = window.PMX.distToSegAR;
   function pointNearRoute(o, x, y) {
     const p = o.points; if (!p || p.length < 2) return false;
     const ar = docAspect();
@@ -1769,22 +1759,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // Gefüllter Pfeilkopf am Streckenende; isotrop trotz preserveAspectRatio="none"
   // Weiche Kurve durch die Stützpunkte (Catmull-Rom → kubische Bézier). Liefert d-Pfad (viewBox 0..100)
   // und die Endtangente (normalisierte Richtung) für die Pfeil-Ausrichtung.
-  function buildRouteCurve(pts) {
-    const n = pts.length;
-    if (n < 2) return { d: n ? 'M' + (pts[0].x * 100) + ' ' + (pts[0].y * 100) : '', tan: { x: 1, y: 0 } };
-    const P = pts.map((p) => ({ x: p.x * 100, y: p.y * 100 }));
-    let d = 'M' + P[0].x + ' ' + P[0].y;
-    let lastC2 = P[0];
-    for (let i = 0; i < n - 1; i++) {
-      const p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || P[i + 1];
-      const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
-      const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
-      d += ' C' + c1x + ' ' + c1y + ' ' + c2x + ' ' + c2y + ' ' + p2.x + ' ' + p2.y;
-      lastC2 = { x: c2x, y: c2y };
-    }
-    const end = P[n - 1];
-    return { d, tan: { x: (end.x - lastC2.x) / 100, y: (end.y - lastC2.y) / 100 } };
-  }
+  const buildRouteCurve = window.PMX.buildRouteCurve;
   // Gefüllter Pfeilkopf am Endpunkt, ausgerichtet an einer (normalisierten) Tangente; isotrop trotz preserveAspectRatio="none".
   function routeArrowFromTan(tip, tanVb, ar) {
     let sdx = tanVb.x * ar, sdy = tanVb.y;
@@ -1958,14 +1933,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // Markiert ein Objekt kurz als "lokal frisch geändert", damit ein Poll die noch nicht bestätigte Änderung nicht überschreibt/entfernt.
   function protectObj(id) { if (id) state.collab.protect[String(id)] = Date.now() + 6000; }
   // Vergleicht zwei Punktlisten mit Toleranz (Server rundet ggf. Floats).
-  function pointsMatch(a, b) {
-    a = a || []; b = b || [];
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (Math.abs((a[i].x || 0) - (b[i].x || 0)) > 0.001 || Math.abs((a[i].y || 0) - (b[i].y || 0)) > 0.001) return false;
-    }
-    return true;
-  }
+  const pointsMatch = window.PMX.pointsMatch;
   function shapeVisualKey(o) {
     const art = (o.metatags || []).find((m) => m.label === 'Förderart');
     return [o.color, o.plcConfigId || '', art ? art.value : '', o.layerId].join('|');
@@ -1985,11 +1953,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     return false;
   }
   function personLabel(v) { return v.name || v.email || ''; }
-  function personInitials(label) {
-    const base = String(label).split('@')[0];
-    const parts = base.split(/[.\-_\s]+/).filter(Boolean).slice(0, 2);
-    return parts.map((s) => s[0].toUpperCase()).join('') || 'U';
-  }
+  const personInitials = window.PMX.personInitials;
   function firstName(label) { return String(label).split('@')[0].split(/[.\-_\s]+/).filter(Boolean)[0] || String(label); }
   function capFirst(s) { s = String(s); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function presenceHtml() {
@@ -2171,23 +2135,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   }
 
   // Polygon mit leicht abgerundeten Ecken als SVG-Pfad (Punkte im 0..100-Raum). r = Rundungsradius.
-  function roundedPolyPath(pts, r) {
-    const n = pts.length;
-    if (n < 3) return pts.length ? 'M' + pts.map((p) => p.x.toFixed(2) + ',' + p.y.toFixed(2)).join('L') + 'Z' : '';
-    let d = '';
-    for (let i = 0; i < n; i++) {
-      const cur = pts[i], prev = pts[(i - 1 + n) % n], next = pts[(i + 1) % n];
-      const v1x = prev.x - cur.x, v1y = prev.y - cur.y;
-      const v2x = next.x - cur.x, v2y = next.y - cur.y;
-      const l1 = Math.hypot(v1x, v1y) || 1, l2 = Math.hypot(v2x, v2y) || 1;
-      const rr = Math.min(r, l1 / 2, l2 / 2);
-      const ax = cur.x + (v1x / l1) * rr, ay = cur.y + (v1y / l1) * rr;
-      const bx = cur.x + (v2x / l2) * rr, by = cur.y + (v2y / l2) * rr;
-      d += (i === 0 ? 'M' : 'L') + ax.toFixed(2) + ',' + ay.toFixed(2)
-        + 'Q' + cur.x.toFixed(2) + ',' + cur.y.toFixed(2) + ' ' + bx.toFixed(2) + ',' + by.toFixed(2);
-    }
-    return d + 'Z';
-  }
+  const roundedPolyPath = window.PMX.roundedPolyPath;
   // Kleine Blitze entlang der SB-Grenze (statt Pfeilen). Aspektkorrigiert, in Zonenfarbe.
   const BOLT_PTS = [[1, -10], [-9, 2], [0, 2], [-1, 10], [9, -2], [0, -2]];
   function sbBoltPath(z, ar) {
@@ -2494,20 +2442,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     return { id: o.id, name: m.value, code: techCode(m.value), col: objIconColor(o), rx: o.x, ry: o.y, bx, by };
   }
   // Abstand vom Zentrum bis zur abgerundeten Rechteck-Umrandung entlang (ux,uy) (alles in Pixeln).
-  function rayRoundedRectDist(ux, uy, hx, hy, rc) {
-    const ax = Math.abs(ux), ay = Math.abs(uy);
-    const tx = ax > 1e-6 ? hx / ax : Infinity;
-    const ty = ay > 1e-6 ? hy / ay : Infinity;
-    let t = Math.min(tx, ty);
-    const px = ux * t, py = uy * t;
-    if (Math.abs(px) > hx - rc && Math.abs(py) > hy - rc) { // Eckbereich -> gegen Eckkreis schneiden
-      const cx = Math.sign(px) * (hx - rc), cy = Math.sign(py) * (hy - rc);
-      const dot = ux * cx + uy * cy;
-      const disc = dot * dot - (cx * cx + cy * cy - rc * rc);
-      if (disc >= 0) { const tc = dot + Math.sqrt(disc); if (tc > 0) t = tc; }
-    }
-    return t;
-  }
+  const rayRoundedRectDist = window.PMX.rayRoundedRectDist;
   // Endpunkte der Technologie-Linie: 2px ausserhalb der sichtbaren Umrandung -
   // Roboter-Kasten (38px inkl. Rahmen, abgerundet r=9) und Tech-Icon-Kreis (Radius 13px).
   function techLineEnds(rx, ry, bx, by) {
@@ -2979,7 +2914,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.1.40'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.1.41'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3890,7 +3825,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.1.40';
+      sc.src = 'js/html2canvas.min.js?v=1.1.41';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4335,19 +4270,9 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     const z = (state.detail.objects || []).find((x) => x.symbolType === 'fg_zone' && fgName(x) === fgv);
     return z ? z.id : null;
   }
-  function zoneCentroid(z) { const n = z.points.length; return { x: z.points.reduce((s, p) => s + p.x, 0) / n, y: z.points.reduce((s, p) => s + p.y, 0) / n }; }
+  const zoneCentroid = window.PMX.zoneCentroid;
   // Bounding-Box + Flaeche (Prozent der Layoutflaeche) eines Polygons/Drafts.
-  function polyMetrics(pts) {
-    if (!pts || pts.length < 2) return null;
-    let minx = 1, miny = 1, maxx = 0, maxy = 0, a = 0;
-    for (let i = 0; i < pts.length; i++) {
-      const p = pts[i], q = pts[(i + 1) % pts.length];
-      if (p.x < minx) minx = p.x; if (p.x > maxx) maxx = p.x;
-      if (p.y < miny) miny = p.y; if (p.y > maxy) maxy = p.y;
-      a += p.x * q.y - q.x * p.y;
-    }
-    return { w: maxx - minx, h: maxy - miny, area: Math.abs(a) / 2, minx: minx, miny: miny, maxx: maxx, maxy: maxy };
-  }
+  const polyMetrics = window.PMX.polyMetrics;
   function fmtMetrics(m, withArea) {
     return 'B ' + Math.round(m.w * 100) + '% × H ' + Math.round(m.h * 100) + '%' + (withArea && m.area > 0.0004 ? ' · A ' + (m.area * 100).toFixed(1) + '%' : '');
   }
@@ -4401,17 +4326,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     }
     return null;
   }
-  function pointInZone(z, x, y) {
-    const p = z.points; if (!p || p.length < 3) return false;
-    let inside = false;
-    for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
-      const xi = p[i].x, yi = p[i].y, xj = p[j].x, yj = p[j].y;
-      const denom = (yj - yi) || 1e-9;
-      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / denom + xi);
-      if (intersect) inside = !inside;
-    }
-    return inside;
-  }
+  const pointInZone = window.PMX.pointInZone;
 
   async function finishZone() {
     if (!state.drawZone || state.zoneDraft.length < 3) { toast('Mindestens 3 Stützpunkte nötig'); return; }
