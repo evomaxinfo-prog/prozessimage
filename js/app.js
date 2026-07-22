@@ -2220,7 +2220,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     Object.keys(sd.last).forEach((id) => {
       const o = (state.detail.objects || []).find((z) => z.id === id); if (!o) return;
       const ns = Math.round(sd.last[id] * 100) / 100;
-      if ((o.scale || 1) !== ns) { o.scale = ns; changed = true; protectObj(o.id); Api.updateObject(id, { scale: ns }).catch(() => { /* ignore */ }); }
+      if ((o.scale || 1) !== ns) { o.scale = ns; changed = true; protectObj(o.id); Api.updateObject(id, { scale: ns }).catch(() => { toast('Änderung nicht gespeichert'); }); }
     });
     if (changed && state._preDrag) { pushUndoSnap(state._preDrag); }
     state._preDrag = null;
@@ -2271,7 +2271,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
           patch.points = o.points;
         }
         changed = true; protectObj(o.id);
-        Api.updateObject(id, patch).catch(() => { /* ignore */ });
+        Api.updateObject(id, patch).catch(() => { toast('Position nicht gespeichert'); });
       }
     }
     if (changed && state._preDrag) { pushUndoSnap(state._preDrag); }
@@ -2864,7 +2864,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.1'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.2'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3039,7 +3039,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     var c = (state.comments || []).find(function (x) { return x.id === state.openComment; });
     state.openComment = null;
     if (c && (!c.messages || !c.messages.length)) {
-      if (state.commentsServer) { Api.deleteComment(c.id).catch(function () {}); }
+      if (state.commentsServer) { Api.deleteComment(c.id).catch(function () { toast('Kommentar konnte nicht gelöscht werden'); }); }
       state.comments = state.comments.filter(function (x) { return x.id !== c.id; });
       if (!state.commentsServer) saveComments();
     }
@@ -3593,11 +3593,11 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (!window.confirm('Wirklich alle ' + objs.length + ' Objekte in „' + label + '" löschen?')) return;
     pushUndo();
     const ids = objs.map((o) => o.id);
-    await Promise.all(ids.map((id) => Api.deleteObject(id).catch(() => {})));
+    const _delResults = await Promise.all(ids.map((id) => Api.deleteObject(id).then(() => true).catch(() => false)));
     const rm = {}; ids.forEach((id) => { rm[id] = true; });
     state.detail.objects = state.detail.objects.filter((x) => !rm[x.id]);
     for (const del of objs) { await unlinkDependentsOf(del); }
-    toast(ids.length + ' Objekte gelöscht'); renderEditor();
+    const _delFailed = _delResults.filter((ok) => !ok).length; toast(_delFailed ? ((ids.length - _delFailed) + ' von ' + ids.length + ' gelöscht, ' + _delFailed + ' fehlgeschlagen') : (ids.length + ' Objekte gelöscht')); renderEditor();
   }
   function closeTagModal() { $('tagModal').style.display = 'none'; state.modalObjId = null; }
   // ---- Eigenes Palette-Symbol: Upload-Dialog ----
@@ -3773,7 +3773,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.1';
+      sc.src = 'js/html2canvas.min.js?v=1.2.2';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4057,7 +4057,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
         z.points.splice(eidx + 1, 0, { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 });
         protectObj(z.id);
         state.geomPending[z.id] = { points: z.points.map(function (pp) { return { x: pp.x, y: pp.y }; }), ts: Date.now() };
-        Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { /* ignore */ });
+        Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast('Position nicht gespeichert'); });
         renderEditor();
       }
       return;
@@ -4572,7 +4572,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       delete _nudgeTimers[id];
       const zz = (state.detail.objects || []).find(function (o) { return o.id === id; });
       if (!zz || !zz.points || !zz.points.length) return;
-      Api.updateObject(id, { points: zz.points, x: zz.points[0].x, y: zz.points[0].y }).catch(function () { /* ignore */ });
+      Api.updateObject(id, { points: zz.points, x: zz.points[0].x, y: zz.points[0].y }).catch(function () { toast('Position nicht gespeichert'); });
     }, 400);
   }
   // Rechtsklick auf einen Stützpunkt entfernt ihn (Polygon bleibt >=3, Weg >=2 Punkte).
@@ -4589,7 +4589,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       z.points.splice(idx, 1);
       protectObj(z.id);
       state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
-      Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { /* ignore */ });
+      Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast('Position nicht gespeichert'); });
       renderEditor();
       return;
     }
