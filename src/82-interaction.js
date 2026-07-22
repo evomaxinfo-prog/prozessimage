@@ -72,10 +72,13 @@
   }
   // Hover-Tooltip: beim Ueberfahren einer Zone Name (+ SPS bei FG/SB) anzeigen.
   let _hoverZoneId = null;
-  function setZoneHoverClass(id, on) {
+  function setZoneHoverClass(id, on, isRoute) {
     if (id == null) return;
-    const p = document.getElementById('zone-poly-' + id); if (p) p.classList.toggle('zone-hover', on);
-    const a = document.getElementById('route-arrow-' + id); if (a) a.classList.toggle('zone-hover', on); // Pfeilspitze bei Routen mit hervorheben
+    const cls = isRoute ? 'route-hl' : 'zone-hover';
+    ['zone-poly-' + id, 'route-arrow-' + id].forEach(function (eid) {
+      const el = document.getElementById(eid); if (!el) return;
+      if (on) el.classList.add(cls); else el.classList.remove('zone-hover', 'route-hl');
+    });
   }
   function updateZoneHoverTitle(e) {
     const doc = document.getElementById('canvasDoc');
@@ -91,7 +94,7 @@
     if (id === _hoverZoneId) return;
     if (_hoverZoneId !== null) setZoneHoverClass(_hoverZoneId, false);
     _hoverZoneId = id;
-    setZoneHoverClass(id, true);
+    setZoneHoverClass(id, true, z && z.symbolType === 'mf_route');
     doc.style.cursor = z ? 'move' : ''; // über einer Zone/Route: Verschiebe-Cursor; sonst Canvas-Standard (grab)
     if (z && (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone')) {
       const sps = plcNameOf(z);
@@ -726,7 +729,7 @@
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.11';
+      sc.src = 'js/html2canvas.min.js?v=1.2.12';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);

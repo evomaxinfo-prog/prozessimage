@@ -2886,7 +2886,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.11'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.12'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3150,10 +3150,13 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   }
   // Hover-Tooltip: beim Ueberfahren einer Zone Name (+ SPS bei FG/SB) anzeigen.
   let _hoverZoneId = null;
-  function setZoneHoverClass(id, on) {
+  function setZoneHoverClass(id, on, isRoute) {
     if (id == null) return;
-    const p = document.getElementById('zone-poly-' + id); if (p) p.classList.toggle('zone-hover', on);
-    const a = document.getElementById('route-arrow-' + id); if (a) a.classList.toggle('zone-hover', on); // Pfeilspitze bei Routen mit hervorheben
+    const cls = isRoute ? 'route-hl' : 'zone-hover';
+    ['zone-poly-' + id, 'route-arrow-' + id].forEach(function (eid) {
+      const el = document.getElementById(eid); if (!el) return;
+      if (on) el.classList.add(cls); else el.classList.remove('zone-hover', 'route-hl');
+    });
   }
   function updateZoneHoverTitle(e) {
     const doc = document.getElementById('canvasDoc');
@@ -3169,7 +3172,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (id === _hoverZoneId) return;
     if (_hoverZoneId !== null) setZoneHoverClass(_hoverZoneId, false);
     _hoverZoneId = id;
-    setZoneHoverClass(id, true);
+    setZoneHoverClass(id, true, z && z.symbolType === 'mf_route');
     doc.style.cursor = z ? 'move' : ''; // über einer Zone/Route: Verschiebe-Cursor; sonst Canvas-Standard (grab)
     if (z && (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone')) {
       const sps = plcNameOf(z);
@@ -3804,7 +3807,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.11';
+      sc.src = 'js/html2canvas.min.js?v=1.2.12';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
