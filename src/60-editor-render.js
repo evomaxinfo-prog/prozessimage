@@ -565,6 +565,7 @@
     return renderEditorImpl();
   }
   function renderEditorImpl() {
+    _hoverZoneId = null; // DOM wird neu gebaut -> Hover-State verwerfen, damit Highlight/Cursor beim naechsten Mausruck neu greift
     const c = $('content'); c.style.padding = '0';
     let L = layerById(state.activeLayer);
     if (!L || !layerAllowed(L.code)) L = allowedLayers()[0] || (state.detail.layers || [])[0];
