@@ -74,16 +74,18 @@
   let _hoverZoneId = null;
   function updateZoneHoverTitle(e) {
     const doc = document.getElementById('canvasDoc');
-    if (!doc || state.drawZone) return;
+    if (!doc) return;
+    if (state.drawZone) { if (doc.style.cursor) doc.style.cursor = ''; return; } // Zeichen-Modus: .drawing-Klasse (crosshair) greifen lassen
     const r = doc.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
-      if (_hoverZoneId !== null) { _hoverZoneId = null; doc.removeAttribute('title'); }
+      if (_hoverZoneId !== null) { _hoverZoneId = null; doc.removeAttribute('title'); doc.style.cursor = ''; }
       return;
     }
     const z = zoneAt((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
     const id = z ? z.id : null;
     if (id === _hoverZoneId) return;
     _hoverZoneId = id;
+    doc.style.cursor = z ? 'move' : ''; // über einer Zone: Verschiebe-Cursor; sonst Canvas-Standard (grab)
     if (z && (z.symbolType === 'fg_zone' || z.symbolType === 'sb_zone')) {
       const sps = plcNameOf(z);
       doc.title = z.name + (sps ? ' — SPS: ' + sps : '');
@@ -717,7 +719,7 @@
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.7';
+      sc.src = 'js/html2canvas.min.js?v=1.2.8';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
