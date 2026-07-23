@@ -43,11 +43,12 @@
   function diagDiff(a, b) {
     const f = [];
     const c = function (k, x, y) { if (x !== y) f.push(k); };
+    const v = function (k, x, y) { if (String(x) !== String(y)) f.push(k + '(' + x + '→' + y + ')'); };
+    v('sichtbar', a.visible, b.visible);
     c('name', a.name, b.name); c('farbe', a.color, b.color); c('ebene', a.layerId, b.layerId);
     c('typ', a.symbolType, b.symbolType); c('x', a.x, b.x); c('y', a.y, b.y);
     c('drehung', a.rotation || 0, b.rotation || 0);
     c('größe', a.scale == null ? 1 : a.scale, b.scale == null ? 1 : b.scale);
-    c('sichtbar', a.visible !== false, b.visible !== false);
     c('sps', a.plcConfigId || '', b.plcConfigId || '');
     if (JSON.stringify(a.points || null) !== JSON.stringify(b.points || null)) f.push('punkte');
     if (JSON.stringify(a.metatags || []) !== JSON.stringify(b.metatags || [])) f.push('tags');

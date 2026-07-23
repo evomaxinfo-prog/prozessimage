@@ -8,11 +8,22 @@
     setTimeout(() => { const e = document.getElementById('zone-poly-' + id); if (e) e.classList.remove('mf-flash'); }, 900);
   }
   // Hat sich ein Objekt in einer sichtbaren/relevanten Eigenschaft geändert?
+  // Der Server speichert Koordinaten als decimal(8,6); lokal liegen ungerundete Werte.
+  // Ohne Rundung gelten reine Nachkomma-Reste als Aenderung -> unnoetige Schreibvorgaenge
+  // und Undo-Schritte, die scheinbar fremde Objekte anfassen.
+  const _r6 = (v) => Math.round((Number(v) || 0) * 1e6) / 1e6;
+  const _samePts = (p, q) => {
+    if (!p || !q) return !p === !q;
+    if (p.length !== q.length) return false;
+    for (let i = 0; i < p.length; i++) { if (_r6(p[i].x) !== _r6(q[i].x) || _r6(p[i].y) !== _r6(q[i].y)) return false; }
+    return true;
+  };
   function objChanged(a, b) {
     if (a.name !== b.name || a.color !== b.color || a.symbolType !== b.symbolType || a.layerId !== b.layerId
-      || a.x !== b.x || a.y !== b.y || (a.rotation || 0) !== (b.rotation || 0) || (a.scale || 1) !== (b.scale || 1)
-      || (a.plcConfigId || '') !== (b.plcConfigId || '') || !!a.visible !== !!b.visible) return true;
-    if (JSON.stringify(a.points || null) !== JSON.stringify(b.points || null)) return true;
+      || _r6(a.x) !== _r6(b.x) || _r6(a.y) !== _r6(b.y) || _r6(a.rotation || 0) !== _r6(b.rotation || 0)
+      || _r6(a.scale == null ? 1 : a.scale) !== _r6(b.scale == null ? 1 : b.scale)
+      || (a.plcConfigId || '') !== (b.plcConfigId || '') || (a.visible !== false) !== (b.visible !== false)) return true;
+    if (!_samePts(a.points || null, b.points || null)) return true;
     if (JSON.stringify(a.metatags || []) !== JSON.stringify(b.metatags || [])) return true;
     return false;
   }

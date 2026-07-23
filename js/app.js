@@ -1976,11 +1976,22 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     setTimeout(() => { const e = document.getElementById('zone-poly-' + id); if (e) e.classList.remove('mf-flash'); }, 900);
   }
   // Hat sich ein Objekt in einer sichtbaren/relevanten Eigenschaft geändert?
+  // Der Server speichert Koordinaten als decimal(8,6); lokal liegen ungerundete Werte.
+  // Ohne Rundung gelten reine Nachkomma-Reste als Aenderung -> unnoetige Schreibvorgaenge
+  // und Undo-Schritte, die scheinbar fremde Objekte anfassen.
+  const _r6 = (v) => Math.round((Number(v) || 0) * 1e6) / 1e6;
+  const _samePts = (p, q) => {
+    if (!p || !q) return !p === !q;
+    if (p.length !== q.length) return false;
+    for (let i = 0; i < p.length; i++) { if (_r6(p[i].x) !== _r6(q[i].x) || _r6(p[i].y) !== _r6(q[i].y)) return false; }
+    return true;
+  };
   function objChanged(a, b) {
     if (a.name !== b.name || a.color !== b.color || a.symbolType !== b.symbolType || a.layerId !== b.layerId
-      || a.x !== b.x || a.y !== b.y || (a.rotation || 0) !== (b.rotation || 0) || (a.scale || 1) !== (b.scale || 1)
-      || (a.plcConfigId || '') !== (b.plcConfigId || '') || !!a.visible !== !!b.visible) return true;
-    if (JSON.stringify(a.points || null) !== JSON.stringify(b.points || null)) return true;
+      || _r6(a.x) !== _r6(b.x) || _r6(a.y) !== _r6(b.y) || _r6(a.rotation || 0) !== _r6(b.rotation || 0)
+      || _r6(a.scale == null ? 1 : a.scale) !== _r6(b.scale == null ? 1 : b.scale)
+      || (a.plcConfigId || '') !== (b.plcConfigId || '') || (a.visible !== false) !== (b.visible !== false)) return true;
+    if (!_samePts(a.points || null, b.points || null)) return true;
     if (JSON.stringify(a.metatags || []) !== JSON.stringify(b.metatags || [])) return true;
     return false;
   }
@@ -2956,7 +2967,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.29'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.30'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3884,7 +3895,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.29';
+      sc.src = 'js/html2canvas.min.js?v=1.2.30';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4751,18 +4762,20 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (state.geomPending && state.geomPending[oldId]) { state.geomPending[newId] = state.geomPending[oldId]; delete state.geomPending[oldId]; }
   }
   // Serverzustand von "from" nach "to" ueberfuehren (Loeschen/Anlegen/Aendern), IDs neu angelegter Objekte uebernehmen.
+  let _opSeq = 0;
   async function applyObjectsState(from, to) {
     state.detail.objects = to; renderEditor();
+    const _op = ++_opSeq; // Vorgangsnummer: macht ueberlappende Vorgaenge im Protokoll sichtbar
     let failed = 0;
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
     const _chg = to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); });
-    diagLog('APPLY', 'löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
+    diagLog('APPLY', '#' + _op + ' löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
       + '] anlegen=[' + diagNames(to.filter(function (o) { return !fromById[o.id]; }))
       + '] ändern=[' + (_chg.length ? _chg.map(function (o) { return (o.name || o.id) + '(' + diagDiff(fromById[o.id], o) + ')'; }).join(', ') : '–') + ']');
     let didCreate = false;
-    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; diagLog('FEHLER', 'löschen ' + (o.name || o.id) + ': ' + diagErr(e)); } } }
+    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' löschen ' + (o.name || o.id) + ': ' + diagErr(e)); } } }
     for (const o of to) {
       if (!fromById[o.id]) {
         try {
@@ -4775,11 +4788,11 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
             if (o.plcConfigId) { after.plcConfigId = o.plcConfigId; after.color = o.color; }
             if (o.scale != null && o.scale !== 1) after.scale = o.scale;
             if (o.visible === false) after.visible = false;
-            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; diagLog('FEHLER', 'nachziehen ' + (o.name || newId) + ': ' + diagErr(e)); } }
+            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' nachziehen ' + (o.name || newId) + ': ' + diagErr(e)); } }
             if (o.metatags && o.metatags.length) { try { await Api.setMetatags(newId, o.metatags); } catch (e) { /* ignore */ } }
             remapId(o.id, newId); didCreate = true;
           }
-        } catch (e) { failed++; diagLog('FEHLER', 'anlegen ' + (o.name || o.id) + ': ' + diagErr(e)); }
+        } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' anlegen ' + (o.name || o.id) + ': ' + diagErr(e)); }
       }
     }
     for (const o of to) {
@@ -4787,14 +4800,15 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       if (f && objChanged(f, o)) {
         const patch = objPayload(o); patch.plcConfigId = o.plcConfigId || null;
         state.geomPending[o.id] = { points: (o.points || []).map((p) => ({ x: p.x, y: p.y })), ts: Date.now() };
-        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; diagLog('FEHLER', 'ändern ' + (o.name || o.id) + ': ' + diagErr(e)); }
+        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' ändern ' + (o.name || o.id) + ': ' + diagErr(e)); }
         if (JSON.stringify(f.metatags || []) !== JSON.stringify(o.metatags || [])) { try { await Api.setMetatags(o.id, o.metatags || []); } catch (e) { /* ignore */ } }
       }
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
+    diagLog('ENDE ', '#' + _op + ' fertig' + (failed ? (' (' + failed + ' Fehler)') : ''));
     if (failed) {
-      diagLog('FEHLER', failed + ' Server-Aufruf(e) fehlgeschlagen — gleiche Anzeige mit dem Server ab');
+      diagLog('FEHLER', '#' + _op + ' — ' + failed + ' Server-Aufruf(e) fehlgeschlagen, gleiche Anzeige mit dem Server ab');
       // Sonst zeigt der Editor einen Stand, den der Server nicht hat (verschwundene Objekte kommen
       // beim naechsten Laden zurueck = die gemeldeten "Reste").
       try {
@@ -4933,11 +4947,12 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   function diagDiff(a, b) {
     const f = [];
     const c = function (k, x, y) { if (x !== y) f.push(k); };
+    const v = function (k, x, y) { if (String(x) !== String(y)) f.push(k + '(' + x + '→' + y + ')'); };
+    v('sichtbar', a.visible, b.visible);
     c('name', a.name, b.name); c('farbe', a.color, b.color); c('ebene', a.layerId, b.layerId);
     c('typ', a.symbolType, b.symbolType); c('x', a.x, b.x); c('y', a.y, b.y);
     c('drehung', a.rotation || 0, b.rotation || 0);
     c('größe', a.scale == null ? 1 : a.scale, b.scale == null ? 1 : b.scale);
-    c('sichtbar', a.visible !== false, b.visible !== false);
     c('sps', a.plcConfigId || '', b.plcConfigId || '');
     if (JSON.stringify(a.points || null) !== JSON.stringify(b.points || null)) f.push('punkte');
     if (JSON.stringify(a.metatags || []) !== JSON.stringify(b.metatags || [])) f.push('tags');

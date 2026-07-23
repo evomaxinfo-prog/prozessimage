@@ -33,18 +33,20 @@
     if (state.geomPending && state.geomPending[oldId]) { state.geomPending[newId] = state.geomPending[oldId]; delete state.geomPending[oldId]; }
   }
   // Serverzustand von "from" nach "to" ueberfuehren (Loeschen/Anlegen/Aendern), IDs neu angelegter Objekte uebernehmen.
+  let _opSeq = 0;
   async function applyObjectsState(from, to) {
     state.detail.objects = to; renderEditor();
+    const _op = ++_opSeq; // Vorgangsnummer: macht ueberlappende Vorgaenge im Protokoll sichtbar
     let failed = 0;
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
     const _chg = to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); });
-    diagLog('APPLY', 'löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
+    diagLog('APPLY', '#' + _op + ' löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
       + '] anlegen=[' + diagNames(to.filter(function (o) { return !fromById[o.id]; }))
       + '] ändern=[' + (_chg.length ? _chg.map(function (o) { return (o.name || o.id) + '(' + diagDiff(fromById[o.id], o) + ')'; }).join(', ') : '–') + ']');
     let didCreate = false;
-    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; diagLog('FEHLER', 'löschen ' + (o.name || o.id) + ': ' + diagErr(e)); } } }
+    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' löschen ' + (o.name || o.id) + ': ' + diagErr(e)); } } }
     for (const o of to) {
       if (!fromById[o.id]) {
         try {
@@ -57,11 +59,11 @@
             if (o.plcConfigId) { after.plcConfigId = o.plcConfigId; after.color = o.color; }
             if (o.scale != null && o.scale !== 1) after.scale = o.scale;
             if (o.visible === false) after.visible = false;
-            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; diagLog('FEHLER', 'nachziehen ' + (o.name || newId) + ': ' + diagErr(e)); } }
+            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' nachziehen ' + (o.name || newId) + ': ' + diagErr(e)); } }
             if (o.metatags && o.metatags.length) { try { await Api.setMetatags(newId, o.metatags); } catch (e) { /* ignore */ } }
             remapId(o.id, newId); didCreate = true;
           }
-        } catch (e) { failed++; diagLog('FEHLER', 'anlegen ' + (o.name || o.id) + ': ' + diagErr(e)); }
+        } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' anlegen ' + (o.name || o.id) + ': ' + diagErr(e)); }
       }
     }
     for (const o of to) {
@@ -69,14 +71,15 @@
       if (f && objChanged(f, o)) {
         const patch = objPayload(o); patch.plcConfigId = o.plcConfigId || null;
         state.geomPending[o.id] = { points: (o.points || []).map((p) => ({ x: p.x, y: p.y })), ts: Date.now() };
-        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; diagLog('FEHLER', 'ändern ' + (o.name || o.id) + ': ' + diagErr(e)); }
+        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' ändern ' + (o.name || o.id) + ': ' + diagErr(e)); }
         if (JSON.stringify(f.metatags || []) !== JSON.stringify(o.metatags || [])) { try { await Api.setMetatags(o.id, o.metatags || []); } catch (e) { /* ignore */ } }
       }
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
+    diagLog('ENDE ', '#' + _op + ' fertig' + (failed ? (' (' + failed + ' Fehler)') : ''));
     if (failed) {
-      diagLog('FEHLER', failed + ' Server-Aufruf(e) fehlgeschlagen — gleiche Anzeige mit dem Server ab');
+      diagLog('FEHLER', '#' + _op + ' — ' + failed + ' Server-Aufruf(e) fehlgeschlagen, gleiche Anzeige mit dem Server ab');
       // Sonst zeigt der Editor einen Stand, den der Server nicht hat (verschwundene Objekte kommen
       // beim naechsten Laden zurueck = die gemeldeten "Reste").
       try {
