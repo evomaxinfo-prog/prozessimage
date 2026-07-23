@@ -118,7 +118,7 @@
       + '<div id="linieTabComments" class="linie-tabpanel" hidden>'
       +   '<div id="linieComments" class="linie-comments-panel"></div>'
       + '</div>'
-      + (state.isAdmin ? '<div id="linieTabChanges" class="linie-tabpanel" hidden><div class="ls-section-title">Änderungsindex <span>alle protokollierten Änderungen der Stationen dieser Linie · neueste zuerst</span></div><div id="linieChanges"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>' : '')
+      + (state.isAdmin ? '<div id="linieTabChanges" class="linie-tabpanel" hidden><div class="ls-section-title">Änderungsindex <span>protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst</span></div><div id="linieChanges"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>' : '')
       + '</div>';
     loadLinieProjekt(node.id);
     if (!stations.length) return;
@@ -201,14 +201,25 @@
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
   const lcoInitials = window.PMX.lcoInitials;
   const lcoColor = window.PMX.lcoColor;
-  // Änderungsindex (admin-only): alle Journal-Einträge der Stationen dieser Linie, neueste zuerst.
+  // Änderungsindex (admin-only): nach Tagen geclustert, neuester Tag zuerst.
   function linieChangesHtml(rows) {
     if (!rows || !rows.length) return '<div class="pad" style="color:var(--muted)">Keine protokollierten Änderungen in dieser Linie.</div>';
+    const fmtTimeOnly = function (iso) { if (!iso) return '–'; const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
     const sorted = rows.slice().sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
-    const body = sorted.map(function (r) {
-      return '<tr><td>' + esc(r.station) + '</td><td>' + esc(r.text || '–') + '</td><td style="white-space:nowrap">' + fmtDateTime(r.createdAt) + '</td><td>' + esc(r.author || '–') + '</td></tr>';
+    const order = [], byDay = {};
+    sorted.forEach(function (r) {
+      const key = fmtDate(r.createdAt);
+      if (!byDay[key]) { byDay[key] = []; order.push(key); }
+      byDay[key].push(r);
+    });
+    return order.map(function (day) {
+      const list = byDay[day];
+      const body = list.map(function (r) {
+        return '<tr><td>' + esc(r.station) + '</td><td>' + esc(r.text || '–') + '</td><td style="white-space:nowrap">' + fmtTimeOnly(r.createdAt) + '</td><td>' + esc(r.author || '–') + '</td></tr>';
+      }).join('');
+      return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + list.length + (list.length === 1 ? ' Eintrag' : ' Einträge') + '</span></div>'
+        + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Art der Änderung</th><th>Uhrzeit</th><th>Von wem</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
     }).join('');
-    return '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Art der Änderung</th><th>Wann</th><th>Von wem</th></tr></thead><tbody>' + body + '</tbody></table></div>';
   }
   function linieCommentsHtml(byStation) {
     if (!byStation || !byStation.length) return '';
