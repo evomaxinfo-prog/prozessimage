@@ -1,5 +1,9 @@
-  function placeFromDrop(clientX, clientY, sym, name, color) { return withMutationLock(function () { return placeFromDropImpl(clientX, clientY, sym, name, color); }); }
-  async function placeFromDropImpl(clientX, clientY, sym, name, color) {
+  // Platzieren zeigt das Symbol SOFORT an (optimistisch) und laesst den Server im Hintergrund
+  // nachziehen. Vorher erschien es erst nach der Anlege-Antwort - bei Prozesstypen sogar erst
+  // nach einem zweiten Aufruf fuer die Metadaten, was sich wie eine lange Verzoegerung anfuehlte.
+  // Weil das Objekt sofort im Zustand steht, sieht auch der naechste Undo-Punkt es bereits -
+  // die frueher noetige Serialisierung entfaellt, schnelles Platzieren ist wieder fluessig.
+  async function placeFromDrop(clientX, clientY, sym, name, color) {
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
     const r = doc.getBoundingClientRect();
     let x = Math.min(0.97, Math.max(0.03, (clientX - r.left) / r.width));
@@ -8,10 +12,22 @@
     const L = layerById(state.activeLayer);
     const base = (name || 'Objekt').replace(/\s+/g, '_');
     const num = String((state.detail.objects || []).filter((o) => o.symbolType === sym).length + 1).padStart(2, '0');
+    const tmpId = 'tmp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    const local = {
+      id: tmpId, layerId: L.id, categoryId: null, name: base + '_' + num, symbolType: sym,
+      color: color || L.color, x, y, rotation: 0, scale: 1, visible: true, points: null,
+      plcConfigId: null, metatags: [],
+    };
+    pushUndo();
+    state.detail.objects.push(local);
+    protectObj(tmpId); // schuetzt das noch unbestaetigte Objekt vor dem Abgleich
+    renderEditor();
     try {
-      pushUndo();
-      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: base + '_' + num, symbolType: sym, color: color || L.color, x, y });
+      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: local.name, symbolType: sym, color: local.color, x, y });
       obj.metatags = obj.metatags || [];
+      remapId(tmpId, obj.id); protectObj(obj.id); // vorlaeufige ID ueberall durch die echte ersetzen
+      const cur = (state.detail.objects || []).find((o) => o.id === obj.id);
+      if (cur) Object.assign(cur, obj);
       const pt = processTypeByName(name);
       if (pt) {
         try {
@@ -24,19 +40,23 @@
           let pos = 3;
           ptStateList(pt).forEach((s) => { tags.push({ position: pos++, label: s.kind + ' – ' + s.name, value: '' }); });
           const upd = await Api.setMetatags(obj.id, tags);
-          obj.metatags = (upd && upd.metatags) || obj.metatags;
+          if (cur) cur.metatags = (upd && upd.metatags) || tags;
           if (fg) toast(name + ' → Funktionsgruppe „' + fg + '" zugeordnet');
           else toast(name + ' ' + t('platziert'));
         } catch (e2) { toast(name + ' ' + t('platziert')); }
       } else if (/^custom:/.test(sym)) {
         const tags = symFields(sym).map((f, i) => ({ position: i + 1, label: f.label, value: '' }));
-        try { const upd = await Api.setMetatags(obj.id, tags); obj.metatags = (upd && upd.metatags) || tags; } catch (e2) { obj.metatags = tags; }
+        try { const upd = await Api.setMetatags(obj.id, tags); if (cur) cur.metatags = (upd && upd.metatags) || tags; } catch (e2) { if (cur) cur.metatags = tags; }
         toast(name + ' ' + t('platziert'));
       } else { toast(name + ' ' + t('platziert')); }
-      state.detail.objects.push(obj); protectObj(obj.id);
       if (sym === 'robot' && state.layoutBlobUrl) promptLearnTemplate(x, y);
       renderEditor();
-    } catch (e) { toast('Platzieren fehlgeschlagen: ' + e.message); }
+    } catch (e) {
+      // Anlegen fehlgeschlagen -> vorlaeufiges Objekt wieder entfernen
+      state.detail.objects = (state.detail.objects || []).filter((o) => o.id !== tmpId);
+      renderEditor();
+      toast('Platzieren fehlgeschlagen: ' + e.message);
+    }
   }
 
   let dragMove = null;
