@@ -843,7 +843,7 @@
         const lname = {}; (full.layers || []).forEach((l) => { lname[l.id] = l.name; });
         const stName = full.anlagenname || n.name;
         if (stComments.length) commentsByStation.push({ node: n.id, station: stName, comments: stComments, layers: full.layers || [] });
-        (full.journal || []).forEach(function (j) { changesRows.push({ station: stName, text: j.text, author: j.author, createdAt: j.createdAt }); });
+        (full.journal || []).forEach(function (j) { changesRows.push({ id: j.id, station: stName, text: j.text, author: j.author, createdAt: j.createdAt }); });
         (full.layers || []).forEach((l) => {
           if (!layerAgg[l.name]) layerAgg[l.name] = { objects: 0, stations: new Set(), color: l.color, code: l.code, syms: {} };
           layerAgg[l.name].stations.add(n.id);
@@ -896,23 +896,38 @@
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
   const lcoInitials = window.PMX.lcoInitials;
   const lcoColor = window.PMX.lcoColor;
+  let _ciDayIds = {}; // Tages-Schluessel -> Journal-Eintrags-IDs (fuer "Tag löschen")
+  async function deleteChangesDay(day) {
+    const ids = (_ciDayIds[day] || []).slice();
+    if (!ids.length) return;
+    if (!window.confirm('Alle Änderungseinträge vom ' + day + ' löschen?\n\n' + ids.length + (ids.length === 1 ? ' Eintrag wird' : ' Einträge werden') + ' dauerhaft entfernt – auch im Änderungsjournal der jeweiligen Station.')) return;
+    const res = await Promise.all(ids.map(function (id) {
+      return Api.deleteJournal(id).then(function () { return true; }).catch(function () { return false; });
+    }));
+    const failed = res.filter(function (ok) { return !ok; }).length;
+    toast(failed ? ((ids.length - failed) + ' von ' + ids.length + ' gelöscht, ' + failed + ' fehlgeschlagen') : (ids.length + (ids.length === 1 ? ' Eintrag gelöscht' : ' Einträge gelöscht')));
+    if (state.selected) selectNode(state.selected); // Ansicht frisch laden
+  }
   // Änderungsindex (admin-only): nach Tagen geclustert, neuester Tag zuerst.
   function linieChangesHtml(rows) {
     if (!rows || !rows.length) return '<div class="pad" style="color:var(--muted)">Keine protokollierten Änderungen in dieser Linie.</div>';
     const fmtTimeOnly = function (iso) { if (!iso) return '–'; const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
     const sorted = rows.slice().sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
     const order = [], byDay = {};
+    _ciDayIds = {};
     sorted.forEach(function (r) {
       const key = fmtDate(r.createdAt);
-      if (!byDay[key]) { byDay[key] = []; order.push(key); }
+      if (!byDay[key]) { byDay[key] = []; order.push(key); _ciDayIds[key] = []; }
       byDay[key].push(r);
+      if (r.id) _ciDayIds[key].push(r.id);
     });
     return order.map(function (day) {
       const list = byDay[day];
       const body = list.map(function (r) {
         return '<tr><td>' + esc(r.station) + '</td><td>' + esc(r.text || '–') + '</td><td style="white-space:nowrap">' + fmtTimeOnly(r.createdAt) + '</td><td>' + esc(r.author || '–') + '</td></tr>';
       }).join('');
-      return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + list.length + (list.length === 1 ? ' Eintrag' : ' Einträge') + '</span></div>'
+      const delBtn = state.isAdmin ? '<button class="ci-del" data-act="ci-del-day" data-day="' + esc(day) + '">Tag löschen</button>' : '';
+      return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + list.length + (list.length === 1 ? ' Eintrag' : ' Einträge') + '</span>' + delBtn + '</div>'
         + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Art der Änderung</th><th>Uhrzeit</th><th>Von wem</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
     }).join('');
   }
@@ -1565,6 +1580,7 @@
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.getAttribute('data-act');
     if (act === 'toggle-edit') { state.detailEdit ? saveDetail() : enterEdit(); }
+    else if (act === 'ci-del-day') { deleteChangesDay(el.getAttribute('data-day')); }
     else if (act === 'plc-add') { state.detailDraft.plcs.push({ id: null, name: nextSpsName(state.detailDraft.plcs), cycleTimeMs: 0, retentiveBytes: 0, codeMemoryKb: 0, color: PLC_COLORS[state.detailDraft.plcs.length % PLC_COLORS.length] }); renderDetail(); }
     else if (act === 'plc-del') { const i = +el.getAttribute('data-idx'); const p = state.detailDraft.plcs[i]; if (p && p.id) state.detailDraft._deleted.push(p.id); state.detailDraft.plcs.splice(i, 1); renderDetail(); }
     else if (act === 'journal-add') { addJournalEntry(); }
@@ -2898,7 +2914,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.18'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.19'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3816,7 +3832,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.18';
+      sc.src = 'js/html2canvas.min.js?v=1.2.19';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);

@@ -398,6 +398,7 @@
     const el = e.target.closest('[data-act]'); if (!el) return;
     const act = el.getAttribute('data-act');
     if (act === 'toggle-edit') { state.detailEdit ? saveDetail() : enterEdit(); }
+    else if (act === 'ci-del-day') { deleteChangesDay(el.getAttribute('data-day')); }
     else if (act === 'plc-add') { state.detailDraft.plcs.push({ id: null, name: nextSpsName(state.detailDraft.plcs), cycleTimeMs: 0, retentiveBytes: 0, codeMemoryKb: 0, color: PLC_COLORS[state.detailDraft.plcs.length % PLC_COLORS.length] }); renderDetail(); }
     else if (act === 'plc-del') { const i = +el.getAttribute('data-idx'); const p = state.detailDraft.plcs[i]; if (p && p.id) state.detailDraft._deleted.push(p.id); state.detailDraft.plcs.splice(i, 1); renderDetail(); }
     else if (act === 'journal-add') { addJournalEntry(); }
