@@ -3,6 +3,13 @@
   'use strict';
   window.PMX = window.PMX || {};
   window.PMX.I18N_EN = {
+    // Layout zuruecksetzen
+    'Reset': 'Reset', 'Alle Objekte dieser Anlage löschen': 'Delete all objects of this station',
+    'Layout ist bereits leer': 'Layout is already empty',
+    'Gesamtes Layout zurücksetzen?': 'Reset the entire layout?',
+    '{n} Objekte aller Ebenen werden gelöscht. Das Layout-Bild bleibt erhalten.': '{n} objects across all layers will be deleted. The layout image is kept.',
+    'Sicherung fehlgeschlagen. Trotzdem zurücksetzen?': 'Backup failed. Reset anyway?',
+    'Layout zurückgesetzt – {n} Objekte gelöscht': 'Layout reset – {n} objects deleted',
     // Aenderungsindex / Letzte Aenderung / Persistenz-Meldungen
     'Änderungsindex': 'Change index',
     'protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst': "logged changes of this line's stations · grouped by day, newest first",

@@ -432,6 +432,7 @@
     else if (act === 'export-pdf') { exportFile('pdf'); }
     else if (act === 'export-csv') { exportFile('csv'); }
     else if (act === 'detect-robots') { detectRobotsFlow(); }
+    else if (act === 'layout-reset') { resetLayout(); }
     else if (act === 'rob-confirm') { e.stopPropagation(); confirmRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
     else if (act === 'rob-dismiss') { e.stopPropagation(); dismissRobotSuggestion(parseInt(el.getAttribute('data-idx'), 10)); }
     else if (act === 'rob-dismiss-all') { state.robotSuggestions = []; renderEditor(); }

@@ -1,3 +1,29 @@
+  // Layout zuruecksetzen (nur Administrator): loescht ALLE Objekte dieser Anlage ueber alle
+  // Ebenen hinweg. Das Layout-Bild bleibt erhalten. Vorher wird automatisch eine Version
+  // gesichert, damit der Schritt ueber die Versionsliste umkehrbar ist.
+  async function resetLayout() {
+    if (!state.isAdmin || !state.detail || !state.detail.id) return;
+    const objs = (state.detail.objects || []).slice();
+    if (!objs.length) { toast(t('Layout ist bereits leer')); return; }
+    if (!window.confirm(t('Gesamtes Layout zurücksetzen?') + '\n\n'
+      + t('{n} Objekte aller Ebenen werden gelöscht. Das Layout-Bild bleibt erhalten.', { n: objs.length }) + '\n'
+      + t('Der aktuelle Stand wird vorher automatisch gesichert.'))) return;
+    let backedUp = true;
+    try { await Api.createVersion(state.detail.id, { label: 'Automatisch vor Zuruecksetzen' }); } catch (e) { backedUp = false; }
+    if (!backedUp && !window.confirm(t('Sicherung fehlgeschlagen. Trotzdem zurücksetzen?'))) return;
+    pushUndo();
+    const ids = objs.map(function (o) { return o.id; });
+    const res = await Promise.all(ids.map(function (id) { return Api.deleteObject(id).then(function () { return true; }).catch(function () { return false; }); }));
+    const failed = res.filter(function (ok) { return !ok; }).length;
+    const rm = {}; ids.forEach(function (id, i) { if (res[i]) rm[id] = true; }); // nur wirklich Geloeschtes lokal entfernen
+    state.detail.objects = (state.detail.objects || []).filter(function (x) { return !rm[x.id]; });
+    state.selObjs = []; state.selectedObj = null;
+    renderEditor();
+    // Journaleintrag bewusst auf Deutsch (Journal ist Datenbestand, wie die Backend-Eintraege)
+    try { await Api.addJournal(state.detail.id, 'Layout zurueckgesetzt (' + (ids.length - failed) + ' Objekte geloescht)'); } catch (e) { /* best-effort */ }
+    toast(failed ? t('{n} von {total} gelöscht, {failed} fehlgeschlagen', { n: ids.length - failed, total: ids.length, failed: failed })
+      : t('Layout zurückgesetzt – {n} Objekte gelöscht', { n: ids.length }));
+  }
   function renderEditor() {
     return renderEditorImpl();
   }
@@ -86,6 +112,7 @@
       + stationNavHtml()
       + '<button class="btn" data-act="export-pdf"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v11M8 10l4 4 4-4M5 19h14"/></svg> PDF</button>'
       + '<button class="btn" data-act="export-csv"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16"/></svg> CSV</button>'
+      + (state.isAdmin ? '<button class="btn btn-danger" data-act="layout-reset" title="' + t('Alle Objekte dieser Anlage löschen') + '"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/></svg> ' + t('Reset') + '</button>' : '')
       + '<button class="btn tree-toggle" data-act="tree-toggle" title="Anlagenstruktur"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg> Struktur</button>'
       + '<button class="btn" data-act="editor-back"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> ' + t('ZURÜCK') + '</button>'
       + '</div></div></div>'
