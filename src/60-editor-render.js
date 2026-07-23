@@ -250,6 +250,8 @@
       draft += '<line id="guide-v" x1="' + gx + '" y1="0" x2="' + gx + '" y2="100" stroke="' + (al.x ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       draft += '<line id="guide-h" x1="0" y1="' + gy + '" x2="100" y2="' + gy + '" stroke="' + (al.y ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       draft += '<circle id="snap-ring" cx="-20" cy="-20" r="1.7" fill="#16A34A" fill-opacity="0.12" stroke="#16A34A" stroke-width="1.2" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      // Blauer Ring am ERSTEN Stuetzpunkt, sobald der Cursor nah genug ist, um das Polygon zu schliessen.
+      draft += '<circle id="close-ring" cx="-20" cy="-20" r="2.2" fill="#0065A5" fill-opacity="0.15" stroke="#0065A5" stroke-width="1.8" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       if (state.zoneDraft.length) {
         const dots = state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
         if (state.drawShape === 'route') {

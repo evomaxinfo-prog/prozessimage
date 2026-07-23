@@ -2223,6 +2223,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       draft += '<line id="guide-v" x1="' + gx + '" y1="0" x2="' + gx + '" y2="100" stroke="' + (al.x ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       draft += '<line id="guide-h" x1="0" y1="' + gy + '" x2="100" y2="' + gy + '" stroke="' + (al.y ? '#E8663F' : '#0065A5') + '" stroke-width="0.9" stroke-dasharray="2.2 1.6" opacity="0.9" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       draft += '<circle id="snap-ring" cx="-20" cy="-20" r="1.7" fill="#16A34A" fill-opacity="0.12" stroke="#16A34A" stroke-width="1.2" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
+      // Blauer Ring am ERSTEN Stuetzpunkt, sobald der Cursor nah genug ist, um das Polygon zu schliessen.
+      draft += '<circle id="close-ring" cx="-20" cy="-20" r="2.2" fill="#0065A5" fill-opacity="0.15" stroke="#0065A5" stroke-width="1.8" vector-effect="non-scaling-stroke" style="pointer-events:none"/>';
       if (state.zoneDraft.length) {
         const dots = state.zoneDraft.map((p) => '<rect x="' + (p.x * 100 - 0.7) + '" y="' + (p.y * 100 - 0.7) + '" width="1.4" height="1.4" fill="' + col + '" style="pointer-events:none"/>').join('');
         if (state.drawShape === 'route') {
@@ -2972,7 +2974,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.35'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.36'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3924,7 +3926,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.35';
+      sc.src = 'js/html2canvas.min.js?v=1.2.36';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4694,6 +4696,20 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (gh && cur) { gh.setAttribute('y1', cur.y * 100); gh.setAttribute('y2', cur.y * 100); gh.setAttribute('stroke', al.y ? '#E8663F' : '#0065A5'); }
     const ring = document.getElementById('snap-ring');
     if (ring) { if (state.zoneSnap) { ring.setAttribute('cx', state.zoneSnap.x * 100); ring.setAttribute('cy', state.zoneSnap.y * 100); } else { ring.setAttribute('cx', -20); ring.setAttribute('cy', -20); } }
+    // Schliess-Anzeige: Polygon (nicht Foerderweg) mit mindestens 3 Punkten und Cursor nah am ersten Punkt.
+    // Schwelle identisch zur Klick-Auswertung (12 px), damit der Ring genau dann zeigt, wenn ein Klick schliesst.
+    const cring = document.getElementById('close-ring');
+    if (cring) {
+      let hit = null;
+      if (cur && state.drawShape !== 'route' && (state.zoneDraft || []).length >= 3) {
+        const docC = document.getElementById('canvasDoc');
+        const rc = docC ? docC.getBoundingClientRect() : null;
+        const f = state.zoneDraft[0];
+        if (rc && Math.hypot((f.x - cur.x) * rc.width, (f.y - cur.y) * rc.height) < 12) hit = f;
+      }
+      if (hit) { cring.setAttribute('cx', hit.x * 100); cring.setAttribute('cy', hit.y * 100); }
+      else { cring.setAttribute('cx', -20); cring.setAttribute('cy', -20); }
+    }
     const meas = document.getElementById('draw-measure');
     if (meas) {
       const pts = cur ? state.zoneDraft.concat([cur]) : state.zoneDraft;

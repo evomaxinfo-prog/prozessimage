@@ -658,6 +658,20 @@
     if (gh && cur) { gh.setAttribute('y1', cur.y * 100); gh.setAttribute('y2', cur.y * 100); gh.setAttribute('stroke', al.y ? '#E8663F' : '#0065A5'); }
     const ring = document.getElementById('snap-ring');
     if (ring) { if (state.zoneSnap) { ring.setAttribute('cx', state.zoneSnap.x * 100); ring.setAttribute('cy', state.zoneSnap.y * 100); } else { ring.setAttribute('cx', -20); ring.setAttribute('cy', -20); } }
+    // Schliess-Anzeige: Polygon (nicht Foerderweg) mit mindestens 3 Punkten und Cursor nah am ersten Punkt.
+    // Schwelle identisch zur Klick-Auswertung (12 px), damit der Ring genau dann zeigt, wenn ein Klick schliesst.
+    const cring = document.getElementById('close-ring');
+    if (cring) {
+      let hit = null;
+      if (cur && state.drawShape !== 'route' && (state.zoneDraft || []).length >= 3) {
+        const docC = document.getElementById('canvasDoc');
+        const rc = docC ? docC.getBoundingClientRect() : null;
+        const f = state.zoneDraft[0];
+        if (rc && Math.hypot((f.x - cur.x) * rc.width, (f.y - cur.y) * rc.height) < 12) hit = f;
+      }
+      if (hit) { cring.setAttribute('cx', hit.x * 100); cring.setAttribute('cy', hit.y * 100); }
+      else { cring.setAttribute('cx', -20); cring.setAttribute('cy', -20); }
+    }
     const meas = document.getElementById('draw-measure');
     if (meas) {
       const pts = cur ? state.zoneDraft.concat([cur]) : state.zoneDraft;
