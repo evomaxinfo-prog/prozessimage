@@ -15,10 +15,12 @@
   function diagCaller() {
     try {
       const st = String((new Error()).stack || '').split('\n');
-      for (let i = 2; i < st.length; i++) {
+      const names = [];
+      for (let i = 2; i < st.length && names.length < 2; i++) {
         const m = /at ([A-Za-z_$][\w$]*)/.exec(st[i]);
-        if (m && !/^(diag|pushUndo|pushUndoSnap|Object)/i.test(m[1])) return m[1];
+        if (m && !/^(diag|pushUndo|pushUndoSnap|Object)/i.test(m[1])) names.push(m[1]);
       }
+      if (names.length) return names.join(' ← ');
     } catch (e) { /* egal */ }
     return '?';
   }
@@ -37,6 +39,24 @@
     return n.length ? n.join(', ') : '–';
   }
 
+  // Welche Felder unterscheiden sich zwischen zwei Staenden desselben Objekts?
+  function diagDiff(a, b) {
+    const f = [];
+    const c = function (k, x, y) { if (x !== y) f.push(k); };
+    c('name', a.name, b.name); c('farbe', a.color, b.color); c('ebene', a.layerId, b.layerId);
+    c('typ', a.symbolType, b.symbolType); c('x', a.x, b.x); c('y', a.y, b.y);
+    c('drehung', a.rotation || 0, b.rotation || 0);
+    c('größe', a.scale == null ? 1 : a.scale, b.scale == null ? 1 : b.scale);
+    c('sichtbar', a.visible !== false, b.visible !== false);
+    c('sps', a.plcConfigId || '', b.plcConfigId || '');
+    if (JSON.stringify(a.points || null) !== JSON.stringify(b.points || null)) f.push('punkte');
+    if (JSON.stringify(a.metatags || []) !== JSON.stringify(b.metatags || [])) f.push('tags');
+    return f.length ? f.join('+') : '?';
+  }
+  function diagErr(e) {
+    if (!e) return 'unbekannt';
+    return (e.status ? e.status + ' ' : '') + (e.message || String(e));
+  }
   function renderDiag() {
     if (!DIAG) return;
     let box = document.getElementById('diagBox');

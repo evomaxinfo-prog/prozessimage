@@ -2956,7 +2956,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.28'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.29'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3884,7 +3884,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.28';
+      sc.src = 'js/html2canvas.min.js?v=1.2.29';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4757,11 +4757,12 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
+    const _chg = to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); });
     diagLog('APPLY', 'löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
       + '] anlegen=[' + diagNames(to.filter(function (o) { return !fromById[o.id]; }))
-      + '] ändern=[' + diagNames(to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); })) + ']');
+      + '] ändern=[' + (_chg.length ? _chg.map(function (o) { return (o.name || o.id) + '(' + diagDiff(fromById[o.id], o) + ')'; }).join(', ') : '–') + ']');
     let didCreate = false;
-    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; } } }
+    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; diagLog('FEHLER', 'löschen ' + (o.name || o.id) + ': ' + diagErr(e)); } } }
     for (const o of to) {
       if (!fromById[o.id]) {
         try {
@@ -4774,11 +4775,11 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
             if (o.plcConfigId) { after.plcConfigId = o.plcConfigId; after.color = o.color; }
             if (o.scale != null && o.scale !== 1) after.scale = o.scale;
             if (o.visible === false) after.visible = false;
-            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; } }
+            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; diagLog('FEHLER', 'nachziehen ' + (o.name || newId) + ': ' + diagErr(e)); } }
             if (o.metatags && o.metatags.length) { try { await Api.setMetatags(newId, o.metatags); } catch (e) { /* ignore */ } }
             remapId(o.id, newId); didCreate = true;
           }
-        } catch (e) { failed++; }
+        } catch (e) { failed++; diagLog('FEHLER', 'anlegen ' + (o.name || o.id) + ': ' + diagErr(e)); }
       }
     }
     for (const o of to) {
@@ -4786,13 +4787,22 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       if (f && objChanged(f, o)) {
         const patch = objPayload(o); patch.plcConfigId = o.plcConfigId || null;
         state.geomPending[o.id] = { points: (o.points || []).map((p) => ({ x: p.x, y: p.y })), ts: Date.now() };
-        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; }
+        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; diagLog('FEHLER', 'ändern ' + (o.name || o.id) + ': ' + diagErr(e)); }
         if (JSON.stringify(f.metatags || []) !== JSON.stringify(o.metatags || [])) { try { await Api.setMetatags(o.id, o.metatags || []); } catch (e) { /* ignore */ } }
       }
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
-    if (failed) { diagLog('FEHLER', failed + ' Server-Aufruf(e) fehlgeschlagen'); toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed })); }
+    if (failed) {
+      diagLog('FEHLER', failed + ' Server-Aufruf(e) fehlgeschlagen — gleiche Anzeige mit dem Server ab');
+      // Sonst zeigt der Editor einen Stand, den der Server nicht hat (verschwundene Objekte kommen
+      // beim naechsten Laden zurueck = die gemeldeten "Reste").
+      try {
+        const fresh = await Api.getObjects(state.detail.id);
+        if (Array.isArray(fresh)) { state.detail.objects = fresh; renderEditor(); diagLog('SYNC ', 'Serverstand geladen: ' + fresh.length + ' Objekte'); }
+      } catch (e) { diagLog('FEHLER', 'Abgleich fehlgeschlagen: ' + diagErr(e)); }
+      toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed }));
+    }
   }
   // Wiedereintritt sperren: ein zweites Strg+Z waehrend der noch laufenden Uebertragung
   // wuerde einen halb angewandten Zwischenstand als Schnappschuss ablegen und die Server-
@@ -4895,10 +4905,12 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   function diagCaller() {
     try {
       const st = String((new Error()).stack || '').split('\n');
-      for (let i = 2; i < st.length; i++) {
+      const names = [];
+      for (let i = 2; i < st.length && names.length < 2; i++) {
         const m = /at ([A-Za-z_$][\w$]*)/.exec(st[i]);
-        if (m && !/^(diag|pushUndo|pushUndoSnap|Object)/i.test(m[1])) return m[1];
+        if (m && !/^(diag|pushUndo|pushUndoSnap|Object)/i.test(m[1])) names.push(m[1]);
       }
+      if (names.length) return names.join(' ← ');
     } catch (e) { /* egal */ }
     return '?';
   }
@@ -4917,6 +4929,24 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     return n.length ? n.join(', ') : '–';
   }
 
+  // Welche Felder unterscheiden sich zwischen zwei Staenden desselben Objekts?
+  function diagDiff(a, b) {
+    const f = [];
+    const c = function (k, x, y) { if (x !== y) f.push(k); };
+    c('name', a.name, b.name); c('farbe', a.color, b.color); c('ebene', a.layerId, b.layerId);
+    c('typ', a.symbolType, b.symbolType); c('x', a.x, b.x); c('y', a.y, b.y);
+    c('drehung', a.rotation || 0, b.rotation || 0);
+    c('größe', a.scale == null ? 1 : a.scale, b.scale == null ? 1 : b.scale);
+    c('sichtbar', a.visible !== false, b.visible !== false);
+    c('sps', a.plcConfigId || '', b.plcConfigId || '');
+    if (JSON.stringify(a.points || null) !== JSON.stringify(b.points || null)) f.push('punkte');
+    if (JSON.stringify(a.metatags || []) !== JSON.stringify(b.metatags || [])) f.push('tags');
+    return f.length ? f.join('+') : '?';
+  }
+  function diagErr(e) {
+    if (!e) return 'unbekannt';
+    return (e.status ? e.status + ' ' : '') + (e.message || String(e));
+  }
   function renderDiag() {
     if (!DIAG) return;
     let box = document.getElementById('diagBox');

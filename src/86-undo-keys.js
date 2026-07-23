@@ -39,11 +39,12 @@
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
+    const _chg = to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); });
     diagLog('APPLY', 'löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
       + '] anlegen=[' + diagNames(to.filter(function (o) { return !fromById[o.id]; }))
-      + '] ändern=[' + diagNames(to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); })) + ']');
+      + '] ändern=[' + (_chg.length ? _chg.map(function (o) { return (o.name || o.id) + '(' + diagDiff(fromById[o.id], o) + ')'; }).join(', ') : '–') + ']');
     let didCreate = false;
-    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; } } }
+    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; diagLog('FEHLER', 'löschen ' + (o.name || o.id) + ': ' + diagErr(e)); } } }
     for (const o of to) {
       if (!fromById[o.id]) {
         try {
@@ -56,11 +57,11 @@
             if (o.plcConfigId) { after.plcConfigId = o.plcConfigId; after.color = o.color; }
             if (o.scale != null && o.scale !== 1) after.scale = o.scale;
             if (o.visible === false) after.visible = false;
-            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; } }
+            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; diagLog('FEHLER', 'nachziehen ' + (o.name || newId) + ': ' + diagErr(e)); } }
             if (o.metatags && o.metatags.length) { try { await Api.setMetatags(newId, o.metatags); } catch (e) { /* ignore */ } }
             remapId(o.id, newId); didCreate = true;
           }
-        } catch (e) { failed++; }
+        } catch (e) { failed++; diagLog('FEHLER', 'anlegen ' + (o.name || o.id) + ': ' + diagErr(e)); }
       }
     }
     for (const o of to) {
@@ -68,13 +69,22 @@
       if (f && objChanged(f, o)) {
         const patch = objPayload(o); patch.plcConfigId = o.plcConfigId || null;
         state.geomPending[o.id] = { points: (o.points || []).map((p) => ({ x: p.x, y: p.y })), ts: Date.now() };
-        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; }
+        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; diagLog('FEHLER', 'ändern ' + (o.name || o.id) + ': ' + diagErr(e)); }
         if (JSON.stringify(f.metatags || []) !== JSON.stringify(o.metatags || [])) { try { await Api.setMetatags(o.id, o.metatags || []); } catch (e) { /* ignore */ } }
       }
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
-    if (failed) { diagLog('FEHLER', failed + ' Server-Aufruf(e) fehlgeschlagen'); toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed })); }
+    if (failed) {
+      diagLog('FEHLER', failed + ' Server-Aufruf(e) fehlgeschlagen — gleiche Anzeige mit dem Server ab');
+      // Sonst zeigt der Editor einen Stand, den der Server nicht hat (verschwundene Objekte kommen
+      // beim naechsten Laden zurueck = die gemeldeten "Reste").
+      try {
+        const fresh = await Api.getObjects(state.detail.id);
+        if (Array.isArray(fresh)) { state.detail.objects = fresh; renderEditor(); diagLog('SYNC ', 'Serverstand geladen: ' + fresh.length + ' Objekte'); }
+      } catch (e) { diagLog('FEHLER', 'Abgleich fehlgeschlagen: ' + diagErr(e)); }
+      toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed }));
+    }
   }
   // Wiedereintritt sperren: ein zweites Strg+Z waehrend der noch laufenden Uebertragung
   // wuerde einen halb angewandten Zwischenstand als Schnappschuss ablegen und die Server-
