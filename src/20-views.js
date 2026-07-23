@@ -101,7 +101,7 @@
       +   '<button class="linie-tab active" data-act="linie-tab" data-tab="projekt"><span class="lt-num">1.0</span> Projektdaten</button>'
       +   '<button class="linie-tab" data-act="linie-tab" data-tab="dash"><span class="lt-num">2.0</span> Linie Dashboard</button>'
       +   '<button class="linie-tab" data-act="linie-tab" data-tab="comments"><span class="lt-num">3.0</span> Kommentare Gesamtübersicht<span class="lt-badge" id="linieCommentsCount" hidden></span></button>'
-      +   (state.isAdmin ? '<button class="linie-tab" data-act="linie-tab" data-tab="changes"><span class="lt-num">4.0</span> Änderungsindex<span class="lt-badge" id="linieChangesCount" hidden></span></button>' : '')
+      +   (state.isAdmin ? '<button class="linie-tab" data-act="linie-tab" data-tab="changes"><span class="lt-num">4.0</span> ' + t('Änderungsindex') + '<span class="lt-badge" id="linieChangesCount" hidden></span></button>' : '')
       + '</div>'
       + '<div id="linieTabProjekt" class="linie-tabpanel"><div id="linieProjekt" class="linie-projekt-panel"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>'
       + '<div id="linieTabDash" class="linie-tabpanel" hidden>'
@@ -119,7 +119,7 @@
       + '<div id="linieTabComments" class="linie-tabpanel" hidden>'
       +   '<div id="linieComments" class="linie-comments-panel"></div>'
       + '</div>'
-      + (state.isAdmin ? '<div id="linieTabChanges" class="linie-tabpanel" hidden><div class="ls-section-title">Änderungsindex <span>protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst</span></div><div id="linieChanges"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>' : '')
+      + (state.isAdmin ? '<div id="linieTabChanges" class="linie-tabpanel" hidden><div class="ls-section-title">' + t('Änderungsindex') + ' <span>' + t('protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst') + '</span></div><div id="linieChanges"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>' : '')
       + '</div>';
     applyLinieTab(_linieTab);
     loadLinieProjekt(node.id);
@@ -215,18 +215,20 @@
   async function deleteChangesDay(day) {
     const ids = (_ciDayIds[day] || []).slice();
     if (!ids.length) return;
-    if (!window.confirm('Alle Änderungseinträge vom ' + day + ' löschen?\n\n' + ids.length + (ids.length === 1 ? ' Eintrag wird' : ' Einträge werden') + ' dauerhaft entfernt – auch im Änderungsjournal der jeweiligen Station.')) return;
+    if (!window.confirm(t('Alle Änderungseinträge vom {day} löschen?', { day: day }) + '\n\n'
+      + t(ids.length === 1 ? '{n} Eintrag wird dauerhaft entfernt – auch im Änderungsjournal der jeweiligen Station.' : '{n} Einträge werden dauerhaft entfernt – auch im Änderungsjournal der jeweiligen Station.', { n: ids.length }))) return;
     const res = await Promise.all(ids.map(function (id) {
       return Api.deleteJournal(id).then(function () { return true; }).catch(function () { return false; });
     }));
     const failed = res.filter(function (ok) { return !ok; }).length;
-    toast(failed ? ((ids.length - failed) + ' von ' + ids.length + ' gelöscht, ' + failed + ' fehlgeschlagen') : (ids.length + (ids.length === 1 ? ' Eintrag gelöscht' : ' Einträge gelöscht')));
+    toast(failed ? t('{n} von {total} gelöscht, {failed} fehlgeschlagen', { n: ids.length - failed, total: ids.length, failed: failed })
+      : t(ids.length === 1 ? '{n} Eintrag gelöscht' : '{n} Einträge gelöscht', { n: ids.length }));
     _linieTab = 'changes'; // nach dem Loeschen auf Tab 4 bleiben
     if (state.selected) selectNode(state.selected); // Ansicht frisch laden
   }
   // Änderungsindex (admin-only): nach Tagen geclustert, neuester Tag zuerst.
   function linieChangesHtml(rows) {
-    if (!rows || !rows.length) return '<div class="pad" style="color:var(--muted)">Keine protokollierten Änderungen in dieser Linie.</div>';
+    if (!rows || !rows.length) return '<div class="pad" style="color:var(--muted)">' + t('Keine protokollierten Änderungen in dieser Linie.') + '</div>';
     const fmtTimeOnly = function (iso) { if (!iso) return '–'; const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
     const sorted = rows.slice().sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
     const order = [], byDay = {};
@@ -242,9 +244,9 @@
       const body = list.map(function (r) {
         return '<tr><td>' + esc(r.station) + '</td><td>' + esc(r.text || '–') + '</td><td style="white-space:nowrap">' + fmtTimeOnly(r.createdAt) + '</td><td>' + esc(r.author || '–') + '</td></tr>';
       }).join('');
-      const delBtn = state.isAdmin ? '<button class="ci-del" data-act="ci-del-day" data-day="' + esc(day) + '">Tag löschen</button>' : '';
-      return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + list.length + (list.length === 1 ? ' Eintrag' : ' Einträge') + '</span>' + delBtn + '</div>'
-        + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Art der Änderung</th><th>Uhrzeit</th><th>Von wem</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
+      const delBtn = state.isAdmin ? '<button class="ci-del" data-act="ci-del-day" data-day="' + esc(day) + '">' + t('Tag löschen') + '</button>' : '';
+      return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + t(list.length === 1 ? '{n} Eintrag' : '{n} Einträge', { n: list.length }) + '</span>' + delBtn + '</div>'
+        + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>' + t('Station') + '</th><th>' + t('Art der Änderung') + '</th><th>' + t('Uhrzeit') + '</th><th>' + t('Von wem') + '</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
     }).join('');
   }
   function linieCommentsHtml(byStation) {

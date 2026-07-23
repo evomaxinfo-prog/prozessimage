@@ -172,7 +172,7 @@
         z.points.splice(eidx + 1, 0, { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 });
         protectObj(z.id);
         state.geomPending[z.id] = { points: z.points.map(function (pp) { return { x: pp.x, y: pp.y }; }), ts: Date.now() };
-        Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast('Position nicht gespeichert'); });
+        Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast(t('Position nicht gespeichert')); });
         renderEditor();
       }
       return;
@@ -687,7 +687,7 @@
       delete _nudgeTimers[id];
       const zz = (state.detail.objects || []).find(function (o) { return o.id === id; });
       if (!zz || !zz.points || !zz.points.length) return;
-      Api.updateObject(id, { points: zz.points, x: zz.points[0].x, y: zz.points[0].y }).catch(function () { toast('Position nicht gespeichert'); });
+      Api.updateObject(id, { points: zz.points, x: zz.points[0].x, y: zz.points[0].y }).catch(function () { toast(t('Position nicht gespeichert')); });
     }, 400);
   }
   // Rechtsklick auf einen Stützpunkt entfernt ihn (Polygon bleibt >=3, Weg >=2 Punkte).
@@ -704,7 +704,7 @@
       z.points.splice(idx, 1);
       protectObj(z.id);
       state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
-      Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast('Position nicht gespeichert'); });
+      Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast(t('Position nicht gespeichert')); });
       renderEditor();
       return;
     }

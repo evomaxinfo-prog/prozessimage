@@ -100,7 +100,7 @@
     var c = (state.comments || []).find(function (x) { return x.id === state.openComment; });
     state.openComment = null;
     if (c && (!c.messages || !c.messages.length)) {
-      if (state.commentsServer) { Api.deleteComment(c.id).catch(function () { toast('Kommentar konnte nicht gelöscht werden'); }); }
+      if (state.commentsServer) { Api.deleteComment(c.id).catch(function () { toast(t('Kommentar konnte nicht gelöscht werden')); }); }
       state.comments = state.comments.filter(function (x) { return x.id !== c.id; });
       if (!state.commentsServer) saveComments();
     }

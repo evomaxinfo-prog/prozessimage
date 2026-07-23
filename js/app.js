@@ -796,7 +796,7 @@
       +   '<button class="linie-tab active" data-act="linie-tab" data-tab="projekt"><span class="lt-num">1.0</span> Projektdaten</button>'
       +   '<button class="linie-tab" data-act="linie-tab" data-tab="dash"><span class="lt-num">2.0</span> Linie Dashboard</button>'
       +   '<button class="linie-tab" data-act="linie-tab" data-tab="comments"><span class="lt-num">3.0</span> Kommentare Gesamtübersicht<span class="lt-badge" id="linieCommentsCount" hidden></span></button>'
-      +   (state.isAdmin ? '<button class="linie-tab" data-act="linie-tab" data-tab="changes"><span class="lt-num">4.0</span> Änderungsindex<span class="lt-badge" id="linieChangesCount" hidden></span></button>' : '')
+      +   (state.isAdmin ? '<button class="linie-tab" data-act="linie-tab" data-tab="changes"><span class="lt-num">4.0</span> ' + t('Änderungsindex') + '<span class="lt-badge" id="linieChangesCount" hidden></span></button>' : '')
       + '</div>'
       + '<div id="linieTabProjekt" class="linie-tabpanel"><div id="linieProjekt" class="linie-projekt-panel"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>'
       + '<div id="linieTabDash" class="linie-tabpanel" hidden>'
@@ -814,7 +814,7 @@
       + '<div id="linieTabComments" class="linie-tabpanel" hidden>'
       +   '<div id="linieComments" class="linie-comments-panel"></div>'
       + '</div>'
-      + (state.isAdmin ? '<div id="linieTabChanges" class="linie-tabpanel" hidden><div class="ls-section-title">Änderungsindex <span>protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst</span></div><div id="linieChanges"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>' : '')
+      + (state.isAdmin ? '<div id="linieTabChanges" class="linie-tabpanel" hidden><div class="ls-section-title">' + t('Änderungsindex') + ' <span>' + t('protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst') + '</span></div><div id="linieChanges"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>' : '')
       + '</div>';
     applyLinieTab(_linieTab);
     loadLinieProjekt(node.id);
@@ -910,18 +910,20 @@
   async function deleteChangesDay(day) {
     const ids = (_ciDayIds[day] || []).slice();
     if (!ids.length) return;
-    if (!window.confirm('Alle Änderungseinträge vom ' + day + ' löschen?\n\n' + ids.length + (ids.length === 1 ? ' Eintrag wird' : ' Einträge werden') + ' dauerhaft entfernt – auch im Änderungsjournal der jeweiligen Station.')) return;
+    if (!window.confirm(t('Alle Änderungseinträge vom {day} löschen?', { day: day }) + '\n\n'
+      + t(ids.length === 1 ? '{n} Eintrag wird dauerhaft entfernt – auch im Änderungsjournal der jeweiligen Station.' : '{n} Einträge werden dauerhaft entfernt – auch im Änderungsjournal der jeweiligen Station.', { n: ids.length }))) return;
     const res = await Promise.all(ids.map(function (id) {
       return Api.deleteJournal(id).then(function () { return true; }).catch(function () { return false; });
     }));
     const failed = res.filter(function (ok) { return !ok; }).length;
-    toast(failed ? ((ids.length - failed) + ' von ' + ids.length + ' gelöscht, ' + failed + ' fehlgeschlagen') : (ids.length + (ids.length === 1 ? ' Eintrag gelöscht' : ' Einträge gelöscht')));
+    toast(failed ? t('{n} von {total} gelöscht, {failed} fehlgeschlagen', { n: ids.length - failed, total: ids.length, failed: failed })
+      : t(ids.length === 1 ? '{n} Eintrag gelöscht' : '{n} Einträge gelöscht', { n: ids.length }));
     _linieTab = 'changes'; // nach dem Loeschen auf Tab 4 bleiben
     if (state.selected) selectNode(state.selected); // Ansicht frisch laden
   }
   // Änderungsindex (admin-only): nach Tagen geclustert, neuester Tag zuerst.
   function linieChangesHtml(rows) {
-    if (!rows || !rows.length) return '<div class="pad" style="color:var(--muted)">Keine protokollierten Änderungen in dieser Linie.</div>';
+    if (!rows || !rows.length) return '<div class="pad" style="color:var(--muted)">' + t('Keine protokollierten Änderungen in dieser Linie.') + '</div>';
     const fmtTimeOnly = function (iso) { if (!iso) return '–'; const d = new Date(iso); return isNaN(d) ? '–' : d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
     const sorted = rows.slice().sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
     const order = [], byDay = {};
@@ -937,9 +939,9 @@
       const body = list.map(function (r) {
         return '<tr><td>' + esc(r.station) + '</td><td>' + esc(r.text || '–') + '</td><td style="white-space:nowrap">' + fmtTimeOnly(r.createdAt) + '</td><td>' + esc(r.author || '–') + '</td></tr>';
       }).join('');
-      const delBtn = state.isAdmin ? '<button class="ci-del" data-act="ci-del-day" data-day="' + esc(day) + '">Tag löschen</button>' : '';
-      return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + list.length + (list.length === 1 ? ' Eintrag' : ' Einträge') + '</span>' + delBtn + '</div>'
-        + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>Station</th><th>Art der Änderung</th><th>Uhrzeit</th><th>Von wem</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
+      const delBtn = state.isAdmin ? '<button class="ci-del" data-act="ci-del-day" data-day="' + esc(day) + '">' + t('Tag löschen') + '</button>' : '';
+      return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + t(list.length === 1 ? '{n} Eintrag' : '{n} Einträge', { n: list.length }) + '</span>' + delBtn + '</div>'
+        + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>' + t('Station') + '</th><th>' + t('Art der Änderung') + '</th><th>' + t('Uhrzeit') + '</th><th>' + t('Von wem') + '</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
     }).join('');
   }
   function linieCommentsHtml(byStation) {
@@ -1331,7 +1333,7 @@
       + '<button class="btn solid-dark" data-act="open-editor">' + t('MODELLIEREN') + '</button>'
       + '</div>'
       + (s.letzteAenderung
-          ? '<div class="detail-lastedit" style="margin-top:10px;font-size:12px;color:var(--muted)">Letzte Änderung: ' + fmtDateTime(s.letzteAenderung) + (s.letzterBearbeiter ? ' · ' + esc(s.letzterBearbeiter) : '') + '</div>'
+          ? '<div class="detail-lastedit" style="margin-top:10px;font-size:12px;color:var(--muted)">' + t('Letzte Änderung') + ': ' + fmtDateTime(s.letzteAenderung) + (s.letzterBearbeiter ? ' · ' + esc(s.letzterBearbeiter) : '') + '</div>'
           : '')
       + '</div></div>'
 
@@ -2280,7 +2282,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     Object.keys(sd.last).forEach((id) => {
       const o = (state.detail.objects || []).find((z) => z.id === id); if (!o) return;
       const ns = Math.round(sd.last[id] * 100) / 100;
-      if ((o.scale || 1) !== ns) { o.scale = ns; changed = true; protectObj(o.id); Api.updateObject(id, { scale: ns }).catch(() => { toast('Änderung nicht gespeichert'); }); }
+      if ((o.scale || 1) !== ns) { o.scale = ns; changed = true; protectObj(o.id); Api.updateObject(id, { scale: ns }).catch(() => { toast(t('Änderung nicht gespeichert')); }); }
     });
     if (changed && state._preDrag) { pushUndoSnap(state._preDrag); }
     state._preDrag = null;
@@ -2331,7 +2333,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
           patch.points = o.points;
         }
         changed = true; protectObj(o.id);
-        Api.updateObject(id, patch).catch(() => { toast('Position nicht gespeichert'); });
+        Api.updateObject(id, patch).catch(() => { toast(t('Position nicht gespeichert')); });
       }
     }
     if (changed && state._preDrag) { pushUndoSnap(state._preDrag); }
@@ -2925,7 +2927,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.21'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.22'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3100,7 +3102,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     var c = (state.comments || []).find(function (x) { return x.id === state.openComment; });
     state.openComment = null;
     if (c && (!c.messages || !c.messages.length)) {
-      if (state.commentsServer) { Api.deleteComment(c.id).catch(function () { toast('Kommentar konnte nicht gelöscht werden'); }); }
+      if (state.commentsServer) { Api.deleteComment(c.id).catch(function () { toast(t('Kommentar konnte nicht gelöscht werden')); }); }
       state.comments = state.comments.filter(function (x) { return x.id !== c.id; });
       if (!state.commentsServer) saveComments();
     }
@@ -3349,7 +3351,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (state.techDrag) {
       const td = state.techDrag; state.techDrag = null;
       const o = (state.detail.objects || []).find((z) => z.id === td.id);
-      if (td.moved && o) { o.points = [{ x: td.fx, y: td.fy }]; if (state._preDrag) { pushUndoSnap(state._preDrag); state._preDrag = null; } protectObj(o.id); try { await Api.updateObject(o.id, { points: o.points }); } catch (e2) { toast('Position nicht gespeichert'); } }
+      if (td.moved && o) { o.points = [{ x: td.fx, y: td.fy }]; if (state._preDrag) { pushUndoSnap(state._preDrag); state._preDrag = null; } protectObj(o.id); try { await Api.updateObject(o.id, { points: o.points }); } catch (e2) { toast(t('Position nicht gespeichert')); } }
       renderEditor(); return;
     }
     if (state.zoneDrag) {
@@ -3363,7 +3365,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
         const _rel = document.getElementById('zone-poly-' + z.id); if (_rel) _rel.setAttribute('stroke', esc(zoneColor(z))); // gruene Snap-Rueckmeldung nach dem Loslassen zuruecksetzen
         try {
           await Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y });
-        } catch (e2) { toast('Position nicht gespeichert'); }
+        } catch (e2) { toast(t('Position nicht gespeichert')); }
         // SB-Polygon auf einen SPS-Bereich gezogen -> automatische SPS-Verknuepfung
         if (zd.type === 'move' && (z.symbolType === 'sb_zone' || z.symbolType === 'fg_zone')) { await autoLinkZoneToSps(z); }
         return;
@@ -3667,7 +3669,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     const rm = {}; ids.forEach((id) => { rm[id] = true; });
     state.detail.objects = state.detail.objects.filter((x) => !rm[x.id]);
     for (const del of objs) { await unlinkDependentsOf(del); }
-    const _delFailed = _delResults.filter((ok) => !ok).length; toast(_delFailed ? ((ids.length - _delFailed) + ' von ' + ids.length + ' gelöscht, ' + _delFailed + ' fehlgeschlagen') : (ids.length + ' Objekte gelöscht')); renderEditor();
+    const _delFailed = _delResults.filter((ok) => !ok).length; toast(_delFailed ? t('{n} von {total} gelöscht, {failed} fehlgeschlagen', { n: ids.length - _delFailed, total: ids.length, failed: _delFailed }) : t('{n} Objekte gelöscht', { n: ids.length })); renderEditor();
   }
   function closeTagModal() { $('tagModal').style.display = 'none'; state.modalObjId = null; }
   // ---- Eigenes Palette-Symbol: Upload-Dialog ----
@@ -3852,7 +3854,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.21';
+      sc.src = 'js/html2canvas.min.js?v=1.2.22';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4136,7 +4138,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
         z.points.splice(eidx + 1, 0, { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 });
         protectObj(z.id);
         state.geomPending[z.id] = { points: z.points.map(function (pp) { return { x: pp.x, y: pp.y }; }), ts: Date.now() };
-        Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast('Position nicht gespeichert'); });
+        Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast(t('Position nicht gespeichert')); });
         renderEditor();
       }
       return;
@@ -4651,7 +4653,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       delete _nudgeTimers[id];
       const zz = (state.detail.objects || []).find(function (o) { return o.id === id; });
       if (!zz || !zz.points || !zz.points.length) return;
-      Api.updateObject(id, { points: zz.points, x: zz.points[0].x, y: zz.points[0].y }).catch(function () { toast('Position nicht gespeichert'); });
+      Api.updateObject(id, { points: zz.points, x: zz.points[0].x, y: zz.points[0].y }).catch(function () { toast(t('Position nicht gespeichert')); });
     }, 400);
   }
   // Rechtsklick auf einen Stützpunkt entfernt ihn (Polygon bleibt >=3, Weg >=2 Punkte).
@@ -4668,7 +4670,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       z.points.splice(idx, 1);
       protectObj(z.id);
       state.geomPending[z.id] = { points: z.points.map(function (p) { return { x: p.x, y: p.y }; }), ts: Date.now() };
-      Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast('Position nicht gespeichert'); });
+      Api.updateObject(z.id, { points: z.points, x: z.points[0].x, y: z.points[0].y }).catch(function () { toast(t('Position nicht gespeichert')); });
       renderEditor();
       return;
     }

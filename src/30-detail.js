@@ -138,7 +138,7 @@
       + '<button class="btn solid-dark" data-act="open-editor">' + t('MODELLIEREN') + '</button>'
       + '</div>'
       + (s.letzteAenderung
-          ? '<div class="detail-lastedit" style="margin-top:10px;font-size:12px;color:var(--muted)">Letzte Änderung: ' + fmtDateTime(s.letzteAenderung) + (s.letzterBearbeiter ? ' · ' + esc(s.letzterBearbeiter) : '') + '</div>'
+          ? '<div class="detail-lastedit" style="margin-top:10px;font-size:12px;color:var(--muted)">' + t('Letzte Änderung') + ': ' + fmtDateTime(s.letzteAenderung) + (s.letzterBearbeiter ? ' · ' + esc(s.letzterBearbeiter) : '') + '</div>'
           : '')
       + '</div></div>'
 

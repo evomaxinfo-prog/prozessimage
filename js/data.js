@@ -3,6 +3,22 @@
   'use strict';
   window.PMX = window.PMX || {};
   window.PMX.I18N_EN = {
+    // Aenderungsindex / Letzte Aenderung / Persistenz-Meldungen
+    'Änderungsindex': 'Change index',
+    'protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst': "logged changes of this line's stations · grouped by day, newest first",
+    'Keine protokollierten Änderungen in dieser Linie.': 'No logged changes in this line.',
+    'Station': 'Station', 'Art der Änderung': 'Type of change', 'Uhrzeit': 'Time', 'Von wem': 'By whom',
+    'Tag löschen': 'Delete day',
+    '{n} Eintrag': '{n} entry', '{n} Einträge': '{n} entries',
+    '{n} Eintrag gelöscht': '{n} entry deleted', '{n} Einträge gelöscht': '{n} entries deleted',
+    '{n} Objekte gelöscht': '{n} objects deleted',
+    '{n} von {total} gelöscht, {failed} fehlgeschlagen': '{n} of {total} deleted, {failed} failed',
+    'Alle Änderungseinträge vom {day} löschen?': 'Delete all change entries from {day}?',
+    '{n} Eintrag wird dauerhaft entfernt – auch im Änderungsjournal der jeweiligen Station.': '{n} entry will be permanently removed – including from the change journal of the station concerned.',
+    '{n} Einträge werden dauerhaft entfernt – auch im Änderungsjournal der jeweiligen Station.': '{n} entries will be permanently removed – including from the change journals of the stations concerned.',
+    'Position nicht gespeichert': 'Position not saved',
+    'Änderung nicht gespeichert': 'Change not saved',
+    'Kommentar konnte nicht gelöscht werden': 'Comment could not be deleted',
     // Profil
     'Profil': 'Profile', 'Einstellungen & Passwort': 'Settings & password',
     'Name': 'Name', 'E-Mail': 'E-mail', 'Rolle': 'Role', 'Gruppe': 'Group', 'Mandant': 'Tenant',
