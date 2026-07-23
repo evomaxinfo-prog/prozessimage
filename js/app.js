@@ -2595,10 +2595,14 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       // Endstand vom Server holen - die Anzeige zeigt danach garantiert das, was wirklich gespeichert ist.
       let remaining = [];
       try { const after = await Api.getObjects(sid); remaining = Array.isArray(after) ? after : []; } catch (e) { remaining = []; }
-      state.objRev = (state.objRev || 0) + 1;
-      // Nur neu zeichnen, wenn wider Erwarten etwas uebrig blieb - sonst steht die leere Flaeche
-      // schon seit dem ersten Durchgang und ein zweiter Aufbau wuerde nur unnoetig flackern.
-      if (remaining.length) { state.detail.objects = remaining; renderEditor(); }
+      // Nur uebernehmen, wenn noch dieselbe Anlage offen ist - sonst wuerde der Stand in eine
+      // inzwischen geoeffnete andere Anlage geschrieben.
+      if (state.detail && state.detail.id === sid) {
+        state.objRev = (state.objRev || 0) + 1;
+        // Nur neu zeichnen, wenn wider Erwarten etwas uebrig blieb - sonst steht die leere Flaeche
+        // schon seit dem ersten Durchgang und ein zweiter Aufbau wuerde nur unnoetig flackern.
+        if (remaining.length) { state.detail.objects = remaining; renderEditor(); }
+      }
       const geloescht = objs.length - remaining.length;
       // Kein Journaleintrag mehr: protokolliert wird ausschliesslich, wenn neue Objekte dazukommen.
       toast(remaining.length
@@ -3008,7 +3012,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.40'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.41'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3204,7 +3208,9 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // Weil das Objekt sofort im Zustand steht, sieht auch der naechste Undo-Punkt es bereits -
   // die frueher noetige Serialisierung entfaellt, schnelles Platzieren ist wieder fluessig.
   async function placeFromDrop(clientX, clientY, sym, name, color) {
-    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const doc = document.getElementById('canvasDoc'); if (!doc || !state.detail) return;
+    const sid = state.detail.id; // Anlage merken: nach den Await-Punkten kann eine andere offen sein
+    const stillHere = () => !!state.detail && state.detail.id === sid;
     const r = doc.getBoundingClientRect();
     let x = Math.min(0.97, Math.max(0.03, (clientX - r.left) / r.width));
     let y = Math.min(0.96, Math.max(0.04, (clientY - r.top) / r.height));
@@ -3224,14 +3230,17 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     renderEditor();
     const finishPending = trackPendingOp(); // Undo/Redo wartet, bis das Anlegen durch ist
     try {
-      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: local.name, symbolType: sym, color: local.color, x, y });
+      const obj = await Api.createObject(sid, { layerId: L.id, name: local.name, symbolType: sym, color: local.color, x, y });
       obj.metatags = obj.metatags || [];
-      remapId(tmpId, obj.id); protectObj(obj.id); // vorlaeufige ID ueberall durch die echte ersetzen
-      let cur = (state.detail.objects || []).find((o) => o.id === obj.id);
-      // Dauerte das Anlegen laenger als der Schutz (6 s), hat der Abgleich das vorlaeufige
-      // Objekt inzwischen weggeraeumt - dann den bestaetigten Stand wieder aufnehmen.
-      if (!cur) { cur = Object.assign({}, obj); state.detail.objects.push(cur); }
-      else Object.assign(cur, obj);
+      let cur = null;
+      if (stillHere()) { // sonst wuerde der Eintrag in einer INZWISCHEN GEOEFFNETEN anderen Anlage landen
+        remapId(tmpId, obj.id); protectObj(obj.id); // vorlaeufige ID ueberall durch die echte ersetzen
+        cur = (state.detail.objects || []).find((o) => o.id === obj.id);
+        // Dauerte das Anlegen laenger als der Schutz (6 s), hat der Abgleich das vorlaeufige
+        // Objekt inzwischen weggeraeumt - dann den bestaetigten Stand wieder aufnehmen.
+        if (!cur) { cur = Object.assign({}, obj); state.detail.objects.push(cur); }
+        else Object.assign(cur, obj);
+      }
       const pt = processTypeByName(name);
       if (pt) {
         try {
@@ -3253,12 +3262,14 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
         try { const upd = await Api.setMetatags(obj.id, tags); if (cur) cur.metatags = (upd && upd.metatags) || tags; } catch (e2) { if (cur) cur.metatags = tags; }
         toast(name + ' ' + t('platziert'));
       } else { toast(name + ' ' + t('platziert')); }
-      if (sym === 'robot' && state.layoutBlobUrl) promptLearnTemplate(x, y);
-      renderEditor();
+      if (sym === 'robot' && state.layoutBlobUrl && stillHere()) promptLearnTemplate(x, y);
+      if (stillHere()) renderEditor();
     } catch (e) {
       // Anlegen fehlgeschlagen -> vorlaeufiges Objekt wieder entfernen
-      state.detail.objects = (state.detail.objects || []).filter((o) => o.id !== tmpId);
-      renderEditor();
+      if (stillHere()) {
+        state.detail.objects = (state.detail.objects || []).filter((o) => o.id !== tmpId);
+        renderEditor();
+      }
       toast('Platzieren fehlgeschlagen: ' + e.message);
     } finally { finishPending(); }
   }
@@ -3960,7 +3971,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.40';
+      sc.src = 'js/html2canvas.min.js?v=1.2.41';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4897,8 +4908,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       // Sonst zeigt der Editor einen Stand, den der Server nicht hat (verschwundene Objekte kommen
       // beim naechsten Laden zurueck = die gemeldeten "Reste").
       try {
-        const fresh = await Api.getObjects(state.detail.id);
-        if (Array.isArray(fresh)) { state.detail.objects = fresh; renderEditor(); }
+        const fresh = await Api.getObjects(sid);
+        if (Array.isArray(fresh) && state.detail && state.detail.id === sid) { state.detail.objects = fresh; renderEditor(); }
       } catch (e) { /* Abgleich nicht moeglich - beim naechsten Laden korrekt */ }
       toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed }));
     }

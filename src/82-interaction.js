@@ -4,7 +4,9 @@
   // Weil das Objekt sofort im Zustand steht, sieht auch der naechste Undo-Punkt es bereits -
   // die frueher noetige Serialisierung entfaellt, schnelles Platzieren ist wieder fluessig.
   async function placeFromDrop(clientX, clientY, sym, name, color) {
-    const doc = document.getElementById('canvasDoc'); if (!doc) return;
+    const doc = document.getElementById('canvasDoc'); if (!doc || !state.detail) return;
+    const sid = state.detail.id; // Anlage merken: nach den Await-Punkten kann eine andere offen sein
+    const stillHere = () => !!state.detail && state.detail.id === sid;
     const r = doc.getBoundingClientRect();
     let x = Math.min(0.97, Math.max(0.03, (clientX - r.left) / r.width));
     let y = Math.min(0.96, Math.max(0.04, (clientY - r.top) / r.height));
@@ -24,14 +26,17 @@
     renderEditor();
     const finishPending = trackPendingOp(); // Undo/Redo wartet, bis das Anlegen durch ist
     try {
-      const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: local.name, symbolType: sym, color: local.color, x, y });
+      const obj = await Api.createObject(sid, { layerId: L.id, name: local.name, symbolType: sym, color: local.color, x, y });
       obj.metatags = obj.metatags || [];
-      remapId(tmpId, obj.id); protectObj(obj.id); // vorlaeufige ID ueberall durch die echte ersetzen
-      let cur = (state.detail.objects || []).find((o) => o.id === obj.id);
-      // Dauerte das Anlegen laenger als der Schutz (6 s), hat der Abgleich das vorlaeufige
-      // Objekt inzwischen weggeraeumt - dann den bestaetigten Stand wieder aufnehmen.
-      if (!cur) { cur = Object.assign({}, obj); state.detail.objects.push(cur); }
-      else Object.assign(cur, obj);
+      let cur = null;
+      if (stillHere()) { // sonst wuerde der Eintrag in einer INZWISCHEN GEOEFFNETEN anderen Anlage landen
+        remapId(tmpId, obj.id); protectObj(obj.id); // vorlaeufige ID ueberall durch die echte ersetzen
+        cur = (state.detail.objects || []).find((o) => o.id === obj.id);
+        // Dauerte das Anlegen laenger als der Schutz (6 s), hat der Abgleich das vorlaeufige
+        // Objekt inzwischen weggeraeumt - dann den bestaetigten Stand wieder aufnehmen.
+        if (!cur) { cur = Object.assign({}, obj); state.detail.objects.push(cur); }
+        else Object.assign(cur, obj);
+      }
       const pt = processTypeByName(name);
       if (pt) {
         try {
@@ -53,12 +58,14 @@
         try { const upd = await Api.setMetatags(obj.id, tags); if (cur) cur.metatags = (upd && upd.metatags) || tags; } catch (e2) { if (cur) cur.metatags = tags; }
         toast(name + ' ' + t('platziert'));
       } else { toast(name + ' ' + t('platziert')); }
-      if (sym === 'robot' && state.layoutBlobUrl) promptLearnTemplate(x, y);
-      renderEditor();
+      if (sym === 'robot' && state.layoutBlobUrl && stillHere()) promptLearnTemplate(x, y);
+      if (stillHere()) renderEditor();
     } catch (e) {
       // Anlegen fehlgeschlagen -> vorlaeufiges Objekt wieder entfernen
-      state.detail.objects = (state.detail.objects || []).filter((o) => o.id !== tmpId);
-      renderEditor();
+      if (stillHere()) {
+        state.detail.objects = (state.detail.objects || []).filter((o) => o.id !== tmpId);
+        renderEditor();
+      }
       toast('Platzieren fehlgeschlagen: ' + e.message);
     } finally { finishPending(); }
   }

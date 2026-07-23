@@ -89,8 +89,8 @@
       // Sonst zeigt der Editor einen Stand, den der Server nicht hat (verschwundene Objekte kommen
       // beim naechsten Laden zurueck = die gemeldeten "Reste").
       try {
-        const fresh = await Api.getObjects(state.detail.id);
-        if (Array.isArray(fresh)) { state.detail.objects = fresh; renderEditor(); }
+        const fresh = await Api.getObjects(sid);
+        if (Array.isArray(fresh) && state.detail && state.detail.id === sid) { state.detail.objects = fresh; renderEditor(); }
       } catch (e) { /* Abgleich nicht moeglich - beim naechsten Laden korrekt */ }
       toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed }));
     }

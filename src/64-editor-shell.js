@@ -45,10 +45,14 @@
       // Endstand vom Server holen - die Anzeige zeigt danach garantiert das, was wirklich gespeichert ist.
       let remaining = [];
       try { const after = await Api.getObjects(sid); remaining = Array.isArray(after) ? after : []; } catch (e) { remaining = []; }
-      state.objRev = (state.objRev || 0) + 1;
-      // Nur neu zeichnen, wenn wider Erwarten etwas uebrig blieb - sonst steht die leere Flaeche
-      // schon seit dem ersten Durchgang und ein zweiter Aufbau wuerde nur unnoetig flackern.
-      if (remaining.length) { state.detail.objects = remaining; renderEditor(); }
+      // Nur uebernehmen, wenn noch dieselbe Anlage offen ist - sonst wuerde der Stand in eine
+      // inzwischen geoeffnete andere Anlage geschrieben.
+      if (state.detail && state.detail.id === sid) {
+        state.objRev = (state.objRev || 0) + 1;
+        // Nur neu zeichnen, wenn wider Erwarten etwas uebrig blieb - sonst steht die leere Flaeche
+        // schon seit dem ersten Durchgang und ein zweiter Aufbau wuerde nur unnoetig flackern.
+        if (remaining.length) { state.detail.objects = remaining; renderEditor(); }
+      }
       const geloescht = objs.length - remaining.length;
       // Kein Journaleintrag mehr: protokolliert wird ausschliesslich, wenn neue Objekte dazukommen.
       toast(remaining.length
