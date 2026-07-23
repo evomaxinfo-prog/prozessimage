@@ -2,7 +2,7 @@
  * robotworker.js - fuehrt die (synchrone, rechenintensive) Roboter-Erkennung im Web Worker aus,
  * damit der Hauptthread frei bleibt (kein "Seite reagiert nicht"). Laedt robotdetect.js per importScripts.
  */
-importScripts('robotdetect.js?v=1.2.37');
+importScripts('robotdetect.js?v=1.2.38');
 
 self.onmessage = function (e) {
   var d = e.data || {};

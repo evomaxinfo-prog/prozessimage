@@ -2576,6 +2576,11 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       + t('Rückgängig nur direkt danach mit Strg+Z.'))) return;
     pushUndo();
     state.undoBusy = true; updateUndoBtns(); // waehrenddessen kein Abgleich und kein Undo dazwischen
+    // Fläche SOFORT leeren und einmal zeichnen. Vorher stand alles bis zum Ende der Loeschungen
+    // sichtbar da und verschwand dann in einem grossen Neuaufbau - das war das Flackern.
+    state.detail.objects = [];
+    state.selObjs = []; state.selectedObj = null; state.selectedZone = null;
+    renderEditor();
     try {
       let rest = await deleteObjectsInBatches(objs.map(function (o) { return o.id; }));
       if (rest.length) { await new Promise(function (r) { setTimeout(r, 700); }); rest = await deleteObjectsInBatches(rest); } // zweiter Versuch
@@ -2590,10 +2595,10 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       // Endstand vom Server holen - die Anzeige zeigt danach garantiert das, was wirklich gespeichert ist.
       let remaining = [];
       try { const after = await Api.getObjects(sid); remaining = Array.isArray(after) ? after : []; } catch (e) { remaining = []; }
-      state.detail.objects = remaining;
-      state.selObjs = []; state.selectedObj = null; state.selectedZone = null;
       state.objRev = (state.objRev || 0) + 1;
-      renderEditor();
+      // Nur neu zeichnen, wenn wider Erwarten etwas uebrig blieb - sonst steht die leere Flaeche
+      // schon seit dem ersten Durchgang und ein zweiter Aufbau wuerde nur unnoetig flackern.
+      if (remaining.length) { state.detail.objects = remaining; renderEditor(); }
       const geloescht = objs.length - remaining.length;
       // Journaleintrag bewusst auf Deutsch (Journal ist Datenbestand, wie die Backend-Eintraege)
       try { await Api.addJournal(sid, 'Layout zurueckgesetzt (' + geloescht + ' Objekte geloescht)'); } catch (e) { /* best-effort */ }
@@ -3004,7 +3009,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.37'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.38'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3956,7 +3961,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.37';
+      sc.src = 'js/html2canvas.min.js?v=1.2.38';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
