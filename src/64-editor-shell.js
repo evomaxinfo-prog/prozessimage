@@ -50,8 +50,7 @@
       // schon seit dem ersten Durchgang und ein zweiter Aufbau wuerde nur unnoetig flackern.
       if (remaining.length) { state.detail.objects = remaining; renderEditor(); }
       const geloescht = objs.length - remaining.length;
-      // Journaleintrag bewusst auf Deutsch (Journal ist Datenbestand, wie die Backend-Eintraege)
-      try { await Api.addJournal(sid, 'Layout zurueckgesetzt (' + geloescht + ' Objekte geloescht)'); } catch (e) { /* best-effort */ }
+      // Kein Journaleintrag mehr: protokolliert wird ausschliesslich, wenn neue Objekte dazukommen.
       toast(remaining.length
         ? t('{n} Objekte konnten nicht gelöscht werden', { n: remaining.length })
         : t('Layout zurückgesetzt – {n} Objekte gelöscht', { n: geloescht }));
