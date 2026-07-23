@@ -1857,6 +1857,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   }
   async function pollCollab() {
     if (!state.detail || state.view !== 'editor') return;
+    if (state.undoBusy) return; // waehrend Undo/Redo nicht abgleichen - sonst kommt gerade Geloeschtes zurueck
     if (state.collab.inflight) return;
     state.collab.inflight = true;
     // Objekte über den zuverlässigen /objects-Endpunkt (keine Zeitstempel-Logik) + Präsenz über /changes.
@@ -2953,7 +2954,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.24'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.25'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3880,7 +3881,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.24';
+      sc.src = 'js/html2canvas.min.js?v=1.2.25';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4712,8 +4713,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   function snapObjects() { return JSON.parse(JSON.stringify(state.detail.objects || [])); }
   function updateUndoBtns() {
     const u = document.getElementById('btnUndo'), r = document.getElementById('btnRedo');
-    if (u) u.disabled = !(state.undoStack && state.undoStack.length);
-    if (r) r.disabled = !(state.redoStack && state.redoStack.length);
+    if (u) u.disabled = !!state.undoBusy || !(state.undoStack && state.undoStack.length);
+    if (r) r.disabled = !!state.undoBusy || !(state.redoStack && state.redoStack.length);
   }
   function pushUndoSnap(snap) {
     state.undoStack = state.undoStack || []; state.redoStack = state.redoStack || [];
@@ -4735,22 +4736,29 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // Serverzustand von "from" nach "to" ueberfuehren (Loeschen/Anlegen/Aendern), IDs neu angelegter Objekte uebernehmen.
   async function applyObjectsState(from, to) {
     state.detail.objects = to; renderEditor();
+    let failed = 0;
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
     let didCreate = false;
-    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { /* ignore */ } } }
+    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; } } }
     for (const o of to) {
       if (!fromById[o.id]) {
         try {
           const created = await Api.createObject(sid, objPayload(o));
           const newId = created && created.id;
           if (newId) {
-            if (o.plcConfigId) { try { await Api.updateObject(newId, { plcConfigId: o.plcConfigId, color: o.color }); } catch (e) { /* ignore */ } }
+            // Die Anlege-Route kennt scale/visible nicht -> direkt nachziehen, sonst kommt das Objekt
+            // beim Rueckgaengigmachen in Standardgroesse/-sichtbarkeit zurueck.
+            const after = {};
+            if (o.plcConfigId) { after.plcConfigId = o.plcConfigId; after.color = o.color; }
+            if (o.scale != null && o.scale !== 1) after.scale = o.scale;
+            if (o.visible === false) after.visible = false;
+            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; } }
             if (o.metatags && o.metatags.length) { try { await Api.setMetatags(newId, o.metatags); } catch (e) { /* ignore */ } }
             remapId(o.id, newId); didCreate = true;
           }
-        } catch (e) { /* ignore */ }
+        } catch (e) { failed++; }
       }
     }
     for (const o of to) {
@@ -4758,24 +4766,34 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       if (f && objChanged(f, o)) {
         const patch = objPayload(o); patch.plcConfigId = o.plcConfigId || null;
         state.geomPending[o.id] = { points: (o.points || []).map((p) => ({ x: p.x, y: p.y })), ts: Date.now() };
-        try { await Api.updateObject(o.id, patch); } catch (e) { /* ignore */ }
+        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; }
         if (JSON.stringify(f.metatags || []) !== JSON.stringify(o.metatags || [])) { try { await Api.setMetatags(o.id, o.metatags || []); } catch (e) { /* ignore */ } }
       }
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
+    if (failed) toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed }));
   }
+  // Wiedereintritt sperren: ein zweites Strg+Z waehrend der noch laufenden Uebertragung
+  // wuerde einen halb angewandten Zwischenstand als Schnappschuss ablegen und die Server-
+  // Aufrufe verschraenken (doppelte Neuanlagen, Loeschen bereits geloeschter Objekte).
   async function doUndo() {
-    if (!(state.undoStack && state.undoStack.length)) return;
-    const curr = snapObjects(); const target = state.undoStack.pop();
-    (state.redoStack = state.redoStack || []).push(curr);
-    await applyObjectsState(curr, target);
+    if (state.undoBusy || !(state.undoStack && state.undoStack.length)) return;
+    state.undoBusy = true; updateUndoBtns();
+    try {
+      const curr = snapObjects(); const target = state.undoStack.pop();
+      (state.redoStack = state.redoStack || []).push(curr);
+      await applyObjectsState(curr, target);
+    } finally { state.undoBusy = false; updateUndoBtns(); }
   }
   async function doRedo() {
-    if (!(state.redoStack && state.redoStack.length)) return;
-    const curr = snapObjects(); const target = state.redoStack.pop();
-    (state.undoStack = state.undoStack || []).push(curr);
-    await applyObjectsState(curr, target);
+    if (state.undoBusy || !(state.redoStack && state.redoStack.length)) return;
+    state.undoBusy = true; updateUndoBtns();
+    try {
+      const curr = snapObjects(); const target = state.redoStack.pop();
+      (state.undoStack = state.undoStack || []).push(curr);
+      await applyObjectsState(curr, target);
+    } finally { state.undoBusy = false; updateUndoBtns(); }
   }
   function onEditorKey(e) {
     if (state.view !== 'editor' || !canEdit()) return;

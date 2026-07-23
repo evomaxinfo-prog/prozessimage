@@ -141,6 +141,12 @@
 
   window.PMX.objPayload = function objPayload(o) {
     const p = { layerId: o.layerId, name: o.name, symbolType: o.symbolType, color: o.color };
+    // rotation/categoryId/scale/visible gehoeren dazu, sonst gehen sie bei Undo/Redo und
+    // beim Einfuegen verloren (die Anlege-Route ignoriert scale/visible - die werden danach nachgepatcht).
+    p.rotation = o.rotation || 0;
+    if (o.categoryId) p.categoryId = o.categoryId;
+    if (o.scale != null) p.scale = o.scale;
+    p.visible = o.visible !== false;
     if (o.points && o.points.length) { p.points = o.points; p.x = o.points[0].x; p.y = o.points[0].y; } else { p.x = o.x; p.y = o.y; }
     return p;
   }

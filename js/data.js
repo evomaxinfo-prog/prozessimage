@@ -3,6 +3,7 @@
   'use strict';
   window.PMX = window.PMX || {};
   window.PMX.I18N_EN = {
+    '{n} Änderungen konnten nicht gespeichert werden': '{n} changes could not be saved',
     // Layout zuruecksetzen
     'Reset': 'Reset', 'Alle Objekte dieser Anlage löschen': 'Delete all objects of this station',
     'Layout ist bereits leer': 'Layout is already empty',

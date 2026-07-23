@@ -30,6 +30,7 @@
   }
   async function pollCollab() {
     if (!state.detail || state.view !== 'editor') return;
+    if (state.undoBusy) return; // waehrend Undo/Redo nicht abgleichen - sonst kommt gerade Geloeschtes zurueck
     if (state.collab.inflight) return;
     state.collab.inflight = true;
     // Objekte über den zuverlässigen /objects-Endpunkt (keine Zeitstempel-Logik) + Präsenz über /changes.
