@@ -320,6 +320,7 @@
     const o = (state.detail && state.detail.objects || []).find((x) => x.id === id);
     const v = (val || '').trim();
     if (o && v && v !== o.name) {
+      pushUndo(); // Umbenennen war bisher kein eigener Undo-Schritt
       try { await Api.updateObject(id, { name: v }); o.name = v; } catch (e) { toast(t('Umbenennen fehlgeschlagen')); }
     }
     renderEditor();

@@ -75,11 +75,26 @@
   // Wiedereintritt sperren: ein zweites Strg+Z waehrend der noch laufenden Uebertragung
   // wuerde einen halb angewandten Zwischenstand als Schnappschuss ablegen und die Server-
   // Aufrufe verschraenken (doppelte Neuanlagen, Loeschen bereits geloeschter Objekte).
+  // Zwei Zustaende gleich? (gleiche Objekte, keine relevante Aenderung)
+  function sameObjectsState(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    const byId = {}; b.forEach(function (o) { byId[o.id] = o; });
+    for (const o of a) { const p = byId[o.id]; if (!p || objChanged(o, p)) return false; }
+    return true;
+  }
+  // Leerlauf-Schritte verwerfen: Schnappschuesse, die nichts aendern (z.B. weil die zugehoerige
+  // Aktion fehlschlug), fuehlten sich wie ein Sprung an - Strg+Z tat scheinbar nichts.
+  function nextDifferent(stack, curr) {
+    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; }
+    return null;
+  }
   async function doUndo() {
     if (state.undoBusy || !(state.undoStack && state.undoStack.length)) return;
     state.undoBusy = true; updateUndoBtns();
     try {
-      const curr = snapObjects(); const target = state.undoStack.pop();
+      const curr = snapObjects();
+      const target = nextDifferent(state.undoStack, curr);
+      if (!target) return;
       (state.redoStack = state.redoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }
@@ -88,7 +103,9 @@
     if (state.undoBusy || !(state.redoStack && state.redoStack.length)) return;
     state.undoBusy = true; updateUndoBtns();
     try {
-      const curr = snapObjects(); const target = state.redoStack.pop();
+      const curr = snapObjects();
+      const target = nextDifferent(state.redoStack, curr);
+      if (!target) return;
       (state.undoStack = state.undoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }

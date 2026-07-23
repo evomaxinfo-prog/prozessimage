@@ -608,6 +608,7 @@
     const o = (state.detail && state.detail.objects || []).find((x) => x.id === id);
     const v = (val || '').trim();
     if (o && v && v !== o.name) {
+      pushUndo(); // Umbenennen war bisher kein eigener Undo-Schritt
       try { await Api.updateObject(id, { name: v }); o.name = v; } catch (e) { toast(t('Umbenennen fehlgeschlagen')); }
     }
     renderEditor();
@@ -2955,7 +2956,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.26'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.27'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3516,7 +3517,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     const commit = async () => {
       if (done) return; done = true;
       const v = (inp.value || '').trim();
-      if (v && v !== o.name) { try { await Api.updateObject(oid, { name: v }); o.name = v; renderEditor(); } catch (e) { toast(t('Umbenennen fehlgeschlagen')); } }
+      if (v && v !== o.name) { pushUndo(); try { await Api.updateObject(oid, { name: v }); o.name = v; renderEditor(); } catch (e) { toast(t('Umbenennen fehlgeschlagen')); } }
       renderModalTitle(oid);
     };
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); commit(); } else if (e.key === 'Escape') { e.preventDefault(); done = true; renderModalTitle(oid); } });
@@ -3883,7 +3884,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.26';
+      sc.src = 'js/html2canvas.min.js?v=1.2.27';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4094,6 +4095,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (bez) metatags.push({ position: 2, label: 'Bezeichnung', value: bez });
     if (mat) metatags.push({ position: 3, label: 'Materialart', value: mat });
     protectObj(z.id);
+    pushUndo(); // Förderweg-Daten/-Farbe waren bisher kein eigener Undo-Schritt
     try {
       const upd = await Api.setMetatags(z.id, metatags); z.metatags = (upd && upd.metatags) || metatags;
       // Farbe aus dem Materialfluss-Typ übernehmen
@@ -4791,11 +4793,26 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // Wiedereintritt sperren: ein zweites Strg+Z waehrend der noch laufenden Uebertragung
   // wuerde einen halb angewandten Zwischenstand als Schnappschuss ablegen und die Server-
   // Aufrufe verschraenken (doppelte Neuanlagen, Loeschen bereits geloeschter Objekte).
+  // Zwei Zustaende gleich? (gleiche Objekte, keine relevante Aenderung)
+  function sameObjectsState(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    const byId = {}; b.forEach(function (o) { byId[o.id] = o; });
+    for (const o of a) { const p = byId[o.id]; if (!p || objChanged(o, p)) return false; }
+    return true;
+  }
+  // Leerlauf-Schritte verwerfen: Schnappschuesse, die nichts aendern (z.B. weil die zugehoerige
+  // Aktion fehlschlug), fuehlten sich wie ein Sprung an - Strg+Z tat scheinbar nichts.
+  function nextDifferent(stack, curr) {
+    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; }
+    return null;
+  }
   async function doUndo() {
     if (state.undoBusy || !(state.undoStack && state.undoStack.length)) return;
     state.undoBusy = true; updateUndoBtns();
     try {
-      const curr = snapObjects(); const target = state.undoStack.pop();
+      const curr = snapObjects();
+      const target = nextDifferent(state.undoStack, curr);
+      if (!target) return;
       (state.redoStack = state.redoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }
@@ -4804,7 +4821,9 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (state.undoBusy || !(state.redoStack && state.redoStack.length)) return;
     state.undoBusy = true; updateUndoBtns();
     try {
-      const curr = snapObjects(); const target = state.redoStack.pop();
+      const curr = snapObjects();
+      const target = nextDifferent(state.redoStack, curr);
+      if (!target) return;
       (state.undoStack = state.undoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }

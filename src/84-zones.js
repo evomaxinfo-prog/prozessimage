@@ -99,6 +99,7 @@
     if (bez) metatags.push({ position: 2, label: 'Bezeichnung', value: bez });
     if (mat) metatags.push({ position: 3, label: 'Materialart', value: mat });
     protectObj(z.id);
+    pushUndo(); // Förderweg-Daten/-Farbe waren bisher kein eigener Undo-Schritt
     try {
       const upd = await Api.setMetatags(z.id, metatags); z.metatags = (upd && upd.metatags) || metatags;
       // Farbe aus dem Materialfluss-Typ übernehmen
