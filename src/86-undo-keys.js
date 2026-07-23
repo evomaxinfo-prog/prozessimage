@@ -12,6 +12,16 @@
     updateUndoBtns();
   }
   function pushUndo() { if (state.detail) pushUndoSnap(snapObjects()); }
+  // Anlegende Aktionen serialisieren: Der Undo-Schnappschuss wird VOR dem Server-Aufruf
+  // genommen, das neue Objekt aber erst DANACH in den Zustand aufgenommen. Ohne Schlange
+  // schnappt eine zweite, schnell folgende Aktion denselben Ausgangszustand - beide Objekte
+  // landen dann in EINEM Undo-Schritt. Mit Schlange wartet sie, bis die vorige fertig ist.
+  let _mutChain = Promise.resolve();
+  function withMutationLock(fn) {
+    const run = _mutChain.then(fn, fn);
+    _mutChain = run.then(function () { }, function () { });
+    return run;
+  }
   const objPayload = window.PMX.objPayload;
   function remapId(oldId, newId) {
     const fix = (arr) => (arr || []).forEach((o) => { if (o.id === oldId) o.id = newId; });

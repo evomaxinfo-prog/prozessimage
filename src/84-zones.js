@@ -385,7 +385,8 @@
   }
   const pointInZone = window.PMX.pointInZone;
 
-  async function finishZone() {
+  function finishZone() { return withMutationLock(function () { return finishZoneImpl(); }); }
+  async function finishZoneImpl() {
     if (!state.drawZone || state.zoneDraft.length < 3) { toast('Mindestens 3 Stützpunkte nötig'); return; }
     pushUndo();
     const pts = state.zoneDraft.slice();
@@ -542,7 +543,8 @@
     renderEditor();
   }
 
-  async function finishRoute() {
+  function finishRoute() { return withMutationLock(function () { return finishRouteImpl(); }); }
+  async function finishRouteImpl() {
     if (state.drawShape !== 'route' || state.zoneDraft.length < 2) { toast('Mindestens 2 Wegpunkte nötig'); return; }
     pushUndo();
     const pts = state.zoneDraft.slice();

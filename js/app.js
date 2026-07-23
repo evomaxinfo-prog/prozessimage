@@ -2356,7 +2356,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     }));
     toast(objs.length === 1 ? t('Icon kopiert') : (objs.length + ' ' + t('Icons kopiert')));
   }
-  async function pasteObjects() {
+  function pasteObjects() { return withMutationLock(function () { return pasteObjectsImpl(); }); }
+  async function pasteObjectsImpl() {
     const cb = state.clipboard || [];
     if (!cb.length || !state.detail) return;
     const dx = 0.03, dy = 0.03;
@@ -2954,7 +2955,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.25'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.26'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3144,7 +3145,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (state.openComment === id) state.openComment = null; renderEditor();
   }
 
-  async function placeFromDrop(clientX, clientY, sym, name, color) {
+  function placeFromDrop(clientX, clientY, sym, name, color) { return withMutationLock(function () { return placeFromDropImpl(clientX, clientY, sym, name, color); }); }
+  async function placeFromDropImpl(clientX, clientY, sym, name, color) {
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
     const r = doc.getBoundingClientRect();
     let x = Math.min(0.97, Math.max(0.03, (clientX - r.left) / r.width));
@@ -3881,7 +3883,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.25';
+      sc.src = 'js/html2canvas.min.js?v=1.2.26';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4378,7 +4380,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   }
   const pointInZone = window.PMX.pointInZone;
 
-  async function finishZone() {
+  function finishZone() { return withMutationLock(function () { return finishZoneImpl(); }); }
+  async function finishZoneImpl() {
     if (!state.drawZone || state.zoneDraft.length < 3) { toast('Mindestens 3 Stützpunkte nötig'); return; }
     pushUndo();
     const pts = state.zoneDraft.slice();
@@ -4535,7 +4538,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     renderEditor();
   }
 
-  async function finishRoute() {
+  function finishRoute() { return withMutationLock(function () { return finishRouteImpl(); }); }
+  async function finishRouteImpl() {
     if (state.drawShape !== 'route' || state.zoneDraft.length < 2) { toast('Mindestens 2 Wegpunkte nötig'); return; }
     pushUndo();
     const pts = state.zoneDraft.slice();
@@ -4724,6 +4728,16 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     updateUndoBtns();
   }
   function pushUndo() { if (state.detail) pushUndoSnap(snapObjects()); }
+  // Anlegende Aktionen serialisieren: Der Undo-Schnappschuss wird VOR dem Server-Aufruf
+  // genommen, das neue Objekt aber erst DANACH in den Zustand aufgenommen. Ohne Schlange
+  // schnappt eine zweite, schnell folgende Aktion denselben Ausgangszustand - beide Objekte
+  // landen dann in EINEM Undo-Schritt. Mit Schlange wartet sie, bis die vorige fertig ist.
+  let _mutChain = Promise.resolve();
+  function withMutationLock(fn) {
+    const run = _mutChain.then(fn, fn);
+    _mutChain = run.then(function () { }, function () { });
+    return run;
+  }
   const objPayload = window.PMX.objPayload;
   function remapId(oldId, newId) {
     const fix = (arr) => (arr || []).forEach((o) => { if (o.id === oldId) o.id = newId; });

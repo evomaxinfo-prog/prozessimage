@@ -389,7 +389,8 @@
     }));
     toast(objs.length === 1 ? t('Icon kopiert') : (objs.length + ' ' + t('Icons kopiert')));
   }
-  async function pasteObjects() {
+  function pasteObjects() { return withMutationLock(function () { return pasteObjectsImpl(); }); }
+  async function pasteObjectsImpl() {
     const cb = state.clipboard || [];
     if (!cb.length || !state.detail) return;
     const dx = 0.03, dy = 0.03;

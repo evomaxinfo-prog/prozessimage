@@ -1,4 +1,5 @@
-  async function placeFromDrop(clientX, clientY, sym, name, color) {
+  function placeFromDrop(clientX, clientY, sym, name, color) { return withMutationLock(function () { return placeFromDropImpl(clientX, clientY, sym, name, color); }); }
+  async function placeFromDropImpl(clientX, clientY, sym, name, color) {
     const doc = document.getElementById('canvasDoc'); if (!doc) return;
     const r = doc.getBoundingClientRect();
     let x = Math.min(0.97, Math.max(0.03, (clientX - r.left) / r.width));
