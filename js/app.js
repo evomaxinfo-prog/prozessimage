@@ -781,6 +781,7 @@
     catch (e) { toast('Speichern fehlgeschlagen'); }
   }
   async function renderLinie(node) {
+    if (_linieTabNode !== node.id) { _linieTabNode = node.id; _linieTab = 'projekt'; } // andere Linie -> wieder Tab 1
     const stations = collectStationNodes(node);
     (state.linieBlobs || []).forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } });
     state.linieBlobs = [];
@@ -815,6 +816,7 @@
       + '</div>'
       + (state.isAdmin ? '<div id="linieTabChanges" class="linie-tabpanel" hidden><div class="ls-section-title">Änderungsindex <span>protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst</span></div><div id="linieChanges"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>' : '')
       + '</div>';
+    applyLinieTab(_linieTab);
     loadLinieProjekt(node.id);
     if (!stations.length) return;
     let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {}, commentsByStation = [], changesRows = [];
@@ -896,6 +898,14 @@
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
   const lcoInitials = window.PMX.lcoInitials;
   const lcoColor = window.PMX.lcoColor;
+  let _linieTab = 'projekt', _linieTabNode = null; // aktiver Linie-Tab, damit er ein Neurendern ueberlebt
+  function applyLinieTab(tab) {
+    const map = { projekt: 'linieTabProjekt', dash: 'linieTabDash', comments: 'linieTabComments', changes: 'linieTabChanges' };
+    if (!map[tab] || !$(map[tab])) tab = 'projekt'; // z.B. Aenderungsindex bei Nicht-Admins
+    _linieTab = tab;
+    document.querySelectorAll('.linie-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
+    Object.keys(map).forEach(function (k) { const el = $(map[k]); if (el) el.hidden = k !== tab; });
+  }
   let _ciDayIds = {}; // Tages-Schluessel -> Journal-Eintrags-IDs (fuer "Tag löschen")
   async function deleteChangesDay(day) {
     const ids = (_ciDayIds[day] || []).slice();
@@ -906,6 +916,7 @@
     }));
     const failed = res.filter(function (ok) { return !ok; }).length;
     toast(failed ? ((ids.length - failed) + ' von ' + ids.length + ' gelöscht, ' + failed + ' fehlgeschlagen') : (ids.length + (ids.length === 1 ? ' Eintrag gelöscht' : ' Einträge gelöscht')));
+    _linieTab = 'changes'; // nach dem Loeschen auf Tab 4 bleiben
     if (state.selected) selectNode(state.selected); // Ansicht frisch laden
   }
   // Änderungsindex (admin-only): nach Tagen geclustert, neuester Tag zuerst.
@@ -1588,7 +1599,7 @@
     else if (act === 'open-station') { selectNode(el.getAttribute('data-id')); }
     else if (act === 'goto-obj') { e.stopPropagation(); gotoObject(el.getAttribute('data-node'), el.getAttribute('data-obj')); }
     else if (act === 'pick-layer') { state.linieActiveLayer = el.getAttribute('data-layer'); renderLinieFolders(); }
-    else if (act === 'linie-tab') { const tab = el.getAttribute('data-tab'); document.querySelectorAll('.linie-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); }); const d = $('linieTabDash'), c = $('linieTabComments'), p = $('linieTabProjekt'), ch = $('linieTabChanges'); if (d) d.hidden = tab !== 'dash'; if (c) c.hidden = tab !== 'comments'; if (p) p.hidden = tab !== 'projekt'; if (ch) ch.hidden = tab !== 'changes'; }
+    else if (act === 'linie-tab') { applyLinieTab(el.getAttribute('data-tab')); }
     else if (act === 'pj-save') { saveLinieProjekt(el.getAttribute('data-node')); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
@@ -2914,7 +2925,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.19'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.20'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3832,7 +3843,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.19';
+      sc.src = 'js/html2canvas.min.js?v=1.2.20';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);

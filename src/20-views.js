@@ -86,6 +86,7 @@
     catch (e) { toast('Speichern fehlgeschlagen'); }
   }
   async function renderLinie(node) {
+    if (_linieTabNode !== node.id) { _linieTabNode = node.id; _linieTab = 'projekt'; } // andere Linie -> wieder Tab 1
     const stations = collectStationNodes(node);
     (state.linieBlobs || []).forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) { /* noop */ } });
     state.linieBlobs = [];
@@ -120,6 +121,7 @@
       + '</div>'
       + (state.isAdmin ? '<div id="linieTabChanges" class="linie-tabpanel" hidden><div class="ls-section-title">Änderungsindex <span>protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst</span></div><div id="linieChanges"><div class="pad" style="color:var(--muted)">lädt …</div></div></div>' : '')
       + '</div>';
+    applyLinieTab(_linieTab);
     loadLinieProjekt(node.id);
     if (!stations.length) return;
     let sps = 0, objs = 0, docn = 0; const ptkRows = [], roboRows = [], layerAgg = {}, commentsByStation = [], changesRows = [];
@@ -201,6 +203,14 @@
   // Kommentar-Uebersicht im Linien-Dashboard: alle Pins je Station inkl. Nachrichtenverlauf.
   const lcoInitials = window.PMX.lcoInitials;
   const lcoColor = window.PMX.lcoColor;
+  let _linieTab = 'projekt', _linieTabNode = null; // aktiver Linie-Tab, damit er ein Neurendern ueberlebt
+  function applyLinieTab(tab) {
+    const map = { projekt: 'linieTabProjekt', dash: 'linieTabDash', comments: 'linieTabComments', changes: 'linieTabChanges' };
+    if (!map[tab] || !$(map[tab])) tab = 'projekt'; // z.B. Aenderungsindex bei Nicht-Admins
+    _linieTab = tab;
+    document.querySelectorAll('.linie-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
+    Object.keys(map).forEach(function (k) { const el = $(map[k]); if (el) el.hidden = k !== tab; });
+  }
   let _ciDayIds = {}; // Tages-Schluessel -> Journal-Eintrags-IDs (fuer "Tag löschen")
   async function deleteChangesDay(day) {
     const ids = (_ciDayIds[day] || []).slice();
@@ -211,6 +221,7 @@
     }));
     const failed = res.filter(function (ok) { return !ok; }).length;
     toast(failed ? ((ids.length - failed) + ' von ' + ids.length + ' gelöscht, ' + failed + ' fehlgeschlagen') : (ids.length + (ids.length === 1 ? ' Eintrag gelöscht' : ' Einträge gelöscht')));
+    _linieTab = 'changes'; // nach dem Loeschen auf Tab 4 bleiben
     if (state.selected) selectNode(state.selected); // Ansicht frisch laden
   }
   // Änderungsindex (admin-only): nach Tagen geclustert, neuester Tag zuerst.

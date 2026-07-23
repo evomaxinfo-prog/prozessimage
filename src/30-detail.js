@@ -406,7 +406,7 @@
     else if (act === 'open-station') { selectNode(el.getAttribute('data-id')); }
     else if (act === 'goto-obj') { e.stopPropagation(); gotoObject(el.getAttribute('data-node'), el.getAttribute('data-obj')); }
     else if (act === 'pick-layer') { state.linieActiveLayer = el.getAttribute('data-layer'); renderLinieFolders(); }
-    else if (act === 'linie-tab') { const tab = el.getAttribute('data-tab'); document.querySelectorAll('.linie-tab').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); }); const d = $('linieTabDash'), c = $('linieTabComments'), p = $('linieTabProjekt'), ch = $('linieTabChanges'); if (d) d.hidden = tab !== 'dash'; if (c) c.hidden = tab !== 'comments'; if (p) p.hidden = tab !== 'projekt'; if (ch) ch.hidden = tab !== 'changes'; }
+    else if (act === 'linie-tab') { applyLinieTab(el.getAttribute('data-tab')); }
     else if (act === 'pj-save') { saveLinieProjekt(el.getAttribute('data-node')); }
     else if (act === 'collab-details') { state.collab.detailsOpen = !state.collab.detailsOpen; renderPresenceOnly(); }
     else if (act === 'editor-back') { leaveEditor(); }
