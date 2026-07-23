@@ -2,25 +2,55 @@
   // Ebenen hinweg. Das Layout-Bild bleibt erhalten. Keine automatische Versions-Sicherung
   // (bewusste Entscheidung); umkehrbar bleibt es direkt danach ueber Undo (Strg+Z),
   // das den Objektbestand auch serverseitig wiederherstellt.
+  // Loescht Objekte in kleinen Gruppen statt alle gleichzeitig: ein Schwall paralleler Anfragen
+  // laeuft sonst ins Anfragelimit des Servers, einzelne Loeschungen scheitern - genau daher blieben
+  // beim Zuruecksetzen Reste stehen. Liefert die IDs zurueck, die NICHT geloescht werden konnten.
+  async function deleteObjectsInBatches(ids) {
+    const failedIds = [];
+    for (let i = 0; i < ids.length; i += 6) {
+      const part = ids.slice(i, i + 6);
+      const res = await Promise.all(part.map(function (id) {
+        return Api.deleteObject(id).then(function () { return null; }).catch(function () { return id; });
+      }));
+      res.forEach(function (id) { if (id) failedIds.push(id); });
+    }
+    return failedIds;
+  }
   async function resetLayout() {
     if (!state.isAdmin || !state.detail || !state.detail.id) return;
+    const sid = state.detail.id;
     const objs = (state.detail.objects || []).slice();
     if (!objs.length) { toast(t('Layout ist bereits leer')); return; }
     if (!window.confirm(t('Gesamtes Layout zurücksetzen?') + '\n\n'
       + t('{n} Objekte aller Ebenen werden gelöscht. Das Layout-Bild bleibt erhalten.', { n: objs.length }) + '\n'
       + t('Rückgängig nur direkt danach mit Strg+Z.'))) return;
     pushUndo();
-    const ids = objs.map(function (o) { return o.id; });
-    const res = await Promise.all(ids.map(function (id) { return Api.deleteObject(id).then(function () { return true; }).catch(function () { return false; }); }));
-    const failed = res.filter(function (ok) { return !ok; }).length;
-    const rm = {}; ids.forEach(function (id, i) { if (res[i]) rm[id] = true; }); // nur wirklich Geloeschtes lokal entfernen
-    state.detail.objects = (state.detail.objects || []).filter(function (x) { return !rm[x.id]; });
-    state.selObjs = []; state.selectedObj = null;
-    renderEditor();
-    // Journaleintrag bewusst auf Deutsch (Journal ist Datenbestand, wie die Backend-Eintraege)
-    try { await Api.addJournal(state.detail.id, 'Layout zurueckgesetzt (' + (ids.length - failed) + ' Objekte geloescht)'); } catch (e) { /* best-effort */ }
-    toast(failed ? t('{n} von {total} gelöscht, {failed} fehlgeschlagen', { n: ids.length - failed, total: ids.length, failed: failed })
-      : t('Layout zurückgesetzt – {n} Objekte gelöscht', { n: ids.length }));
+    state.undoBusy = true; updateUndoBtns(); // waehrenddessen kein Abgleich und kein Undo dazwischen
+    try {
+      let rest = await deleteObjectsInBatches(objs.map(function (o) { return o.id; }));
+      if (rest.length) { await new Promise(function (r) { setTimeout(r, 700); }); rest = await deleteObjectsInBatches(rest); } // zweiter Versuch
+      // Nachkontrolle direkt am Server: erfasst auch Objekte, die lokal noch gar nicht bekannt waren
+      // (z.B. parallel von jemand anderem angelegt) und alles, was beim ersten Durchgang haengen blieb.
+      for (let pass = 0; pass < 2; pass++) {
+        let left = [];
+        try { const fresh = await Api.getObjects(sid); left = Array.isArray(fresh) ? fresh : []; } catch (e) { break; }
+        if (!left.length) break;
+        await deleteObjectsInBatches(left.map(function (o) { return o.id; }));
+      }
+      // Endstand vom Server holen - die Anzeige zeigt danach garantiert das, was wirklich gespeichert ist.
+      let remaining = [];
+      try { const after = await Api.getObjects(sid); remaining = Array.isArray(after) ? after : []; } catch (e) { remaining = []; }
+      state.detail.objects = remaining;
+      state.selObjs = []; state.selectedObj = null; state.selectedZone = null;
+      state.objRev = (state.objRev || 0) + 1;
+      renderEditor();
+      const geloescht = objs.length - remaining.length;
+      // Journaleintrag bewusst auf Deutsch (Journal ist Datenbestand, wie die Backend-Eintraege)
+      try { await Api.addJournal(sid, 'Layout zurueckgesetzt (' + geloescht + ' Objekte geloescht)'); } catch (e) { /* best-effort */ }
+      toast(remaining.length
+        ? t('{n} Objekte konnten nicht gelöscht werden', { n: remaining.length })
+        : t('Layout zurückgesetzt – {n} Objekte gelöscht', { n: geloescht }));
+    } finally { state.undoBusy = false; updateUndoBtns(); }
   }
   function renderEditor() {
     return renderEditorImpl();

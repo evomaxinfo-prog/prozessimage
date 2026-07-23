@@ -11,6 +11,7 @@
     '{n} Objekte aller Ebenen werden gelöscht. Das Layout-Bild bleibt erhalten.': '{n} objects across all layers will be deleted. The layout image is kept.',
     'Rückgängig nur direkt danach mit Strg+Z.': 'Undo only immediately afterwards with Ctrl+Z.',
     'Layout zurückgesetzt – {n} Objekte gelöscht': 'Layout reset – {n} objects deleted',
+    '{n} Objekte konnten nicht gelöscht werden': '{n} objects could not be deleted',
     // Aenderungsindex / Letzte Aenderung / Persistenz-Meldungen
     'Änderungsindex': 'Change index',
     'protokollierte Änderungen der Stationen dieser Linie · nach Tagen gruppiert, neueste zuerst': "logged changes of this line's stations · grouped by day, newest first",
