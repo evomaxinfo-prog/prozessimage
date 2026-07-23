@@ -1,16 +1,14 @@
   // Layout zuruecksetzen (nur Administrator): loescht ALLE Objekte dieser Anlage ueber alle
-  // Ebenen hinweg. Das Layout-Bild bleibt erhalten. Vorher wird automatisch eine Version
-  // gesichert, damit der Schritt ueber die Versionsliste umkehrbar ist.
+  // Ebenen hinweg. Das Layout-Bild bleibt erhalten. Keine automatische Versions-Sicherung
+  // (bewusste Entscheidung); umkehrbar bleibt es direkt danach ueber Undo (Strg+Z),
+  // das den Objektbestand auch serverseitig wiederherstellt.
   async function resetLayout() {
     if (!state.isAdmin || !state.detail || !state.detail.id) return;
     const objs = (state.detail.objects || []).slice();
     if (!objs.length) { toast(t('Layout ist bereits leer')); return; }
     if (!window.confirm(t('Gesamtes Layout zurücksetzen?') + '\n\n'
       + t('{n} Objekte aller Ebenen werden gelöscht. Das Layout-Bild bleibt erhalten.', { n: objs.length }) + '\n'
-      + t('Der aktuelle Stand wird vorher automatisch gesichert.'))) return;
-    let backedUp = true;
-    try { await Api.createVersion(state.detail.id, { label: 'Automatisch vor Zuruecksetzen' }); } catch (e) { backedUp = false; }
-    if (!backedUp && !window.confirm(t('Sicherung fehlgeschlagen. Trotzdem zurücksetzen?'))) return;
+      + t('Rückgängig nur direkt danach mit Strg+Z.'))) return;
     pushUndo();
     const ids = objs.map(function (o) { return o.id; });
     const res = await Promise.all(ids.map(function (id) { return Api.deleteObject(id).then(function () { return true; }).catch(function () { return false; }); }));

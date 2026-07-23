@@ -2528,18 +2528,16 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   }
   // renderEditor delegiert an renderEditorImpl (stabiler Einstiegspunkt; frueherer ?perf=1-Timing-Wrapper wurde entfernt).
   // Layout zuruecksetzen (nur Administrator): loescht ALLE Objekte dieser Anlage ueber alle
-  // Ebenen hinweg. Das Layout-Bild bleibt erhalten. Vorher wird automatisch eine Version
-  // gesichert, damit der Schritt ueber die Versionsliste umkehrbar ist.
+  // Ebenen hinweg. Das Layout-Bild bleibt erhalten. Keine automatische Versions-Sicherung
+  // (bewusste Entscheidung); umkehrbar bleibt es direkt danach ueber Undo (Strg+Z),
+  // das den Objektbestand auch serverseitig wiederherstellt.
   async function resetLayout() {
     if (!state.isAdmin || !state.detail || !state.detail.id) return;
     const objs = (state.detail.objects || []).slice();
     if (!objs.length) { toast(t('Layout ist bereits leer')); return; }
     if (!window.confirm(t('Gesamtes Layout zurücksetzen?') + '\n\n'
       + t('{n} Objekte aller Ebenen werden gelöscht. Das Layout-Bild bleibt erhalten.', { n: objs.length }) + '\n'
-      + t('Der aktuelle Stand wird vorher automatisch gesichert.'))) return;
-    let backedUp = true;
-    try { await Api.createVersion(state.detail.id, { label: 'Automatisch vor Zuruecksetzen' }); } catch (e) { backedUp = false; }
-    if (!backedUp && !window.confirm(t('Sicherung fehlgeschlagen. Trotzdem zurücksetzen?'))) return;
+      + t('Rückgängig nur direkt danach mit Strg+Z.'))) return;
     pushUndo();
     const ids = objs.map(function (o) { return o.id; });
     const res = await Promise.all(ids.map(function (id) { return Api.deleteObject(id).then(function () { return true; }).catch(function () { return false; }); }));
@@ -2955,7 +2953,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.23'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.24'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3882,7 +3880,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.23';
+      sc.src = 'js/html2canvas.min.js?v=1.2.24';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);

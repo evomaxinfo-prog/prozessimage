@@ -8,7 +8,7 @@
     'Layout ist bereits leer': 'Layout is already empty',
     'Gesamtes Layout zurücksetzen?': 'Reset the entire layout?',
     '{n} Objekte aller Ebenen werden gelöscht. Das Layout-Bild bleibt erhalten.': '{n} objects across all layers will be deleted. The layout image is kept.',
-    'Sicherung fehlgeschlagen. Trotzdem zurücksetzen?': 'Backup failed. Reset anyway?',
+    'Rückgängig nur direkt danach mit Strg+Z.': 'Undo only immediately afterwards with Ctrl+Z.',
     'Layout zurückgesetzt – {n} Objekte gelöscht': 'Layout reset – {n} objects deleted',
     // Aenderungsindex / Letzte Aenderung / Persistenz-Meldungen
     'Änderungsindex': 'Change index',
