@@ -7,6 +7,7 @@
   function pushUndoSnap(snap) {
     state.undoStack = state.undoStack || []; state.redoStack = state.redoStack || [];
     state.undoStack.push(snap);
+    state.objRev = (state.objRev || 0) + 1; // Stand-Zaehler: entwertet noch laufende Abgleiche
     diagLog('SNAP ', diagCaller() + ' — Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', Objekte=' + snap.length);
     if (state.undoStack.length > 60) state.undoStack.shift();
     state.redoStack = [];
@@ -37,6 +38,7 @@
   async function applyObjectsState(from, to) {
     state.detail.objects = to; renderEditor();
     const _op = ++_opSeq; // Vorgangsnummer: macht ueberlappende Vorgaenge im Protokoll sichtbar
+    state.objRev = (state.objRev || 0) + 1;
     let failed = 0;
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
@@ -77,6 +79,7 @@
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
+    state.objRev = (state.objRev || 0) + 1;
     diagLog('ENDE ', '#' + _op + ' fertig' + (failed ? (' (' + failed + ' Fehler)') : ''));
     if (failed) {
       diagLog('FEHLER', '#' + _op + ' — ' + failed + ' Server-Aufruf(e) fehlgeschlagen, gleiche Anzeige mit dem Server ab');

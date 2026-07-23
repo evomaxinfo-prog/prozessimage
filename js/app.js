@@ -1861,12 +1861,17 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (state.undoBusy) return; // waehrend Undo/Redo nicht abgleichen - sonst kommt gerade Geloeschtes zurueck
     if (state.collab.inflight) return;
     state.collab.inflight = true;
+    const _rev0 = state.objRev || 0; // Stand beim Start der Anfrage
     // Objekte über den zuverlässigen /objects-Endpunkt (keine Zeitstempel-Logik) + Präsenz über /changes.
     const sid = state.detail.id;
     let objsList, chg;
     const [objR, chR, cmR] = await Promise.allSettled([Api.getObjects(sid), Api.getChanges(sid, null), state.commentsServer ? Api.getComments(sid) : Promise.resolve(null)]);
     state.collab.inflight = false;
     if (state.view !== 'editor') return; // waehrend des Await weg-navigiert -> nicht mehr in den Editor rendern
+    // Waehrend der Anfrage wurde lokal geaendert (z.B. Undo hat geloescht)? Dann ist die Antwort
+    // veraltet - sie wuerde soeben Geloeschtes wiederbeleben (danach 404 beim naechsten Loeschen)
+    // und Felder auf alte Werte zuruecksetzen. Verwerfen und beim naechsten Durchlauf neu holen.
+    if (state.undoBusy || (state.objRev || 0) !== _rev0) { diagLog('SKIP ', 'Abgleich verworfen (Stand veraltet)'); return; }
     if (objR.status === 'rejected') {
       const st = objR.reason && objR.reason.status;
       if (st === 404 || st === 405) { state.collab.enabled = false; state.collab.status = 'offline'; stopCollab(); renderPresenceOnly(); return; }
@@ -2967,7 +2972,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.30'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.31'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3895,7 +3900,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.30';
+      sc.src = 'js/html2canvas.min.js?v=1.2.31';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4736,6 +4741,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   function pushUndoSnap(snap) {
     state.undoStack = state.undoStack || []; state.redoStack = state.redoStack || [];
     state.undoStack.push(snap);
+    state.objRev = (state.objRev || 0) + 1; // Stand-Zaehler: entwertet noch laufende Abgleiche
     diagLog('SNAP ', diagCaller() + ' — Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', Objekte=' + snap.length);
     if (state.undoStack.length > 60) state.undoStack.shift();
     state.redoStack = [];
@@ -4766,6 +4772,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   async function applyObjectsState(from, to) {
     state.detail.objects = to; renderEditor();
     const _op = ++_opSeq; // Vorgangsnummer: macht ueberlappende Vorgaenge im Protokoll sichtbar
+    state.objRev = (state.objRev || 0) + 1;
     let failed = 0;
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
@@ -4806,6 +4813,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
+    state.objRev = (state.objRev || 0) + 1;
     diagLog('ENDE ', '#' + _op + ' fertig' + (failed ? (' (' + failed + ' Fehler)') : ''));
     if (failed) {
       diagLog('FEHLER', '#' + _op + ' — ' + failed + ' Server-Aufruf(e) fehlgeschlagen, gleiche Anzeige mit dem Server ab');

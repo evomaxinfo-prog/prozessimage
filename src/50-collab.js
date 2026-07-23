@@ -33,12 +33,17 @@
     if (state.undoBusy) return; // waehrend Undo/Redo nicht abgleichen - sonst kommt gerade Geloeschtes zurueck
     if (state.collab.inflight) return;
     state.collab.inflight = true;
+    const _rev0 = state.objRev || 0; // Stand beim Start der Anfrage
     // Objekte über den zuverlässigen /objects-Endpunkt (keine Zeitstempel-Logik) + Präsenz über /changes.
     const sid = state.detail.id;
     let objsList, chg;
     const [objR, chR, cmR] = await Promise.allSettled([Api.getObjects(sid), Api.getChanges(sid, null), state.commentsServer ? Api.getComments(sid) : Promise.resolve(null)]);
     state.collab.inflight = false;
     if (state.view !== 'editor') return; // waehrend des Await weg-navigiert -> nicht mehr in den Editor rendern
+    // Waehrend der Anfrage wurde lokal geaendert (z.B. Undo hat geloescht)? Dann ist die Antwort
+    // veraltet - sie wuerde soeben Geloeschtes wiederbeleben (danach 404 beim naechsten Loeschen)
+    // und Felder auf alte Werte zuruecksetzen. Verwerfen und beim naechsten Durchlauf neu holen.
+    if (state.undoBusy || (state.objRev || 0) !== _rev0) { diagLog('SKIP ', 'Abgleich verworfen (Stand veraltet)'); return; }
     if (objR.status === 'rejected') {
       const st = objR.reason && objR.reason.status;
       if (st === 404 || st === 405) { state.collab.enabled = false; state.collab.status = 'offline'; stopCollab(); renderPresenceOnly(); return; }
