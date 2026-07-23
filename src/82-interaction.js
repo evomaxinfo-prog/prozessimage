@@ -591,8 +591,17 @@
     fc.addEventListener('change', (e) => { if (e.target.classList.contains('sf-type')) { syncSymFields(fc); renderSymFieldsInto(fc); } });
     document.getElementById('symCancel').addEventListener('click', closeSymModal);
     document.getElementById('symSave').addEventListener('click', saveSymUpload);
-    m.addEventListener('click', (e) => { if (e.target === m) closeSymModal(); });
+    bindBackdropClose(m, closeSymModal);
     setTimeout(() => { const n = document.getElementById('symName'); if (n) { n.focus(); n.select(); } }, 40);
+  }
+  // Fenster per Klick auf den Hintergrund schliessen - aber NUR, wenn der Klick dort auch
+  // BEGONNEN hat. Sonst schliesst eine Textmarkierung, die man ueber den Fensterrand hinaus
+  // zieht und aussen loslaesst, das Fenster ungewollt (Eingaben gehen dabei verloren).
+  function bindBackdropClose(m, closeFn) {
+    if (!m) return;
+    let downOnBackdrop = false;
+    m.addEventListener('pointerdown', function (e) { downOnBackdrop = (e.target === m); });
+    m.addEventListener('click', function (e) { const ok = downOnBackdrop; downOnBackdrop = false; if (e.target === m && ok) closeFn(); });
   }
   function closeSymModal() { const m = document.getElementById('symModal'); if (m) m.style.display = 'none'; state.symEdit = null; }
   // Feldeditor im Symbol-Dialog
@@ -651,7 +660,7 @@
     document.getElementById('pfCancel').addEventListener('click', closeProfile);
     document.getElementById('pfSave').addEventListener('click', saveProfilePw);
     m.querySelectorAll('.pf-lang-btn').forEach((b) => b.addEventListener('click', () => setLang(b.getAttribute('data-lang'))));
-    m.addEventListener('click', (e) => { if (e.target === m) closeProfile(); });
+    bindBackdropClose(m, closeProfile);
     setTimeout(() => { const o = document.getElementById('pfOld'); if (o) o.focus(); }, 40);
   }
   async function setLang(lang) {
@@ -726,7 +735,7 @@
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.20';
+      sc.src = 'js/html2canvas.min.js?v=1.2.21';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);

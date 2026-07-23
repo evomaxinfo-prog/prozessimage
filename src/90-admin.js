@@ -430,8 +430,7 @@
     $('mClose').addEventListener('click', closeTagModal);
     $('mX').addEventListener('click', closeTagModal);
     $('mBody').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') saveTags(); });
-    $('tagModal').addEventListener('mousedown', (e) => { state._tagDownBackdrop = (e.target.id === 'tagModal'); });
-    $('tagModal').addEventListener('click', (e) => { if (e.target.id === 'tagModal' && state._tagDownBackdrop) closeTagModal(); state._tagDownBackdrop = false; });
+    bindBackdropClose($('tagModal'), closeTagModal); // gleiche Absicherung wie die uebrigen Fenster
 
     window.addEventListener('promodx:unauthorized', () => { toast('Sitzung abgelaufen'); showLogin(); });
   }

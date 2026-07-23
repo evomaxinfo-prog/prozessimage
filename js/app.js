@@ -2925,7 +2925,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.20'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.21'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3708,8 +3708,17 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     fc.addEventListener('change', (e) => { if (e.target.classList.contains('sf-type')) { syncSymFields(fc); renderSymFieldsInto(fc); } });
     document.getElementById('symCancel').addEventListener('click', closeSymModal);
     document.getElementById('symSave').addEventListener('click', saveSymUpload);
-    m.addEventListener('click', (e) => { if (e.target === m) closeSymModal(); });
+    bindBackdropClose(m, closeSymModal);
     setTimeout(() => { const n = document.getElementById('symName'); if (n) { n.focus(); n.select(); } }, 40);
+  }
+  // Fenster per Klick auf den Hintergrund schliessen - aber NUR, wenn der Klick dort auch
+  // BEGONNEN hat. Sonst schliesst eine Textmarkierung, die man ueber den Fensterrand hinaus
+  // zieht und aussen loslaesst, das Fenster ungewollt (Eingaben gehen dabei verloren).
+  function bindBackdropClose(m, closeFn) {
+    if (!m) return;
+    let downOnBackdrop = false;
+    m.addEventListener('pointerdown', function (e) { downOnBackdrop = (e.target === m); });
+    m.addEventListener('click', function (e) { const ok = downOnBackdrop; downOnBackdrop = false; if (e.target === m && ok) closeFn(); });
   }
   function closeSymModal() { const m = document.getElementById('symModal'); if (m) m.style.display = 'none'; state.symEdit = null; }
   // Feldeditor im Symbol-Dialog
@@ -3768,7 +3777,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     document.getElementById('pfCancel').addEventListener('click', closeProfile);
     document.getElementById('pfSave').addEventListener('click', saveProfilePw);
     m.querySelectorAll('.pf-lang-btn').forEach((b) => b.addEventListener('click', () => setLang(b.getAttribute('data-lang'))));
-    m.addEventListener('click', (e) => { if (e.target === m) closeProfile(); });
+    bindBackdropClose(m, closeProfile);
     setTimeout(() => { const o = document.getElementById('pfOld'); if (o) o.focus(); }, 40);
   }
   async function setLang(lang) {
@@ -3843,7 +3852,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.20';
+      sc.src = 'js/html2canvas.min.js?v=1.2.21';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -5216,8 +5225,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     $('mClose').addEventListener('click', closeTagModal);
     $('mX').addEventListener('click', closeTagModal);
     $('mBody').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') saveTags(); });
-    $('tagModal').addEventListener('mousedown', (e) => { state._tagDownBackdrop = (e.target.id === 'tagModal'); });
-    $('tagModal').addEventListener('click', (e) => { if (e.target.id === 'tagModal' && state._tagDownBackdrop) closeTagModal(); state._tagDownBackdrop = false; });
+    bindBackdropClose($('tagModal'), closeTagModal); // gleiche Absicherung wie die uebrigen Fenster
 
     window.addEventListener('promodx:unauthorized', () => { toast('Sitzung abgelaufen'); showLogin(); });
   }
