@@ -131,7 +131,14 @@
     setLayerVisibility(stationId, layerId, visible) {
       return this.request('/stations/' + stationId + '/layers/' + layerId, { method: 'PATCH', body: { visible } });
     },
-    createObject(stationId, obj) { return this.request('/stations/' + stationId + '/objects', { method: 'POST', body: obj }); },
+    // Neu angelegte Objekte sind IMMER sichtbar - die Anlege-Route nimmt gar kein visible entgegen.
+    // Aeltere Backend-Staende melden hier faelschlich visible=false (die frisch erzeugte Model-Instanz
+    // kennt den DB-Standardwert nicht). Das galt beim Undo/Redo als echte Aenderung und konnte Objekte
+    // beim Zurueckspielen sogar tatsaechlich ausblenden.
+    createObject(stationId, obj) {
+      return this.request('/stations/' + stationId + '/objects', { method: 'POST', body: obj })
+        .then(function (o) { if (o && o.visible === false) o.visible = true; return o; });
+    },
     getObjects(stationId) { return this.request('/stations/' + stationId + '/objects'); },
     updateObject(id, patch) { return this.request('/objects/' + id, { method: 'PATCH', body: patch }); },
     deleteObject(id) { return this.request('/objects/' + id, { method: 'DELETE' }); },

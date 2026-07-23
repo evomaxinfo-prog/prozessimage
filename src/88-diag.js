@@ -46,7 +46,8 @@
     const v = function (k, x, y) { if (String(x) !== String(y)) f.push(k + '(' + x + '→' + y + ')'); };
     v('sichtbar', a.visible, b.visible);
     c('name', a.name, b.name); c('farbe', a.color, b.color); c('ebene', a.layerId, b.layerId);
-    c('typ', a.symbolType, b.symbolType); c('x', a.x, b.x); c('y', a.y, b.y);
+    const r6 = function (v) { return Math.round((Number(v) || 0) * 1e6) / 1e6; };
+    c('typ', a.symbolType, b.symbolType); c('x', r6(a.x), r6(b.x)); c('y', r6(a.y), r6(b.y));
     c('drehung', a.rotation || 0, b.rotation || 0);
     c('größe', a.scale == null ? 1 : a.scale, b.scale == null ? 1 : b.scale);
     c('sps', a.plcConfigId || '', b.plcConfigId || '');

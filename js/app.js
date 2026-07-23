@@ -2972,7 +2972,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.31'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.32'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3900,7 +3900,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.31';
+      sc.src = 'js/html2canvas.min.js?v=1.2.32';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4958,7 +4958,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     const v = function (k, x, y) { if (String(x) !== String(y)) f.push(k + '(' + x + '→' + y + ')'); };
     v('sichtbar', a.visible, b.visible);
     c('name', a.name, b.name); c('farbe', a.color, b.color); c('ebene', a.layerId, b.layerId);
-    c('typ', a.symbolType, b.symbolType); c('x', a.x, b.x); c('y', a.y, b.y);
+    const r6 = function (v) { return Math.round((Number(v) || 0) * 1e6) / 1e6; };
+    c('typ', a.symbolType, b.symbolType); c('x', r6(a.x), r6(b.x)); c('y', r6(a.y), r6(b.y));
     c('drehung', a.rotation || 0, b.rotation || 0);
     c('größe', a.scale == null ? 1 : a.scale, b.scale == null ? 1 : b.scale);
     c('sps', a.plcConfigId || '', b.plcConfigId || '');
