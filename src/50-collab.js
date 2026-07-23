@@ -43,7 +43,7 @@
     // Waehrend der Anfrage wurde lokal geaendert (z.B. Undo hat geloescht)? Dann ist die Antwort
     // veraltet - sie wuerde soeben Geloeschtes wiederbeleben (danach 404 beim naechsten Loeschen)
     // und Felder auf alte Werte zuruecksetzen. Verwerfen und beim naechsten Durchlauf neu holen.
-    if (state.undoBusy || (state.objRev || 0) !== _rev0) { diagLog('SKIP ', 'Abgleich verworfen (Stand veraltet)'); return; }
+    if (state.undoBusy || (state.objRev || 0) !== _rev0) return;
     if (objR.status === 'rejected') {
       const st = objR.reason && objR.reason.status;
       if (st === 404 || st === 405) { state.collab.enabled = false; state.collab.status = 'offline'; stopCollab(); renderPresenceOnly(); return; }

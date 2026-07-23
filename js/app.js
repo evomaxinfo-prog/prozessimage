@@ -1871,7 +1871,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     // Waehrend der Anfrage wurde lokal geaendert (z.B. Undo hat geloescht)? Dann ist die Antwort
     // veraltet - sie wuerde soeben Geloeschtes wiederbeleben (danach 404 beim naechsten Loeschen)
     // und Felder auf alte Werte zuruecksetzen. Verwerfen und beim naechsten Durchlauf neu holen.
-    if (state.undoBusy || (state.objRev || 0) !== _rev0) { diagLog('SKIP ', 'Abgleich verworfen (Stand veraltet)'); return; }
+    if (state.undoBusy || (state.objRev || 0) !== _rev0) return;
     if (objR.status === 'rejected') {
       const st = objR.reason && objR.reason.status;
       if (st === 404 || st === 405) { state.collab.enabled = false; state.collab.status = 'offline'; stopCollab(); renderPresenceOnly(); return; }
@@ -2972,7 +2972,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.32'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.33'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3900,7 +3900,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.32';
+      sc.src = 'js/html2canvas.min.js?v=1.2.33';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4742,7 +4742,6 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     state.undoStack = state.undoStack || []; state.redoStack = state.redoStack || [];
     state.undoStack.push(snap);
     state.objRev = (state.objRev || 0) + 1; // Stand-Zaehler: entwertet noch laufende Abgleiche
-    diagLog('SNAP ', diagCaller() + ' — Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', Objekte=' + snap.length);
     if (state.undoStack.length > 60) state.undoStack.shift();
     state.redoStack = [];
     updateUndoBtns();
@@ -4768,21 +4767,15 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (state.geomPending && state.geomPending[oldId]) { state.geomPending[newId] = state.geomPending[oldId]; delete state.geomPending[oldId]; }
   }
   // Serverzustand von "from" nach "to" ueberfuehren (Loeschen/Anlegen/Aendern), IDs neu angelegter Objekte uebernehmen.
-  let _opSeq = 0;
   async function applyObjectsState(from, to) {
     state.detail.objects = to; renderEditor();
-    const _op = ++_opSeq; // Vorgangsnummer: macht ueberlappende Vorgaenge im Protokoll sichtbar
     state.objRev = (state.objRev || 0) + 1;
     let failed = 0;
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
-    const _chg = to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); });
-    diagLog('APPLY', '#' + _op + ' löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
-      + '] anlegen=[' + diagNames(to.filter(function (o) { return !fromById[o.id]; }))
-      + '] ändern=[' + (_chg.length ? _chg.map(function (o) { return (o.name || o.id) + '(' + diagDiff(fromById[o.id], o) + ')'; }).join(', ') : '–') + ']');
     let didCreate = false;
-    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' löschen ' + (o.name || o.id) + ': ' + diagErr(e)); } } }
+    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; } } }
     for (const o of to) {
       if (!fromById[o.id]) {
         try {
@@ -4795,11 +4788,11 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
             if (o.plcConfigId) { after.plcConfigId = o.plcConfigId; after.color = o.color; }
             if (o.scale != null && o.scale !== 1) after.scale = o.scale;
             if (o.visible === false) after.visible = false;
-            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' nachziehen ' + (o.name || newId) + ': ' + diagErr(e)); } }
+            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; } }
             if (o.metatags && o.metatags.length) { try { await Api.setMetatags(newId, o.metatags); } catch (e) { /* ignore */ } }
             remapId(o.id, newId); didCreate = true;
           }
-        } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' anlegen ' + (o.name || o.id) + ': ' + diagErr(e)); }
+        } catch (e) { failed++; }
       }
     }
     for (const o of to) {
@@ -4807,22 +4800,20 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       if (f && objChanged(f, o)) {
         const patch = objPayload(o); patch.plcConfigId = o.plcConfigId || null;
         state.geomPending[o.id] = { points: (o.points || []).map((p) => ({ x: p.x, y: p.y })), ts: Date.now() };
-        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' ändern ' + (o.name || o.id) + ': ' + diagErr(e)); }
+        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; }
         if (JSON.stringify(f.metatags || []) !== JSON.stringify(o.metatags || [])) { try { await Api.setMetatags(o.id, o.metatags || []); } catch (e) { /* ignore */ } }
       }
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
     state.objRev = (state.objRev || 0) + 1;
-    diagLog('ENDE ', '#' + _op + ' fertig' + (failed ? (' (' + failed + ' Fehler)') : ''));
     if (failed) {
-      diagLog('FEHLER', '#' + _op + ' — ' + failed + ' Server-Aufruf(e) fehlgeschlagen, gleiche Anzeige mit dem Server ab');
       // Sonst zeigt der Editor einen Stand, den der Server nicht hat (verschwundene Objekte kommen
       // beim naechsten Laden zurueck = die gemeldeten "Reste").
       try {
         const fresh = await Api.getObjects(state.detail.id);
-        if (Array.isArray(fresh)) { state.detail.objects = fresh; renderEditor(); diagLog('SYNC ', 'Serverstand geladen: ' + fresh.length + ' Objekte'); }
-      } catch (e) { diagLog('FEHLER', 'Abgleich fehlgeschlagen: ' + diagErr(e)); }
+        if (Array.isArray(fresh)) { state.detail.objects = fresh; renderEditor(); }
+      } catch (e) { /* Abgleich nicht moeglich - beim naechsten Laden korrekt */ }
       toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed }));
     }
   }
@@ -4839,7 +4830,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // Leerlauf-Schritte verwerfen: Schnappschuesse, die nichts aendern (z.B. weil die zugehoerige
   // Aktion fehlschlug), fuehlten sich wie ein Sprung an - Strg+Z tat scheinbar nichts.
   function nextDifferent(stack, curr) {
-    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; diagLog('SKIP ', 'Leerlauf-Schritt verworfen'); }
+    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; }
     return null;
   }
   async function doUndo() {
@@ -4847,9 +4838,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     state.undoBusy = true; updateUndoBtns();
     try {
       const curr = snapObjects();
-      diagLog('UNDO ', 'Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', aktuell ' + curr.length + ' Objekte');
       const target = nextDifferent(state.undoStack, curr);
-      if (!target) { diagLog('UNDO ', 'nichts anzuwenden'); return; }
+      if (!target) return;
       (state.redoStack = state.redoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }
@@ -4859,9 +4849,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     state.undoBusy = true; updateUndoBtns();
     try {
       const curr = snapObjects();
-      diagLog('REDO ', 'Stapel u=' + ((state.undoStack || []).length) + ' r=' + state.redoStack.length + ', aktuell ' + curr.length + ' Objekte');
       const target = nextDifferent(state.redoStack, curr);
-      if (!target) { diagLog('REDO ', 'nichts anzuwenden'); return; }
+      if (!target) return;
       (state.undoStack = state.undoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }
@@ -4908,98 +4897,6 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedZone && !inField) {
       e.preventDefault(); deleteSelectedZone();
     }
-  }
-
-  /* ============ TEMPORAERE Diagnose fuer Undo/Redo ============
-     Aktivierung: einmal mit ?diag=1 aufrufen (bleibt fuer den Tab aktiv),
-     Abschalten:  mit ?diag=0 aufrufen oder Tab schliessen.
-     Nach der Fehlersuche ersatzlos entfernbar (diese Datei + die diagLog-Aufrufe). */
-  const DIAG = (function () {
-    try {
-      if (/[?&]diag=1/.test(location.search)) sessionStorage.setItem('pmx_diag', '1');
-      if (/[?&]diag=0/.test(location.search)) sessionStorage.removeItem('pmx_diag');
-      return sessionStorage.getItem('pmx_diag') === '1';
-    } catch (e) { return /[?&]diag=1/.test(location.search); }
-  })();
-  const _diagLines = [];
-
-  // Ermittelt den ausloesenden Funktionsnamen aus dem Aufruf-Stapel (keine Aenderung an den Aufrufstellen noetig).
-  function diagCaller() {
-    try {
-      const st = String((new Error()).stack || '').split('\n');
-      const names = [];
-      for (let i = 2; i < st.length && names.length < 2; i++) {
-        const m = /at ([A-Za-z_$][\w$]*)/.exec(st[i]);
-        if (m && !/^(diag|pushUndo|pushUndoSnap|Object)/i.test(m[1])) names.push(m[1]);
-      }
-      if (names.length) return names.join(' ← ');
-    } catch (e) { /* egal */ }
-    return '?';
-  }
-
-  function diagLog(kind, text) {
-    if (!DIAG) return;
-    const d = new Date();
-    const ts = d.toLocaleTimeString('de-DE', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
-    _diagLines.push(ts + '  ' + kind + '  ' + text);
-    if (_diagLines.length > 300) _diagLines.shift();
-    renderDiag();
-  }
-
-  function diagNames(list) {
-    const n = (list || []).map(function (o) { return (o.name || o.id || '?'); });
-    return n.length ? n.join(', ') : '–';
-  }
-
-  // Welche Felder unterscheiden sich zwischen zwei Staenden desselben Objekts?
-  function diagDiff(a, b) {
-    const f = [];
-    const c = function (k, x, y) { if (x !== y) f.push(k); };
-    const v = function (k, x, y) { if (String(x) !== String(y)) f.push(k + '(' + x + '→' + y + ')'); };
-    v('sichtbar', a.visible, b.visible);
-    c('name', a.name, b.name); c('farbe', a.color, b.color); c('ebene', a.layerId, b.layerId);
-    const r6 = function (v) { return Math.round((Number(v) || 0) * 1e6) / 1e6; };
-    c('typ', a.symbolType, b.symbolType); c('x', r6(a.x), r6(b.x)); c('y', r6(a.y), r6(b.y));
-    c('drehung', a.rotation || 0, b.rotation || 0);
-    c('größe', a.scale == null ? 1 : a.scale, b.scale == null ? 1 : b.scale);
-    c('sps', a.plcConfigId || '', b.plcConfigId || '');
-    if (JSON.stringify(a.points || null) !== JSON.stringify(b.points || null)) f.push('punkte');
-    if (JSON.stringify(a.metatags || []) !== JSON.stringify(b.metatags || [])) f.push('tags');
-    return f.length ? f.join('+') : '?';
-  }
-  function diagErr(e) {
-    if (!e) return 'unbekannt';
-    return (e.status ? e.status + ' ' : '') + (e.message || String(e));
-  }
-  function renderDiag() {
-    if (!DIAG) return;
-    let box = document.getElementById('diagBox');
-    if (!box) {
-      box = document.createElement('div');
-      box.id = 'diagBox';
-      box.className = 'diag-box';
-      const head = document.createElement('div');
-      head.className = 'diag-head';
-      head.appendChild(document.createTextNode('Undo/Redo-Diagnose'));
-      const bCopy = document.createElement('button'); bCopy.textContent = 'kopieren';
-      const bClear = document.createElement('button'); bClear.textContent = 'leeren';
-      const bHide = document.createElement('button'); bHide.textContent = '–';
-      head.appendChild(bCopy); head.appendChild(bClear); head.appendChild(bHide);
-      const pre = document.createElement('pre'); pre.id = 'diagPre';
-      box.appendChild(head); box.appendChild(pre);
-      document.body.appendChild(box);
-      bCopy.addEventListener('click', function () {
-        const txt = _diagLines.join('\n');
-        try {
-          if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt); toast('Diagnose kopiert'); return; }
-        } catch (e) { /* Fallback unten */ }
-        window.prompt('Diagnose (kopieren mit Strg+C):', txt);
-      });
-      bClear.addEventListener('click', function () { _diagLines.length = 0; renderDiag(); });
-      bHide.addEventListener('click', function () { box.classList.toggle('mini'); });
-    }
-    const pre = document.getElementById('diagPre');
-    if (pre) { pre.textContent = _diagLines.slice(-60).join('\n'); pre.scrollTop = pre.scrollHeight; }
   }
 
   /* ================= Benutzerverwaltung (admin) ================= */

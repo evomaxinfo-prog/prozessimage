@@ -8,7 +8,6 @@
     state.undoStack = state.undoStack || []; state.redoStack = state.redoStack || [];
     state.undoStack.push(snap);
     state.objRev = (state.objRev || 0) + 1; // Stand-Zaehler: entwertet noch laufende Abgleiche
-    diagLog('SNAP ', diagCaller() + ' — Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', Objekte=' + snap.length);
     if (state.undoStack.length > 60) state.undoStack.shift();
     state.redoStack = [];
     updateUndoBtns();
@@ -34,21 +33,15 @@
     if (state.geomPending && state.geomPending[oldId]) { state.geomPending[newId] = state.geomPending[oldId]; delete state.geomPending[oldId]; }
   }
   // Serverzustand von "from" nach "to" ueberfuehren (Loeschen/Anlegen/Aendern), IDs neu angelegter Objekte uebernehmen.
-  let _opSeq = 0;
   async function applyObjectsState(from, to) {
     state.detail.objects = to; renderEditor();
-    const _op = ++_opSeq; // Vorgangsnummer: macht ueberlappende Vorgaenge im Protokoll sichtbar
     state.objRev = (state.objRev || 0) + 1;
     let failed = 0;
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
-    const _chg = to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); });
-    diagLog('APPLY', '#' + _op + ' löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
-      + '] anlegen=[' + diagNames(to.filter(function (o) { return !fromById[o.id]; }))
-      + '] ändern=[' + (_chg.length ? _chg.map(function (o) { return (o.name || o.id) + '(' + diagDiff(fromById[o.id], o) + ')'; }).join(', ') : '–') + ']');
     let didCreate = false;
-    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' löschen ' + (o.name || o.id) + ': ' + diagErr(e)); } } }
+    for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; } } }
     for (const o of to) {
       if (!fromById[o.id]) {
         try {
@@ -61,11 +54,11 @@
             if (o.plcConfigId) { after.plcConfigId = o.plcConfigId; after.color = o.color; }
             if (o.scale != null && o.scale !== 1) after.scale = o.scale;
             if (o.visible === false) after.visible = false;
-            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' nachziehen ' + (o.name || newId) + ': ' + diagErr(e)); } }
+            if (Object.keys(after).length) { try { await Api.updateObject(newId, after); } catch (e) { failed++; } }
             if (o.metatags && o.metatags.length) { try { await Api.setMetatags(newId, o.metatags); } catch (e) { /* ignore */ } }
             remapId(o.id, newId); didCreate = true;
           }
-        } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' anlegen ' + (o.name || o.id) + ': ' + diagErr(e)); }
+        } catch (e) { failed++; }
       }
     }
     for (const o of to) {
@@ -73,22 +66,20 @@
       if (f && objChanged(f, o)) {
         const patch = objPayload(o); patch.plcConfigId = o.plcConfigId || null;
         state.geomPending[o.id] = { points: (o.points || []).map((p) => ({ x: p.x, y: p.y })), ts: Date.now() };
-        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; diagLog('FEHLER', '#' + _op + ' ändern ' + (o.name || o.id) + ': ' + diagErr(e)); }
+        try { await Api.updateObject(o.id, patch); } catch (e) { failed++; }
         if (JSON.stringify(f.metatags || []) !== JSON.stringify(o.metatags || [])) { try { await Api.setMetatags(o.id, o.metatags || []); } catch (e) { /* ignore */ } }
       }
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
     state.objRev = (state.objRev || 0) + 1;
-    diagLog('ENDE ', '#' + _op + ' fertig' + (failed ? (' (' + failed + ' Fehler)') : ''));
     if (failed) {
-      diagLog('FEHLER', '#' + _op + ' — ' + failed + ' Server-Aufruf(e) fehlgeschlagen, gleiche Anzeige mit dem Server ab');
       // Sonst zeigt der Editor einen Stand, den der Server nicht hat (verschwundene Objekte kommen
       // beim naechsten Laden zurueck = die gemeldeten "Reste").
       try {
         const fresh = await Api.getObjects(state.detail.id);
-        if (Array.isArray(fresh)) { state.detail.objects = fresh; renderEditor(); diagLog('SYNC ', 'Serverstand geladen: ' + fresh.length + ' Objekte'); }
-      } catch (e) { diagLog('FEHLER', 'Abgleich fehlgeschlagen: ' + diagErr(e)); }
+        if (Array.isArray(fresh)) { state.detail.objects = fresh; renderEditor(); }
+      } catch (e) { /* Abgleich nicht moeglich - beim naechsten Laden korrekt */ }
       toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed }));
     }
   }
@@ -105,7 +96,7 @@
   // Leerlauf-Schritte verwerfen: Schnappschuesse, die nichts aendern (z.B. weil die zugehoerige
   // Aktion fehlschlug), fuehlten sich wie ein Sprung an - Strg+Z tat scheinbar nichts.
   function nextDifferent(stack, curr) {
-    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; diagLog('SKIP ', 'Leerlauf-Schritt verworfen'); }
+    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; }
     return null;
   }
   async function doUndo() {
@@ -113,9 +104,8 @@
     state.undoBusy = true; updateUndoBtns();
     try {
       const curr = snapObjects();
-      diagLog('UNDO ', 'Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', aktuell ' + curr.length + ' Objekte');
       const target = nextDifferent(state.undoStack, curr);
-      if (!target) { diagLog('UNDO ', 'nichts anzuwenden'); return; }
+      if (!target) return;
       (state.redoStack = state.redoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }
@@ -125,9 +115,8 @@
     state.undoBusy = true; updateUndoBtns();
     try {
       const curr = snapObjects();
-      diagLog('REDO ', 'Stapel u=' + ((state.undoStack || []).length) + ' r=' + state.redoStack.length + ', aktuell ' + curr.length + ' Objekte');
       const target = nextDifferent(state.redoStack, curr);
-      if (!target) { diagLog('REDO ', 'nichts anzuwenden'); return; }
+      if (!target) return;
       (state.undoStack = state.undoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }
