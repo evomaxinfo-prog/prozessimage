@@ -7,6 +7,7 @@
   function pushUndoSnap(snap) {
     state.undoStack = state.undoStack || []; state.redoStack = state.redoStack || [];
     state.undoStack.push(snap);
+    diagLog('SNAP ', diagCaller() + ' — Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', Objekte=' + snap.length);
     if (state.undoStack.length > 60) state.undoStack.shift();
     state.redoStack = [];
     updateUndoBtns();
@@ -38,6 +39,9 @@
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
+    diagLog('APPLY', 'löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
+      + '] anlegen=[' + diagNames(to.filter(function (o) { return !fromById[o.id]; }))
+      + '] ändern=[' + diagNames(to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); })) + ']');
     let didCreate = false;
     for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; } } }
     for (const o of to) {
@@ -70,7 +74,7 @@
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
-    if (failed) toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed }));
+    if (failed) { diagLog('FEHLER', failed + ' Server-Aufruf(e) fehlgeschlagen'); toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed })); }
   }
   // Wiedereintritt sperren: ein zweites Strg+Z waehrend der noch laufenden Uebertragung
   // wuerde einen halb angewandten Zwischenstand als Schnappschuss ablegen und die Server-
@@ -85,7 +89,7 @@
   // Leerlauf-Schritte verwerfen: Schnappschuesse, die nichts aendern (z.B. weil die zugehoerige
   // Aktion fehlschlug), fuehlten sich wie ein Sprung an - Strg+Z tat scheinbar nichts.
   function nextDifferent(stack, curr) {
-    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; }
+    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; diagLog('SKIP ', 'Leerlauf-Schritt verworfen'); }
     return null;
   }
   async function doUndo() {
@@ -93,8 +97,9 @@
     state.undoBusy = true; updateUndoBtns();
     try {
       const curr = snapObjects();
+      diagLog('UNDO ', 'Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', aktuell ' + curr.length + ' Objekte');
       const target = nextDifferent(state.undoStack, curr);
-      if (!target) return;
+      if (!target) { diagLog('UNDO ', 'nichts anzuwenden'); return; }
       (state.redoStack = state.redoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }
@@ -104,8 +109,9 @@
     state.undoBusy = true; updateUndoBtns();
     try {
       const curr = snapObjects();
+      diagLog('REDO ', 'Stapel u=' + ((state.undoStack || []).length) + ' r=' + state.redoStack.length + ', aktuell ' + curr.length + ' Objekte');
       const target = nextDifferent(state.redoStack, curr);
-      if (!target) return;
+      if (!target) { diagLog('REDO ', 'nichts anzuwenden'); return; }
       (state.undoStack = state.undoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }

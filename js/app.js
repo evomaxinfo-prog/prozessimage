@@ -2956,7 +2956,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.27'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.28'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3884,7 +3884,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.27';
+      sc.src = 'js/html2canvas.min.js?v=1.2.28';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4725,6 +4725,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   function pushUndoSnap(snap) {
     state.undoStack = state.undoStack || []; state.redoStack = state.redoStack || [];
     state.undoStack.push(snap);
+    diagLog('SNAP ', diagCaller() + ' — Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', Objekte=' + snap.length);
     if (state.undoStack.length > 60) state.undoStack.shift();
     state.redoStack = [];
     updateUndoBtns();
@@ -4756,6 +4757,9 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     const fromById = {}, toById = {};
     from.forEach((o) => { fromById[o.id] = o; }); to.forEach((o) => { toById[o.id] = o; });
     const sid = state.detail.id;
+    diagLog('APPLY', 'löschen=[' + diagNames(from.filter(function (o) { return !toById[o.id]; }))
+      + '] anlegen=[' + diagNames(to.filter(function (o) { return !fromById[o.id]; }))
+      + '] ändern=[' + diagNames(to.filter(function (o) { return fromById[o.id] && objChanged(fromById[o.id], o); })) + ']');
     let didCreate = false;
     for (const o of from) { if (!toById[o.id]) { try { await Api.deleteObject(o.id); } catch (e) { failed++; } } }
     for (const o of to) {
@@ -4788,7 +4792,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     }
     // Nur neu rendern, wenn sich IDs geaendert haben (Neuanlage) – sonst flackert das Layout unnoetig.
     if (didCreate) renderEditor(); else updateUndoBtns();
-    if (failed) toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed }));
+    if (failed) { diagLog('FEHLER', failed + ' Server-Aufruf(e) fehlgeschlagen'); toast(t('{n} Änderungen konnten nicht gespeichert werden', { n: failed })); }
   }
   // Wiedereintritt sperren: ein zweites Strg+Z waehrend der noch laufenden Uebertragung
   // wuerde einen halb angewandten Zwischenstand als Schnappschuss ablegen und die Server-
@@ -4803,7 +4807,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // Leerlauf-Schritte verwerfen: Schnappschuesse, die nichts aendern (z.B. weil die zugehoerige
   // Aktion fehlschlug), fuehlten sich wie ein Sprung an - Strg+Z tat scheinbar nichts.
   function nextDifferent(stack, curr) {
-    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; }
+    while (stack.length) { const cand = stack.pop(); if (!sameObjectsState(curr, cand)) return cand; diagLog('SKIP ', 'Leerlauf-Schritt verworfen'); }
     return null;
   }
   async function doUndo() {
@@ -4811,8 +4815,9 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     state.undoBusy = true; updateUndoBtns();
     try {
       const curr = snapObjects();
+      diagLog('UNDO ', 'Stapel u=' + state.undoStack.length + ' r=' + ((state.redoStack || []).length) + ', aktuell ' + curr.length + ' Objekte');
       const target = nextDifferent(state.undoStack, curr);
-      if (!target) return;
+      if (!target) { diagLog('UNDO ', 'nichts anzuwenden'); return; }
       (state.redoStack = state.redoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }
@@ -4822,8 +4827,9 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     state.undoBusy = true; updateUndoBtns();
     try {
       const curr = snapObjects();
+      diagLog('REDO ', 'Stapel u=' + ((state.undoStack || []).length) + ' r=' + state.redoStack.length + ', aktuell ' + curr.length + ' Objekte');
       const target = nextDifferent(state.redoStack, curr);
-      if (!target) return;
+      if (!target) { diagLog('REDO ', 'nichts anzuwenden'); return; }
       (state.undoStack = state.undoStack || []).push(curr);
       await applyObjectsState(curr, target);
     } finally { state.undoBusy = false; updateUndoBtns(); }
@@ -4870,6 +4876,76 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedZone && !inField) {
       e.preventDefault(); deleteSelectedZone();
     }
+  }
+
+  /* ============ TEMPORAERE Diagnose fuer Undo/Redo ============
+     Aktivierung: einmal mit ?diag=1 aufrufen (bleibt fuer den Tab aktiv),
+     Abschalten:  mit ?diag=0 aufrufen oder Tab schliessen.
+     Nach der Fehlersuche ersatzlos entfernbar (diese Datei + die diagLog-Aufrufe). */
+  const DIAG = (function () {
+    try {
+      if (/[?&]diag=1/.test(location.search)) sessionStorage.setItem('pmx_diag', '1');
+      if (/[?&]diag=0/.test(location.search)) sessionStorage.removeItem('pmx_diag');
+      return sessionStorage.getItem('pmx_diag') === '1';
+    } catch (e) { return /[?&]diag=1/.test(location.search); }
+  })();
+  const _diagLines = [];
+
+  // Ermittelt den ausloesenden Funktionsnamen aus dem Aufruf-Stapel (keine Aenderung an den Aufrufstellen noetig).
+  function diagCaller() {
+    try {
+      const st = String((new Error()).stack || '').split('\n');
+      for (let i = 2; i < st.length; i++) {
+        const m = /at ([A-Za-z_$][\w$]*)/.exec(st[i]);
+        if (m && !/^(diag|pushUndo|pushUndoSnap|Object)/i.test(m[1])) return m[1];
+      }
+    } catch (e) { /* egal */ }
+    return '?';
+  }
+
+  function diagLog(kind, text) {
+    if (!DIAG) return;
+    const d = new Date();
+    const ts = d.toLocaleTimeString('de-DE', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+    _diagLines.push(ts + '  ' + kind + '  ' + text);
+    if (_diagLines.length > 300) _diagLines.shift();
+    renderDiag();
+  }
+
+  function diagNames(list) {
+    const n = (list || []).map(function (o) { return (o.name || o.id || '?'); });
+    return n.length ? n.join(', ') : '–';
+  }
+
+  function renderDiag() {
+    if (!DIAG) return;
+    let box = document.getElementById('diagBox');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'diagBox';
+      box.className = 'diag-box';
+      const head = document.createElement('div');
+      head.className = 'diag-head';
+      head.appendChild(document.createTextNode('Undo/Redo-Diagnose'));
+      const bCopy = document.createElement('button'); bCopy.textContent = 'kopieren';
+      const bClear = document.createElement('button'); bClear.textContent = 'leeren';
+      const bHide = document.createElement('button'); bHide.textContent = '–';
+      head.appendChild(bCopy); head.appendChild(bClear); head.appendChild(bHide);
+      const pre = document.createElement('pre'); pre.id = 'diagPre';
+      box.appendChild(head); box.appendChild(pre);
+      document.body.appendChild(box);
+      bCopy.addEventListener('click', function () {
+        const txt = _diagLines.join('\n');
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt); toast('Diagnose kopiert'); return; }
+        } catch (e) { /* Fallback unten */ }
+        window.prompt('Diagnose (kopieren mit Strg+C):', txt);
+      });
+      bClear.addEventListener('click', function () { _diagLines.length = 0; renderDiag(); });
+      bHide.addEventListener('click', function () { box.classList.toggle('mini'); });
+    }
+    const pre = document.getElementById('diagPre');
+    if (pre) { pre.textContent = _diagLines.slice(-60).join('\n'); pre.scrollTop = pre.scrollHeight; }
   }
 
   /* ================= Benutzerverwaltung (admin) ================= */
