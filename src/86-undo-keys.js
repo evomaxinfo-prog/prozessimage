@@ -17,6 +17,18 @@
   // genommen, das neue Objekt aber erst DANACH in den Zustand aufgenommen. Ohne Schlange
   // schnappt eine zweite, schnell folgende Aktion denselben Ausgangszustand - beide Objekte
   // landen dann in EINEM Undo-Schritt. Mit Schlange wartet sie, bis die vorige fertig ist.
+  // Noch unbestaetigte Anlagen (optimistisches Platzieren). Undo/Redo wartet kurz darauf,
+  // sonst wuerde es versuchen, ein Objekt mit vorlaeufiger ID auf dem Server zu loeschen -
+  // und die parallel laufende Anlage haette danach eine Karteileiche hinterlassen.
+  let _pendingOps = [];
+  function trackPendingOp() {
+    let done; const p = new Promise(function (r) { done = r; });
+    _pendingOps.push(p);
+    const fin = function () { _pendingOps = _pendingOps.filter(function (x) { return x !== p; }); };
+    p.then(fin, fin);
+    return done;
+  }
+  function settlePendingOps() { return _pendingOps.length ? Promise.allSettled(_pendingOps.slice()) : Promise.resolve(); }
   let _mutChain = Promise.resolve();
   function withMutationLock(fn) {
     const run = _mutChain.then(fn, fn);
@@ -103,6 +115,7 @@
     if (state.undoBusy || !(state.undoStack && state.undoStack.length)) return;
     state.undoBusy = true; updateUndoBtns();
     try {
+      await settlePendingOps(); // erst offene Anlagen abwarten, dann den Stand nehmen
       const curr = snapObjects();
       const target = nextDifferent(state.undoStack, curr);
       if (!target) return;
@@ -114,6 +127,7 @@
     if (state.undoBusy || !(state.redoStack && state.redoStack.length)) return;
     state.undoBusy = true; updateUndoBtns();
     try {
+      await settlePendingOps();
       const curr = snapObjects();
       const target = nextDifferent(state.redoStack, curr);
       if (!target) return;

@@ -22,12 +22,16 @@
     state.detail.objects.push(local);
     protectObj(tmpId); // schuetzt das noch unbestaetigte Objekt vor dem Abgleich
     renderEditor();
+    const finishPending = trackPendingOp(); // Undo/Redo wartet, bis das Anlegen durch ist
     try {
       const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: local.name, symbolType: sym, color: local.color, x, y });
       obj.metatags = obj.metatags || [];
       remapId(tmpId, obj.id); protectObj(obj.id); // vorlaeufige ID ueberall durch die echte ersetzen
-      const cur = (state.detail.objects || []).find((o) => o.id === obj.id);
-      if (cur) Object.assign(cur, obj);
+      let cur = (state.detail.objects || []).find((o) => o.id === obj.id);
+      // Dauerte das Anlegen laenger als der Schutz (6 s), hat der Abgleich das vorlaeufige
+      // Objekt inzwischen weggeraeumt - dann den bestaetigten Stand wieder aufnehmen.
+      if (!cur) { cur = Object.assign({}, obj); state.detail.objects.push(cur); }
+      else Object.assign(cur, obj);
       const pt = processTypeByName(name);
       if (pt) {
         try {
@@ -56,7 +60,7 @@
       state.detail.objects = (state.detail.objects || []).filter((o) => o.id !== tmpId);
       renderEditor();
       toast('Platzieren fehlgeschlagen: ' + e.message);
-    }
+    } finally { finishPending(); }
   }
 
   let dragMove = null;

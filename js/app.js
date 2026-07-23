@@ -2972,7 +2972,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.34'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.35'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -3186,12 +3186,16 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     state.detail.objects.push(local);
     protectObj(tmpId); // schuetzt das noch unbestaetigte Objekt vor dem Abgleich
     renderEditor();
+    const finishPending = trackPendingOp(); // Undo/Redo wartet, bis das Anlegen durch ist
     try {
       const obj = await Api.createObject(state.detail.id, { layerId: L.id, name: local.name, symbolType: sym, color: local.color, x, y });
       obj.metatags = obj.metatags || [];
       remapId(tmpId, obj.id); protectObj(obj.id); // vorlaeufige ID ueberall durch die echte ersetzen
-      const cur = (state.detail.objects || []).find((o) => o.id === obj.id);
-      if (cur) Object.assign(cur, obj);
+      let cur = (state.detail.objects || []).find((o) => o.id === obj.id);
+      // Dauerte das Anlegen laenger als der Schutz (6 s), hat der Abgleich das vorlaeufige
+      // Objekt inzwischen weggeraeumt - dann den bestaetigten Stand wieder aufnehmen.
+      if (!cur) { cur = Object.assign({}, obj); state.detail.objects.push(cur); }
+      else Object.assign(cur, obj);
       const pt = processTypeByName(name);
       if (pt) {
         try {
@@ -3220,7 +3224,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       state.detail.objects = (state.detail.objects || []).filter((o) => o.id !== tmpId);
       renderEditor();
       toast('Platzieren fehlgeschlagen: ' + e.message);
-    }
+    } finally { finishPending(); }
   }
 
   let dragMove = null;
@@ -3920,7 +3924,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.34';
+      sc.src = 'js/html2canvas.min.js?v=1.2.35';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4771,6 +4775,18 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
   // genommen, das neue Objekt aber erst DANACH in den Zustand aufgenommen. Ohne Schlange
   // schnappt eine zweite, schnell folgende Aktion denselben Ausgangszustand - beide Objekte
   // landen dann in EINEM Undo-Schritt. Mit Schlange wartet sie, bis die vorige fertig ist.
+  // Noch unbestaetigte Anlagen (optimistisches Platzieren). Undo/Redo wartet kurz darauf,
+  // sonst wuerde es versuchen, ein Objekt mit vorlaeufiger ID auf dem Server zu loeschen -
+  // und die parallel laufende Anlage haette danach eine Karteileiche hinterlassen.
+  let _pendingOps = [];
+  function trackPendingOp() {
+    let done; const p = new Promise(function (r) { done = r; });
+    _pendingOps.push(p);
+    const fin = function () { _pendingOps = _pendingOps.filter(function (x) { return x !== p; }); };
+    p.then(fin, fin);
+    return done;
+  }
+  function settlePendingOps() { return _pendingOps.length ? Promise.allSettled(_pendingOps.slice()) : Promise.resolve(); }
   let _mutChain = Promise.resolve();
   function withMutationLock(fn) {
     const run = _mutChain.then(fn, fn);
@@ -4857,6 +4873,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (state.undoBusy || !(state.undoStack && state.undoStack.length)) return;
     state.undoBusy = true; updateUndoBtns();
     try {
+      await settlePendingOps(); // erst offene Anlagen abwarten, dann den Stand nehmen
       const curr = snapObjects();
       const target = nextDifferent(state.undoStack, curr);
       if (!target) return;
@@ -4868,6 +4885,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (state.undoBusy || !(state.redoStack && state.redoStack.length)) return;
     state.undoBusy = true; updateUndoBtns();
     try {
+      await settlePendingOps();
       const curr = snapObjects();
       const target = nextDifferent(state.redoStack, curr);
       if (!target) return;
