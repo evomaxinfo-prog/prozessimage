@@ -73,9 +73,22 @@
     state.customBlobs = used; state.customSyms = next; state.customWerkId = werkId;
   }
   // Symbol-Inhalt: eigenes Bild (custom:) oder Standard-SVG.
+  let _symSeq = 0; // eindeutige Masken-IDs je gezeichnetem Roboter-Symbol
   function symInner(symbolType, px) {
     const c = state.customSyms && state.customSyms[symbolType];
     if (c) return c.url ? '<img class="sym-img" draggable="false" src="' + esc(c.url) + '" alt="" style="width:' + px + 'px;height:' + px + 'px">' : '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + SYM.box + '</svg>';
+    if (symbolType === 'robot') {
+      // Der Roboter ist ein eingefaerbtes Rechteck, das erst durch eine Bildmaske sichtbar wird.
+      // Lag die Maske in einem separaten (versteckten) SVG, zog der Browser die CSS-Drehung nicht
+      // mit - das Symbol blieb als einziges ungedreht stehen. Deshalb bekommt jede Instanz ihre
+      // eigene Maske IM selben SVG; die ID enthaelt weiter "robotMask", damit der PDF-Export sie findet.
+      const rid = 'robotMask-' + (++_symSeq);
+      return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">'
+        + '<defs><mask id="' + rid + '" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">'
+        + '<image href="img/robot-mask.png?v=1.2.54" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>'
+        + '</mask></defs>'
+        + '<rect x="0" y="0" width="24" height="24" fill="currentColor" mask="url(#' + rid + ')"/></svg>';
+    }
     return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 24 24">' + (SYM[symbolType] || SYM.box) + '</svg>';
   }
   // Feld-Konfiguration eines eigenen Symbols (Überschrift + Typ text/select + Optionen).
