@@ -273,7 +273,7 @@
       return '<button class="btn chg-day' + (d === _chgDays ? ' active' : '') + '" data-act="chg-days" data-days="' + d + '">' + d + ' ' + t('Tage') + '</button>';
     }).join('');
     $('content').innerHTML = '<div class="pad">'
-      + '<div class="ls-section-title">' + t('Änderungen aller Werke') + ' <span>' + t('nach Tagen gruppiert, neueste zuerst') + '</span></div>'
+      + '<div class="ls-section-title">' + t('Änderungen aller Werke') + ' <span>' + t('werksübergreifende Übersicht') + '</span></div>'
       + '<div class="chg-filter">' + filter + '</div>'
       + '<div id="chgBody"><div class="pad" style="color:var(--muted)">' + t('lädt …') + '</div></div></div>';
     try {
@@ -289,6 +289,17 @@
     const rows = (data && data.changes) || [];
     const letzte = (data && data.stations) || [];
     let html = '';
+    // "Zuletzt bearbeitet" steht oben: lueckenlos und damit der schnellste Ueberblick.
+    if (letzte.length) {
+      const body = chgSortiere(letzte, _lastSort, FELDER_LAST).map(function (s) {
+        return '<tr><td class="chg-path">' + chgPfadHtml(s) + '</td>'
+          + '<td style="white-space:nowrap">' + fmtDateTime(s.letzteAenderung) + '</td>'
+          + '<td>' + esc(s.letzterBearbeiter || '–') + '</td></tr>';
+      }).join('');
+      html += '<div class="ls-section-title">' + t('Zuletzt bearbeitet') + ' <span>' + t('jede Layout-Änderung, unabhängig vom Journal') + '</span></div>'
+        + '<div class="ls-scroll"><table class="ls-tbl chg-tbl2"><thead><tr>' + thSort('last', 'pfad', t('Werk / Anlage')) + thSort('last', 'zeit', t('Letzte Änderung')) + thSort('last', 'autor', t('Von wem')) + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    }
+    html += '<div class="ls-section-title" style="margin-top:24px">' + t('Protokollierte Änderungen') + ' <span>' + t('nach Tagen gruppiert, neueste zuerst') + '</span></div>';
     if (!rows.length) {
       html += '<div class="pad" style="color:var(--muted)">' + t('Keine protokollierten Änderungen im gewählten Zeitraum.') + '</div>';
     } else {
@@ -310,15 +321,6 @@
         return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + t(list.length === 1 ? '{n} Eintrag' : '{n} Einträge', { n: list.length }) + '</span></div>'
           + '<div class="ls-scroll"><table class="ls-tbl chg-tbl"><thead><tr>' + thSort('chg', 'pfad', t('Werk / Anlage')) + thSort('chg', 'text', t('Art der Änderung')) + thSort('chg', 'zeit', t('Uhrzeit')) + thSort('chg', 'autor', t('Von wem')) + '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
       }).join('');
-    }
-    if (letzte.length) {
-      const body = chgSortiere(letzte, _lastSort, FELDER_LAST).map(function (s) {
-        return '<tr><td class="chg-path">' + chgPfadHtml(s) + '</td>'
-          + '<td style="white-space:nowrap">' + fmtDateTime(s.letzteAenderung) + '</td>'
-          + '<td>' + esc(s.letzterBearbeiter || '–') + '</td></tr>';
-      }).join('');
-      html += '<div class="ls-section-title" style="margin-top:22px">' + t('Zuletzt bearbeitet') + ' <span>' + t('jede Layout-Änderung, unabhängig vom Journal') + '</span></div>'
-        + '<div class="ls-scroll"><table class="ls-tbl chg-tbl2"><thead><tr>' + thSort('last', 'pfad', t('Werk / Anlage')) + thSort('last', 'zeit', t('Letzte Änderung')) + thSort('last', 'autor', t('Von wem')) + '</tr></thead><tbody>' + body + '</tbody></table></div>';
     }
     return html;
   }
