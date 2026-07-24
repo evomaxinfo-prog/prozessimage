@@ -190,6 +190,7 @@
   function applyRoleUi() {
     $('btnAdmin').style.display = state.isAdmin ? '' : 'none';
     const add = $('btnAddWerk'); if (add) add.style.display = state.isAdmin ? '' : 'none';
+    const chg = $('btnChanges'); if (chg) chg.hidden = !state.isAdmin; // zentrale Änderungsansicht
   }
 
   function enterApp(ctx) {

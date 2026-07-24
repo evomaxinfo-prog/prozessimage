@@ -9,24 +9,24 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://api.prozessimage.de; connect-src 'self' https://api.prozessimage.de; form-action 'self'; upgrade-insecure-requests">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>ProModXgOEM2</title>
-<link rel="icon" href="img/favicon.ico?v=1.2.42" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png?v=1.2.42">
-<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png?v=1.2.42">
-<link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png?v=1.2.42">
-<link rel="stylesheet" href="css/app.css?v=1.2.42">
-<script defer src="js/api.js?v=1.2.42"></script>
-<script defer src="js/robotdetect.js?v=1.2.42"></script>
-<script defer src="js/qrcode.min.js?v=1.2.42"></script>
-<script defer src="js/utils.js?v=1.2.42"></script>
-<script defer src="js/data.js?v=1.2.42"></script>
-<script defer src="js/app.js?v=1.2.42"></script>
+<link rel="icon" href="img/favicon.ico?v=1.2.43" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png?v=1.2.43">
+<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png?v=1.2.43">
+<link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png?v=1.2.43">
+<link rel="stylesheet" href="css/app.css?v=1.2.43">
+<script defer src="js/api.js?v=1.2.43"></script>
+<script defer src="js/robotdetect.js?v=1.2.43"></script>
+<script defer src="js/qrcode.min.js?v=1.2.43"></script>
+<script defer src="js/utils.js?v=1.2.43"></script>
+<script defer src="js/data.js?v=1.2.43"></script>
+<script defer src="js/app.js?v=1.2.43"></script>
 </head>
 <body>
 
 <!-- Geteilte SVG-Maske: Roboter-Icon wird über die Maske mit currentColor (Ebenenfarbe) eingefärbt -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <mask id="robotMask" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-    <image href="img/robot-mask.png?v=1.2.42" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>
+    <image href="img/robot-mask.png?v=1.2.43" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>
   </mask>
 </defs></svg>
 
@@ -35,7 +35,7 @@
   <div class="login-bg"></div>
   <div class="login-card">
     <div class="login-brand">
-      <img class="lb-logo" src="img/logo.png?v=1.2.42" alt="ProModXgOEM2">
+      <img class="lb-logo" src="img/logo.png?v=1.2.43" alt="ProModXgOEM2">
       <div>
         <div class="lb-sub">Anlagendokumentation · <span class="ver">V1.2</span></div>
       </div>
@@ -161,7 +161,7 @@
 <!-- ================= HEADER ================= -->
 <header>
   <div class="brand">
-    <img class="brand-logo" src="img/logo.png?v=1.2.42" alt="ProModXgOEM2">
+    <img class="brand-logo" src="img/logo.png?v=1.2.43" alt="ProModXgOEM2">
     <span class="ver">V1.2</span>
   </div>
   <div class="tenant"><span class="dot"></span><span id="tenantName">TEST</span></div>
@@ -188,6 +188,7 @@
   <aside class="tree">
     <div class="tree-head"><h2 data-i18n="Anlagenstruktur">Anlagenstruktur</h2>
       <div class="tree-head-actions">
+        <button id="btnChanges" data-act="open-changes" title="Änderungen aller Werke" data-i18n-title="Änderungen aller Werke" aria-label="Änderungen aller Werke" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8.5"/></svg></button>
         <button id="btnToggleAll" title="Alles auf-/zuklappen" data-i18n-title="Alles auf-/zuklappen" aria-label="Alles auf-/zuklappen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg></button>
         <button id="btnTreeCollapse" title="Baum einklappen" data-i18n-title="Baum einklappen" aria-label="Baum einklappen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/><path d="M16 9.5 13.5 12l2.5 2.5"/></svg></button>
       </div>
