@@ -4,6 +4,13 @@
   window.PMX = window.PMX || {};
   window.PMX.I18N_EN = {
     '{n} Änderungen konnten nicht gespeichert werden': '{n} changes could not be saved',
+    // Zentrale Aenderungsansicht
+    'Änderungen aller Werke': 'Changes across all plants',
+    'nach Tagen gruppiert, neueste zuerst': 'grouped by day, newest first',
+    'Tage': 'days', 'lädt …': 'loading …', 'Laden fehlgeschlagen': 'Loading failed',
+    'Keine protokollierten Änderungen im gewählten Zeitraum.': 'No logged changes in the selected period.',
+    'Werk / Anlage': 'Plant / station', 'Zuletzt bearbeitet': 'Recently edited',
+    'jede Layout-Änderung, unabhängig vom Journal': 'every layout change, independent of the journal',
     // Layout zuruecksetzen
     'Reset': 'Reset', 'Alle Objekte dieser Anlage löschen': 'Delete all objects of this station',
     'Layout ist bereits leer': 'Layout is already empty',

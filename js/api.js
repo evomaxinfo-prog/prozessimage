@@ -121,6 +121,7 @@
     // ---- Anlage / Stammdaten (ab Schritt 2) ----
     getStationFull(id) { return this.request('/stations/' + id + '/full'); },
     updateStation(id, patch) { return this.request('/stations/' + id, { method: 'PATCH', body: patch }); },
+    getChangesOverview(days) { return this.request('/journal?days=' + (days || 30)); },
     addJournal(stationId, text) { return this.request('/stations/' + stationId + '/journal', { method: 'POST', body: { text } }); },
     deleteJournal(entryId) { return this.request('/journal/' + entryId, { method: 'DELETE' }); },
     addPlc(stationId, plc) { return this.request('/stations/' + stationId + '/plcs', { method: 'POST', body: plc }); },

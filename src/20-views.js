@@ -13,6 +13,7 @@
       + '<img class="welcome-logo" src="img/logo.png?v=0.25.18" alt="ProModXgOEM2">'
       + '<h2>' + t('Anlage auswählen') + '</h2>'
       + '<p>Navigiere links durch die Struktur. Neue Knoten legst du mit dem +-Symbol an. Detailansicht und Editor folgen in den nächsten Schritten.</p>'
+      + (state.isAdmin ? '<button class="btn solid-dark" data-act="open-changes">' + t('Änderungen aller Werke') + '</button>' : '')
       + '</div></div>';
   }
 
@@ -225,6 +226,71 @@
       : t(ids.length === 1 ? '{n} Eintrag gelöscht' : '{n} Einträge gelöscht', { n: ids.length }));
     _linieTab = 'changes'; // nach dem Loeschen auf Tab 4 bleiben
     if (state.selected) selectNode(state.selected); // Ansicht frisch laden
+  }
+  /* ---- Zentrale Änderungsansicht über ALLE Werke (admin-only) ----
+     Holt die Daten über einen eigenen, serverseitig auf die sichtbaren Werke gefilterten
+     Endpunkt - nicht über die Stationsabfragen, die pro Anlage den kompletten Bestand laden. */
+  let _chgDays = 30;
+  async function openChangesOverview(days) {
+    if (days) _chgDays = days;
+    stopCollab();
+    state.view = 'changes'; state.selected = null; state.detail = null;
+    setStationUrl(null); renderTree();
+    const filter = [7, 30, 90].map(function (d) {
+      return '<button class="btn chg-day' + (d === _chgDays ? ' active' : '') + '" data-act="chg-days" data-days="' + d + '">' + d + ' ' + t('Tage') + '</button>';
+    }).join('');
+    $('content').innerHTML = '<div class="pad">'
+      + '<div class="ls-section-title">' + t('Änderungen aller Werke') + ' <span>' + t('nach Tagen gruppiert, neueste zuerst') + '</span></div>'
+      + '<div class="chg-filter">' + filter + '</div>'
+      + '<div id="chgBody"><div class="pad" style="color:var(--muted)">' + t('lädt …') + '</div></div></div>';
+    try {
+      const data = await Api.getChangesOverview(_chgDays);
+      if (state.view !== 'changes') return; // zwischenzeitlich weg-navigiert
+      $('chgBody').innerHTML = changesOverviewHtml(data);
+    } catch (e) {
+      const b = $('chgBody'); if (b) b.innerHTML = '<div class="pad" style="color:var(--muted)">' + t('Laden fehlgeschlagen') + '</div>';
+    }
+  }
+  function changesOverviewHtml(data) {
+    const rows = (data && data.changes) || [];
+    const letzte = (data && data.stations) || [];
+    let html = '';
+    if (!rows.length) {
+      html += '<div class="pad" style="color:var(--muted)">' + t('Keine protokollierten Änderungen im gewählten Zeitraum.') + '</div>';
+    } else {
+      const order = [], byDay = {};
+      rows.forEach(function (r) {
+        const k = fmtDate(r.createdAt);
+        if (!byDay[k]) { byDay[k] = []; order.push(k); }
+        byDay[k].push(r);
+      });
+      html += order.map(function (day) {
+        const list = byDay[day];
+        const body = list.map(function (r) {
+          return '<tr><td><a href="#" class="chg-link" data-act="goto-node" data-id="' + esc(r.nodeId) + '">' + esc(r.pfad || r.anlage) + '</a></td>'
+            + '<td>' + esc(r.text || '–') + '</td>'
+            + '<td style="white-space:nowrap">' + fmtTimeShort(r.createdAt) + '</td>'
+            + '<td>' + esc(r.author || '–') + '</td></tr>';
+        }).join('');
+        return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + t(list.length === 1 ? '{n} Eintrag' : '{n} Einträge', { n: list.length }) + '</span></div>'
+          + '<div class="ls-scroll"><table class="ls-tbl chg-tbl"><thead><tr><th>' + t('Werk / Anlage') + '</th><th>' + t('Art der Änderung') + '</th><th>' + t('Uhrzeit') + '</th><th>' + t('Von wem') + '</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
+      }).join('');
+    }
+    if (letzte.length) {
+      const body = letzte.map(function (s) {
+        return '<tr><td><a href="#" class="chg-link" data-act="goto-node" data-id="' + esc(s.nodeId) + '">' + esc(s.pfad || s.anlage) + '</a></td>'
+          + '<td style="white-space:nowrap">' + fmtDateTime(s.letzteAenderung) + '</td>'
+          + '<td>' + esc(s.letzterBearbeiter || '–') + '</td></tr>';
+      }).join('');
+      html += '<div class="ls-section-title" style="margin-top:22px">' + t('Zuletzt bearbeitet') + ' <span>' + t('jede Layout-Änderung, unabhängig vom Journal') + '</span></div>'
+        + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>' + t('Werk / Anlage') + '</th><th>' + t('Letzte Änderung') + '</th><th>' + t('Von wem') + '</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+    }
+    return html;
+  }
+  function fmtTimeShort(iso) {
+    if (!iso) return '–';
+    const d = new Date(iso);
+    return isNaN(d) ? '–' : d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
   }
   // Änderungsindex (admin-only): nach Tagen geclustert, neuester Tag zuerst.
   function linieChangesHtml(rows) {
