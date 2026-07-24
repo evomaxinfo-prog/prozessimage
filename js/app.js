@@ -984,12 +984,21 @@
     }
     return html;
   }
-  // Pfad mit vorangestelltem Werk-Symbol (gleiche Farbe wie im Baum); Werk hervorgehoben, Rest gedaempft.
+  // Farbcodierung des Werk-Symbols nach Alter: heute grün, gestern und älter gelb.
+  const CHG_HEUTE = '#16A34A', CHG_AELTER = '#E0A21B';
+  function istHeute(iso) {
+    if (!iso) return false;
+    const d = new Date(iso);
+    return !isNaN(d) && d.toDateString() === new Date().toDateString();
+  }
+  // Pfad mit vorangestelltem Werk-Symbol; Werk hervorgehoben, Rest gedaempft.
   function chgPfadHtml(r) {
     const teile = String(r.pfad || r.anlage || '').split(' › ');
     const werk = teile.shift() || '';
+    const heute = istHeute(r.createdAt || r.letzteAenderung);
     return '<a href="#" class="chg-link" data-act="goto-node" data-id="' + esc(r.nodeId) + '">'
-      + '<svg class="chg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="color:' + NODE_ICON_COLOR.werk + '">' + ICONS.werk + '</svg>'
+      + '<svg class="chg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" style="color:' + (heute ? CHG_HEUTE : CHG_AELTER) + '">'
+      + '<title>' + (heute ? t('heute geändert') : t('früher geändert')) + '</title>' + ICONS.werk + '</svg>'
       + '<span class="chg-werk">' + esc(werk) + '</span>'
       + (teile.length ? '<span class="chg-rest">' + esc(' › ' + teile.join(' › ')) + '</span>' : '')
       + '</a>';
@@ -3092,7 +3101,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.46'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.47'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -4051,7 +4060,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.46';
+      sc.src = 'js/html2canvas.min.js?v=1.2.47';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);

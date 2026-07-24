@@ -287,12 +287,21 @@
     }
     return html;
   }
-  // Pfad mit vorangestelltem Werk-Symbol (gleiche Farbe wie im Baum); Werk hervorgehoben, Rest gedaempft.
+  // Farbcodierung des Werk-Symbols nach Alter: heute grün, gestern und älter gelb.
+  const CHG_HEUTE = '#16A34A', CHG_AELTER = '#E0A21B';
+  function istHeute(iso) {
+    if (!iso) return false;
+    const d = new Date(iso);
+    return !isNaN(d) && d.toDateString() === new Date().toDateString();
+  }
+  // Pfad mit vorangestelltem Werk-Symbol; Werk hervorgehoben, Rest gedaempft.
   function chgPfadHtml(r) {
     const teile = String(r.pfad || r.anlage || '').split(' › ');
     const werk = teile.shift() || '';
+    const heute = istHeute(r.createdAt || r.letzteAenderung);
     return '<a href="#" class="chg-link" data-act="goto-node" data-id="' + esc(r.nodeId) + '">'
-      + '<svg class="chg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="color:' + NODE_ICON_COLOR.werk + '">' + ICONS.werk + '</svg>'
+      + '<svg class="chg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" style="color:' + (heute ? CHG_HEUTE : CHG_AELTER) + '">'
+      + '<title>' + (heute ? t('heute geändert') : t('früher geändert')) + '</title>' + ICONS.werk + '</svg>'
       + '<span class="chg-werk">' + esc(werk) + '</span>'
       + (teile.length ? '<span class="chg-rest">' + esc(' › ' + teile.join(' › ')) + '</span>' : '')
       + '</a>';

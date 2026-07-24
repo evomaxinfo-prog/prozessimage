@@ -5,6 +5,7 @@
   window.PMX.I18N_EN = {
     '{n} Änderungen konnten nicht gespeichert werden': '{n} changes could not be saved',
     // Zentrale Aenderungsansicht
+    'heute geändert': 'changed today', 'früher geändert': 'changed earlier',
     'Änderungen aller Werke': 'Changes across all plants',
     'nach Tagen gruppiert, neueste zuerst': 'grouped by day, newest first',
     'Tage': 'days', 'lädt …': 'loading …', 'Laden fehlgeschlagen': 'Loading failed',
