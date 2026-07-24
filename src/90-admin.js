@@ -334,6 +334,9 @@
 
     // Baum
     $('btnAddWerk').addEventListener('click', addWerk);
+    // Der data-act-Verteiler haengt nur an #content - Knoepfe in der linken Spalte brauchen
+    // deshalb eine eigene Verdrahtung.
+    { const bch = $('btnChanges'); if (bch) bch.addEventListener('click', () => openChangesOverview()); }
     { const bta = $('btnToggleAll'); if (bta) bta.addEventListener('click', toggleAllTree); }
     { const btc = $('btnTreeCollapse'); if (btc) btc.addEventListener('click', () => { const a = document.querySelector('.app'); if (a) a.classList.add('tree-collapsed'); }); }
     { const bte = $('btnTreeExpand'); if (bte) bte.addEventListener('click', () => { const a = document.querySelector('.app'); if (a) a.classList.remove('tree-collapsed'); }); }

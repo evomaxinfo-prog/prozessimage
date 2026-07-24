@@ -3082,7 +3082,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.43'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.44'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -4041,7 +4041,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.43';
+      sc.src = 'js/html2canvas.min.js?v=1.2.44';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -5404,6 +5404,9 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
 
     // Baum
     $('btnAddWerk').addEventListener('click', addWerk);
+    // Der data-act-Verteiler haengt nur an #content - Knoepfe in der linken Spalte brauchen
+    // deshalb eine eigene Verdrahtung.
+    { const bch = $('btnChanges'); if (bch) bch.addEventListener('click', () => openChangesOverview()); }
     { const bta = $('btnToggleAll'); if (bta) bta.addEventListener('click', toggleAllTree); }
     { const btc = $('btnTreeCollapse'); if (btc) btc.addEventListener('click', () => { const a = document.querySelector('.app'); if (a) a.classList.add('tree-collapsed'); }); }
     { const bte = $('btnTreeExpand'); if (bte) bte.addEventListener('click', () => { const a = document.querySelector('.app'); if (a) a.classList.remove('tree-collapsed'); }); }
