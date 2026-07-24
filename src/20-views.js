@@ -230,7 +230,40 @@
   /* ---- Zentrale Änderungsansicht über ALLE Werke (admin-only) ----
      Holt die Daten über einen eigenen, serverseitig auf die sichtbaren Werke gefilterten
      Endpunkt - nicht über die Stationsabfragen, die pro Anlage den kompletten Bestand laden. */
-  let _chgDays = 30;
+  let _chgDays = 30, _chgData = null;
+  // Sortierung je Tabelle: Standard neueste zuerst. Die Tagesgruppierung bleibt erhalten -
+  // sortiert wird innerhalb der Tagesbloecke, bei Sortierung nach Zeit dreht sich auch die Tagesfolge.
+  const _chgSort = { col: 'zeit', dir: 'desc' }, _lastSort = { col: 'zeit', dir: 'desc' };
+  const FELDER_CHG = {
+    pfad: (r) => r.pfad || r.anlage || '', text: (r) => r.text || '',
+    zeit: (r) => new Date(r.createdAt || 0).getTime(), autor: (r) => r.author || '',
+  };
+  const FELDER_LAST = {
+    pfad: (r) => r.pfad || r.anlage || '',
+    zeit: (r) => new Date(r.letzteAenderung || 0).getTime(), autor: (r) => r.letzterBearbeiter || '',
+  };
+  function chgSortToggle(tbl, col) {
+    const s = tbl === 'last' ? _lastSort : _chgSort;
+    if (s.col === col) s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+    else { s.col = col; s.dir = col === 'zeit' ? 'desc' : 'asc'; }
+    const b = $('chgBody'); if (b && _chgData) b.innerHTML = changesOverviewHtml(_chgData);
+  }
+  function thSort(tbl, col, label) {
+    const s = tbl === 'last' ? _lastSort : _chgSort;
+    const aktiv = s.col === col;
+    const pfeil = aktiv ? (s.dir === 'asc' ? '▲' : '▼') : '▼';
+    return '<th class="th-sort' + (aktiv ? ' aktiv' : '') + '" data-act="chg-sort" data-tbl="' + tbl + '" data-col="' + col + '">'
+      + esc(label) + '<span class="th-arrow">' + pfeil + '</span></th>';
+  }
+  function chgSortiere(list, s, felder) {
+    const f = felder[s.col]; if (!f) return list;
+    const richtung = s.dir === 'asc' ? 1 : -1;
+    return list.slice().sort(function (a, b) {
+      const va = f(a), vb = f(b);
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * richtung;
+      return String(va).localeCompare(String(vb), 'de') * richtung;
+    });
+  }
   async function openChangesOverview(days) {
     if (days) _chgDays = days;
     stopCollab();
@@ -246,6 +279,7 @@
     try {
       const data = await Api.getChangesOverview(_chgDays);
       if (state.view !== 'changes') return; // zwischenzeitlich weg-navigiert
+      _chgData = data;
       $('chgBody').innerHTML = changesOverviewHtml(data);
     } catch (e) {
       const b = $('chgBody'); if (b) b.innerHTML = '<div class="pad" style="color:var(--muted)">' + t('Laden fehlgeschlagen') + '</div>';
@@ -264,8 +298,9 @@
         if (!byDay[k]) { byDay[k] = []; order.push(k); }
         byDay[k].push(r);
       });
+      if (_chgSort.col === 'zeit' && _chgSort.dir === 'asc') order.reverse();
       html += order.map(function (day) {
-        const list = byDay[day];
+        const list = chgSortiere(byDay[day], _chgSort, FELDER_CHG);
         const body = list.map(function (r) {
           return '<tr><td class="chg-path">' + chgPfadHtml(r) + '</td>'
             + '<td>' + esc(r.text || '–') + '</td>'
@@ -273,17 +308,17 @@
             + '<td>' + esc(r.author || '–') + '</td></tr>';
         }).join('');
         return '<div class="ci-day"><div class="ci-day-head">' + esc(day) + '<span>' + t(list.length === 1 ? '{n} Eintrag' : '{n} Einträge', { n: list.length }) + '</span></div>'
-          + '<div class="ls-scroll"><table class="ls-tbl chg-tbl"><thead><tr><th>' + t('Werk / Anlage') + '</th><th>' + t('Art der Änderung') + '</th><th>' + t('Uhrzeit') + '</th><th>' + t('Von wem') + '</th></tr></thead><tbody>' + body + '</tbody></table></div></div>';
+          + '<div class="ls-scroll"><table class="ls-tbl chg-tbl"><thead><tr>' + thSort('chg', 'pfad', t('Werk / Anlage')) + thSort('chg', 'text', t('Art der Änderung')) + thSort('chg', 'zeit', t('Uhrzeit')) + thSort('chg', 'autor', t('Von wem')) + '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
       }).join('');
     }
     if (letzte.length) {
-      const body = letzte.map(function (s) {
+      const body = chgSortiere(letzte, _lastSort, FELDER_LAST).map(function (s) {
         return '<tr><td class="chg-path">' + chgPfadHtml(s) + '</td>'
           + '<td style="white-space:nowrap">' + fmtDateTime(s.letzteAenderung) + '</td>'
           + '<td>' + esc(s.letzterBearbeiter || '–') + '</td></tr>';
       }).join('');
       html += '<div class="ls-section-title" style="margin-top:22px">' + t('Zuletzt bearbeitet') + ' <span>' + t('jede Layout-Änderung, unabhängig vom Journal') + '</span></div>'
-        + '<div class="ls-scroll"><table class="ls-tbl chg-tbl2"><thead><tr><th>' + t('Werk / Anlage') + '</th><th>' + t('Letzte Änderung') + '</th><th>' + t('Von wem') + '</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+        + '<div class="ls-scroll"><table class="ls-tbl chg-tbl2"><thead><tr>' + thSort('last', 'pfad', t('Werk / Anlage')) + thSort('last', 'zeit', t('Letzte Änderung')) + thSort('last', 'autor', t('Von wem')) + '</tr></thead><tbody>' + body + '</tbody></table></div>';
     }
     return html;
   }
@@ -299,7 +334,7 @@
     const teile = String(r.pfad || r.anlage || '').split(' › ');
     const werk = teile.shift() || '';
     const heute = istHeute(r.createdAt || r.letzteAenderung);
-    return '<a href="#" class="chg-link" data-act="goto-node" data-id="' + esc(r.nodeId) + '">'
+    return '<a href="#" class="chg-link" title="' + esc(r.pfad || r.anlage || '') + '" data-act="goto-node" data-id="' + esc(r.nodeId) + '">'
       + '<svg class="chg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" style="color:' + (heute ? CHG_HEUTE : CHG_AELTER) + '">'
       + '<title>' + (heute ? t('heute geändert') : t('früher geändert')) + '</title>' + ICONS.werk + '</svg>'
       + '<span class="chg-werk">' + esc(werk) + '</span>'
