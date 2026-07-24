@@ -267,7 +267,7 @@
       html += order.map(function (day) {
         const list = byDay[day];
         const body = list.map(function (r) {
-          return '<tr><td><a href="#" class="chg-link" data-act="goto-node" data-id="' + esc(r.nodeId) + '">' + esc(r.pfad || r.anlage) + '</a></td>'
+          return '<tr><td class="chg-path">' + chgPfadHtml(r) + '</td>'
             + '<td>' + esc(r.text || '–') + '</td>'
             + '<td style="white-space:nowrap">' + fmtTimeShort(r.createdAt) + '</td>'
             + '<td>' + esc(r.author || '–') + '</td></tr>';
@@ -278,14 +278,24 @@
     }
     if (letzte.length) {
       const body = letzte.map(function (s) {
-        return '<tr><td><a href="#" class="chg-link" data-act="goto-node" data-id="' + esc(s.nodeId) + '">' + esc(s.pfad || s.anlage) + '</a></td>'
+        return '<tr><td class="chg-path">' + chgPfadHtml(s) + '</td>'
           + '<td style="white-space:nowrap">' + fmtDateTime(s.letzteAenderung) + '</td>'
           + '<td>' + esc(s.letzterBearbeiter || '–') + '</td></tr>';
       }).join('');
       html += '<div class="ls-section-title" style="margin-top:22px">' + t('Zuletzt bearbeitet') + ' <span>' + t('jede Layout-Änderung, unabhängig vom Journal') + '</span></div>'
-        + '<div class="ls-scroll"><table class="ls-tbl"><thead><tr><th>' + t('Werk / Anlage') + '</th><th>' + t('Letzte Änderung') + '</th><th>' + t('Von wem') + '</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+        + '<div class="ls-scroll"><table class="ls-tbl chg-tbl2"><thead><tr><th>' + t('Werk / Anlage') + '</th><th>' + t('Letzte Änderung') + '</th><th>' + t('Von wem') + '</th></tr></thead><tbody>' + body + '</tbody></table></div>';
     }
     return html;
+  }
+  // Pfad mit vorangestelltem Werk-Symbol (gleiche Farbe wie im Baum); Werk hervorgehoben, Rest gedaempft.
+  function chgPfadHtml(r) {
+    const teile = String(r.pfad || r.anlage || '').split(' › ');
+    const werk = teile.shift() || '';
+    return '<a href="#" class="chg-link" data-act="goto-node" data-id="' + esc(r.nodeId) + '">'
+      + '<svg class="chg-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" style="color:' + NODE_ICON_COLOR.werk + '">' + ICONS.werk + '</svg>'
+      + '<span class="chg-werk">' + esc(werk) + '</span>'
+      + (teile.length ? '<span class="chg-rest">' + esc(' › ' + teile.join(' › ')) + '</span>' : '')
+      + '</a>';
   }
   function fmtTimeShort(iso) {
     if (!iso) return '–';
