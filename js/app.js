@@ -2241,7 +2241,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       } else {
         chipsHtml = (o.metatags || []).map((m) => m.value).filter(Boolean).map((t) => '<span class="ptag">' + esc(t) + '</span>').join('');
       }
-      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + ' hover-tags' + (isSelObj(o.id) ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + ';--osc:' + (o.scale || 1) + '"'
+      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + ' hover-tags' + (isSelObj(o.id) ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + ';--osc:' + (o.scale || 1) + ';--orot:' + (o.rotation || 0) + 'deg"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
         + (robotIncomplete ? '<span class="obj-warn" title="Safe Funktion und Technologie sind Pflicht">!</span>' : '')
@@ -2532,6 +2532,30 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     state.selObjs = newIds; state.selectedObj = newIds.length === 1 ? newIds[0] : null; state.selectedZone = null;
     renderEditor();
     if (newIds.length) toast(newIds.length === 1 ? t('Icon eingefügt') : (newIds.length + ' ' + t('Icons eingefügt')));
+  }
+  // Auswahl in 15-Grad-Schritten drehen. Zonen/Foerderwege (mit Stuetzpunkten) bleiben aussen vor.
+  // Die Anzeige wird sofort ueber die CSS-Variable nachgezogen (kein Neuaufbau), gespeichert wird
+  // gebuendelt nach kurzer Pause - sonst gaebe es eine Server-Anfrage je Tastendruck.
+  function rotateSelectedObjects(delta) {
+    if (!state.detail) return;
+    const ids = (state.selObjs && state.selObjs.length) ? state.selObjs.slice() : (state.selectedObj ? [state.selectedObj] : []);
+    const objs = (state.detail.objects || []).filter((o) => ids.indexOf(o.id) >= 0 && !(o.points && o.points.length));
+    if (!objs.length) return;
+    if (!state._rotUndoActive) { pushUndo(); state._rotUndoActive = true; } // ein Undo-Punkt je Dreh-Serie
+    if (state._rotUndoTimer) clearTimeout(state._rotUndoTimer);
+    state._rotUndoTimer = setTimeout(function () { state._rotUndoActive = false; }, 700);
+    objs.forEach(function (o) {
+      o.rotation = ((((o.rotation || 0) + delta) % 360) + 360) % 360;
+      protectObj(o.id);
+      const el = document.querySelector('.placed[data-obj="' + o.id + '"]');
+      if (el) el.style.setProperty('--orot', o.rotation + 'deg');
+    });
+    if (state._rotSaveTimer) clearTimeout(state._rotSaveTimer);
+    state._rotSaveTimer = setTimeout(function () {
+      objs.forEach(function (o) {
+        Api.updateObject(o.id, { rotation: o.rotation }).catch(function () { toast(t('Änderung nicht gespeichert')); });
+      });
+    }, 350);
   }
   async function deleteSelectedObjects() {
     const ids = (state.selObjs && state.selObjs.length) ? state.selObjs.slice() : (state.selectedObj ? [state.selectedObj] : []);
@@ -3139,7 +3163,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.49'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.50'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -4098,7 +4122,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.49';
+      sc.src = 'js/html2canvas.min.js?v=1.2.50';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -5101,6 +5125,12 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if ((e.key === 'r' || e.key === 'R') && state.selectedZone && !inField) {
       const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone);
       if (z && z.symbolType === 'mf_route') { e.preventDefault(); reverseRoute(z.id); return; }
+    }
+    // Objekte drehen: R im Uhrzeigersinn, Umschalt+R zurueck. Nur wenn KEINE Zone gewaehlt ist,
+    // damit das bestehende R zum Umkehren eines Foerderwegs unveraendert bleibt.
+    if ((e.key === 'r' || e.key === 'R') && !inField && !state.selectedZone
+      && (state.selectedObj || (state.selObjs && state.selObjs.length))) {
+      e.preventDefault(); rotateSelectedObjects(e.shiftKey ? -15 : 15); return;
     }
     if (state.selectedZone && !inField && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) {
       const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && o.points);

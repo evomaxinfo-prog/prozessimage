@@ -156,6 +156,12 @@
       const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone);
       if (z && z.symbolType === 'mf_route') { e.preventDefault(); reverseRoute(z.id); return; }
     }
+    // Objekte drehen: R im Uhrzeigersinn, Umschalt+R zurueck. Nur wenn KEINE Zone gewaehlt ist,
+    // damit das bestehende R zum Umkehren eines Foerderwegs unveraendert bleibt.
+    if ((e.key === 'r' || e.key === 'R') && !inField && !state.selectedZone
+      && (state.selectedObj || (state.selObjs && state.selObjs.length))) {
+      e.preventDefault(); rotateSelectedObjects(e.shiftKey ? -15 : 15); return;
+    }
     if (state.selectedZone && !inField && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) {
       const z = (state.detail.objects || []).find((o) => o.id === state.selectedZone && o.points);
       if (z) {

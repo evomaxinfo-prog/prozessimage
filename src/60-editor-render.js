@@ -141,7 +141,7 @@
       } else {
         chipsHtml = (o.metatags || []).map((m) => m.value).filter(Boolean).map((t) => '<span class="ptag">' + esc(t) + '</span>').join('');
       }
-      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + ' hover-tags' + (isSelObj(o.id) ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + ';--osc:' + (o.scale || 1) + '"'
+      return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + ' hover-tags' + (isSelObj(o.id) ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + ';--osc:' + (o.scale || 1) + ';--orot:' + (o.rotation || 0) + 'deg"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
         + (robotIncomplete ? '<span class="obj-warn" title="Safe Funktion und Technologie sind Pflicht">!</span>' : '')
@@ -432,6 +432,30 @@
     state.selObjs = newIds; state.selectedObj = newIds.length === 1 ? newIds[0] : null; state.selectedZone = null;
     renderEditor();
     if (newIds.length) toast(newIds.length === 1 ? t('Icon eingefügt') : (newIds.length + ' ' + t('Icons eingefügt')));
+  }
+  // Auswahl in 15-Grad-Schritten drehen. Zonen/Foerderwege (mit Stuetzpunkten) bleiben aussen vor.
+  // Die Anzeige wird sofort ueber die CSS-Variable nachgezogen (kein Neuaufbau), gespeichert wird
+  // gebuendelt nach kurzer Pause - sonst gaebe es eine Server-Anfrage je Tastendruck.
+  function rotateSelectedObjects(delta) {
+    if (!state.detail) return;
+    const ids = (state.selObjs && state.selObjs.length) ? state.selObjs.slice() : (state.selectedObj ? [state.selectedObj] : []);
+    const objs = (state.detail.objects || []).filter((o) => ids.indexOf(o.id) >= 0 && !(o.points && o.points.length));
+    if (!objs.length) return;
+    if (!state._rotUndoActive) { pushUndo(); state._rotUndoActive = true; } // ein Undo-Punkt je Dreh-Serie
+    if (state._rotUndoTimer) clearTimeout(state._rotUndoTimer);
+    state._rotUndoTimer = setTimeout(function () { state._rotUndoActive = false; }, 700);
+    objs.forEach(function (o) {
+      o.rotation = ((((o.rotation || 0) + delta) % 360) + 360) % 360;
+      protectObj(o.id);
+      const el = document.querySelector('.placed[data-obj="' + o.id + '"]');
+      if (el) el.style.setProperty('--orot', o.rotation + 'deg');
+    });
+    if (state._rotSaveTimer) clearTimeout(state._rotSaveTimer);
+    state._rotSaveTimer = setTimeout(function () {
+      objs.forEach(function (o) {
+        Api.updateObject(o.id, { rotation: o.rotation }).catch(function () { toast(t('Änderung nicht gespeichert')); });
+      });
+    }, 350);
   }
   async function deleteSelectedObjects() {
     const ids = (state.selObjs && state.selObjs.length) ? state.selObjs.slice() : (state.selectedObj ? [state.selectedObj] : []);
