@@ -2244,6 +2244,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + ' hover-tags' + (isSelObj(o.id) ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + ';--osc:' + (o.scale || 1) + ';--orot:' + (o.rotation || 0) + 'deg"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
+        + ((o.rotation || 0) ? '<span class="p-orient" title="' + esc(t('gedreht um {n}°', { n: Math.round(o.rotation) })) + '"></span>' : '')
         + (robotIncomplete ? '<span class="obj-warn" title="Safe Funktion und Technologie sind Pflicht">!</span>' : '')
         + (chipsHtml ? '<div class="ptags">' + chipsHtml + '</div>' : '')
         + '</div>';
@@ -2392,7 +2393,11 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     return bb.objs.map(function (o) {
       const off = handleOff(o.scale || 1);
       const hx = clamp01(o.x + off), hy = clamp01(o.y + off);
-      return '<div class="sel-resize" data-scalehandle="1" data-obj="' + o.id + '" style="left:' + (hx * 100) + '%;top:' + (hy * 100) + '%" title="' + t('Symbolgröße ziehen') + '">' + arrow + '</div>';
+      const rx = clamp01(o.x + off), ry = clamp01(o.y - off); // Dreh-Anfasser gegenueber dem Groessen-Anfasser
+      const dreh = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+        + '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>';
+      return '<div class="sel-resize" data-scalehandle="1" data-obj="' + o.id + '" style="left:' + (hx * 100) + '%;top:' + (hy * 100) + '%" title="' + t('Symbolgröße ziehen') + '">' + arrow + '</div>'
+        + '<div class="sel-rotate" data-rothandle="1" data-obj="' + o.id + '" style="left:' + (rx * 100) + '%;top:' + (ry * 100) + '%" title="' + t('Drehen: Klick +15°, Umschalt+Klick −15° (auch Taste R)') + '">' + dreh + '</div>';
     }).join('');
   }
   function startScaleDrag(e) {
@@ -3163,7 +3168,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
       function syncFallback() { setTimeout(function () { try { resolve((RobotDetect.detectMultiFast || RobotDetect.detectMulti)(layout, templates, opts)); } catch (e) { reject(e); } }, 30); }
       if (typeof Worker === 'undefined') { syncFallback(); return; }
       var w, done = false, dog = 0;
-      try { w = new Worker('js/robotworker.js?v=1.2.50'); } catch (e) { syncFallback(); return; }
+      try { w = new Worker('js/robotworker.js?v=1.2.51'); } catch (e) { syncFallback(); return; }
       // Watchdog: antwortet der Worker nicht (Haenger), sauber abbrechen statt fuer immer "gruen" zu bleiben.
       dog = setTimeout(function () {
         if (done) return; done = true;
@@ -4122,7 +4127,7 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     if (_h2cPromise) return _h2cPromise;
     _h2cPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'js/html2canvas.min.js?v=1.2.50';
+      sc.src = 'js/html2canvas.min.js?v=1.2.51';
       sc.onload = () => resolve(window.html2canvas);
       sc.onerror = () => { _h2cPromise = null; reject(new Error('html2canvas nicht geladen')); };
       document.head.appendChild(sc);
@@ -4433,6 +4438,8 @@ const STATE_ICONS = (window.PMX && window.PMX.STATE_ICONS) || {};
     }
     // Symbol verschieben
     // Skalier-Anfasser der Mehrfachauswahl
+    const rh = e.target.closest('[data-rothandle]');
+    if (rh) { e.preventDefault(); rotateSelectedObjects(e.shiftKey ? -15 : 15); return; }
     const sh = e.target.closest('[data-scalehandle]');
     if (sh) { startScaleDrag(e); return; }
     const pl = e.target.closest('.placed');

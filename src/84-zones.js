@@ -199,6 +199,8 @@
     }
     // Symbol verschieben
     // Skalier-Anfasser der Mehrfachauswahl
+    const rh = e.target.closest('[data-rothandle]');
+    if (rh) { e.preventDefault(); rotateSelectedObjects(e.shiftKey ? -15 : 15); return; }
     const sh = e.target.closest('[data-scalehandle]');
     if (sh) { startScaleDrag(e); return; }
     const pl = e.target.closest('.placed');

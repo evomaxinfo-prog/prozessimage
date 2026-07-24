@@ -144,6 +144,7 @@
       return '<div class="placed' + (fgAssigned ? ' fg-assigned' : '') + ' hover-tags' + (isSelObj(o.id) ? ' sel' : '') + '" data-obj="' + o.id + '" style="left:' + (o.x * 100) + '%;top:' + (o.y * 100) + '%;color:' + esc(objIconColor(o)) + ';--osc:' + (o.scale || 1) + ';--orot:' + (o.rotation || 0) + 'deg"'
         + ' title="' + esc(o.name) + ' — ziehen zum Verschieben · Doppelklick für Metatags">'
         + '<span class="p-sym">' + symInner(o.symbolType, 26) + '</span>'
+        + ((o.rotation || 0) ? '<span class="p-orient" title="' + esc(t('gedreht um {n}°', { n: Math.round(o.rotation) })) + '"></span>' : '')
         + (robotIncomplete ? '<span class="obj-warn" title="Safe Funktion und Technologie sind Pflicht">!</span>' : '')
         + (chipsHtml ? '<div class="ptags">' + chipsHtml + '</div>' : '')
         + '</div>';
@@ -292,7 +293,11 @@
     return bb.objs.map(function (o) {
       const off = handleOff(o.scale || 1);
       const hx = clamp01(o.x + off), hy = clamp01(o.y + off);
-      return '<div class="sel-resize" data-scalehandle="1" data-obj="' + o.id + '" style="left:' + (hx * 100) + '%;top:' + (hy * 100) + '%" title="' + t('Symbolgröße ziehen') + '">' + arrow + '</div>';
+      const rx = clamp01(o.x + off), ry = clamp01(o.y - off); // Dreh-Anfasser gegenueber dem Groessen-Anfasser
+      const dreh = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+        + '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>';
+      return '<div class="sel-resize" data-scalehandle="1" data-obj="' + o.id + '" style="left:' + (hx * 100) + '%;top:' + (hy * 100) + '%" title="' + t('Symbolgröße ziehen') + '">' + arrow + '</div>'
+        + '<div class="sel-rotate" data-rothandle="1" data-obj="' + o.id + '" style="left:' + (rx * 100) + '%;top:' + (ry * 100) + '%" title="' + t('Drehen: Klick +15°, Umschalt+Klick −15° (auch Taste R)') + '">' + dreh + '</div>';
     }).join('');
   }
   function startScaleDrag(e) {

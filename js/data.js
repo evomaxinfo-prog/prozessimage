@@ -6,6 +6,7 @@
     '{n} Änderungen konnten nicht gespeichert werden': '{n} changes could not be saved',
     // Zentrale Aenderungsansicht
     'heute geändert': 'changed today', 'früher geändert': 'changed earlier',
+    'gedreht um {n}°': 'rotated by {n}°', 'Drehen: Klick +15°, Umschalt+Klick −15° (auch Taste R)': 'Rotate: click +15°, shift-click −15° (or press R)',
     'werksübergreifende Übersicht': 'cross-plant overview', 'Protokollierte Änderungen': 'Logged changes',
     'Änderungen aller Werke': 'Changes across all plants',
     'nach Tagen gruppiert, neueste zuerst': 'grouped by day, newest first',
